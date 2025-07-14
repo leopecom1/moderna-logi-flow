@@ -14,16 +14,381 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          address: string
+          city: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          neighborhood: string | null
+          notes: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          city?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          neighborhood?: string | null
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          city?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          neighborhood?: string | null
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      deliveries: {
+        Row: {
+          attempted_at: string | null
+          cadete_id: string
+          created_at: string
+          delivered_at: string | null
+          delivery_notes: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          order_id: string
+          route_id: string | null
+          status: Database["public"]["Enums"]["delivery_status"]
+          updated_at: string
+        }
+        Insert: {
+          attempted_at?: string | null
+          cadete_id: string
+          created_at?: string
+          delivered_at?: string | null
+          delivery_notes?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          order_id: string
+          route_id?: string | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          updated_at?: string
+        }
+        Update: {
+          attempted_at?: string | null
+          cadete_id?: string
+          created_at?: string
+          delivered_at?: string | null
+          delivery_notes?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          order_id?: string
+          route_id?: string | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deliveries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      incidents: {
+        Row: {
+          created_at: string
+          delivery_id: string | null
+          description: string
+          id: string
+          incident_type: Database["public"]["Enums"]["incident_type"]
+          order_id: string | null
+          reported_by: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          delivery_id?: string | null
+          description: string
+          id?: string
+          incident_type: Database["public"]["Enums"]["incident_type"]
+          order_id?: string | null
+          reported_by: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          delivery_id?: string | null
+          description?: string
+          id?: string
+          incident_type?: Database["public"]["Enums"]["incident_type"]
+          order_id?: string | null
+          reported_by?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          cadete_id: string | null
+          created_at: string
+          customer_id: string
+          delivery_address: string
+          delivery_date: string | null
+          delivery_neighborhood: string | null
+          delivery_time_slot: string | null
+          id: string
+          notes: string | null
+          order_number: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          products: Json
+          seller_id: string
+          status: Database["public"]["Enums"]["order_status"]
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          cadete_id?: string | null
+          created_at?: string
+          customer_id: string
+          delivery_address: string
+          delivery_date?: string | null
+          delivery_neighborhood?: string | null
+          delivery_time_slot?: string | null
+          id?: string
+          notes?: string | null
+          order_number: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          products: Json
+          seller_id: string
+          status?: Database["public"]["Enums"]["order_status"]
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          cadete_id?: string | null
+          created_at?: string
+          customer_id?: string
+          delivery_address?: string
+          delivery_date?: string | null
+          delivery_neighborhood?: string | null
+          delivery_time_slot?: string | null
+          id?: string
+          notes?: string | null
+          order_number?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          products?: Json
+          seller_id?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          liquidated_at: string | null
+          notes: string | null
+          order_id: string
+          paid_at: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          reference_number: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          liquidated_at?: string | null
+          notes?: string | null
+          order_id: string
+          paid_at?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          reference_number?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          liquidated_at?: string | null
+          notes?: string | null
+          order_id?: string
+          paid_at?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          reference_number?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          is_active: boolean
+          phone: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          phone?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      routes: {
+        Row: {
+          cadete_id: string
+          completed_deliveries: number | null
+          created_at: string
+          end_time: string | null
+          id: string
+          route_date: string
+          route_name: string
+          start_time: string | null
+          total_deliveries: number | null
+          updated_at: string
+        }
+        Insert: {
+          cadete_id: string
+          completed_deliveries?: number | null
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          route_date: string
+          route_name: string
+          start_time?: string | null
+          total_deliveries?: number | null
+          updated_at?: string
+        }
+        Update: {
+          cadete_id?: string
+          completed_deliveries?: number | null
+          created_at?: string
+          end_time?: string | null
+          id?: string
+          route_date?: string
+          route_name?: string
+          start_time?: string | null
+          total_deliveries?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: Database["public"]["Enums"]["user_role"]
+      }
     }
     Enums: {
-      [_ in never]: never
+      delivery_status:
+        | "pendiente"
+        | "en_camino"
+        | "entregado"
+        | "con_demora"
+        | "no_entregado"
+      incident_type:
+        | "reclamo"
+        | "problema_entrega"
+        | "direccion_incorrecta"
+        | "cliente_ausente"
+        | "otro"
+      order_status:
+        | "pendiente"
+        | "asignado"
+        | "en_ruta"
+        | "entregado"
+        | "cancelado"
+      payment_method:
+        | "efectivo"
+        | "tarjeta"
+        | "transferencia"
+        | "cuenta_corriente"
+      payment_status: "pendiente" | "pagado" | "liquidado"
+      user_role: "gerencia" | "vendedor" | "cadete"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +515,36 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      delivery_status: [
+        "pendiente",
+        "en_camino",
+        "entregado",
+        "con_demora",
+        "no_entregado",
+      ],
+      incident_type: [
+        "reclamo",
+        "problema_entrega",
+        "direccion_incorrecta",
+        "cliente_ausente",
+        "otro",
+      ],
+      order_status: [
+        "pendiente",
+        "asignado",
+        "en_ruta",
+        "entregado",
+        "cancelado",
+      ],
+      payment_method: [
+        "efectivo",
+        "tarjeta",
+        "transferencia",
+        "cuenta_corriente",
+      ],
+      payment_status: ["pendiente", "pagado", "liquidado"],
+      user_role: ["gerencia", "vendedor", "cadete"],
+    },
   },
 } as const
