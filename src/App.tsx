@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
+import UsersPage from "./pages/UsersPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/users" element={<UsersPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
