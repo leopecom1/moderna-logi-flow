@@ -31,6 +31,12 @@ export const GooglePlacesAutocomplete = ({
           fields: ['formatted_address', 'geometry', 'address_components', 'place_id']
         });
 
+        // Ensure the dropdown is properly styled and clickable
+        const pacContainer = document.querySelector('.pac-container');
+        if (pacContainer) {
+          (pacContainer as HTMLElement).style.zIndex = '9999';
+        }
+
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
           console.log('Place selected:', place);
@@ -40,6 +46,15 @@ export const GooglePlacesAutocomplete = ({
               inputRef.current.value = place.formatted_address;
             }
             onChange(place.formatted_address, place);
+          }
+        });
+
+        // Add focus event to ensure dropdown appears
+        inputRef.current.addEventListener('focus', () => {
+          const pacContainer = document.querySelector('.pac-container');
+          if (pacContainer) {
+            (pacContainer as HTMLElement).style.zIndex = '9999';
+            (pacContainer as HTMLElement).style.pointerEvents = 'auto';
           }
         });
 
@@ -56,6 +71,41 @@ export const GooglePlacesAutocomplete = ({
       }
     };
   }, [isLoaded, disabled, onChange]);
+
+  // Add global CSS for Google Places dropdown
+  useEffect(() => {
+    if (isLoaded) {
+      const style = document.createElement('style');
+      style.textContent = `
+        .pac-container {
+          z-index: 9999 !important;
+          border-radius: 8px;
+          border: 1px solid hsl(var(--border));
+          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          font-family: inherit;
+        }
+        .pac-item {
+          padding: 8px 12px;
+          cursor: pointer !important;
+          border-bottom: 1px solid hsl(var(--border));
+        }
+        .pac-item:hover {
+          background-color: hsl(var(--accent));
+        }
+        .pac-item-selected {
+          background-color: hsl(var(--accent));
+        }
+        .pac-matched {
+          font-weight: 600;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      return () => {
+        document.head.removeChild(style);
+      };
+    }
+  }, [isLoaded]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
