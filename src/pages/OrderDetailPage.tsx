@@ -74,7 +74,7 @@ export default function OrderDetailPage() {
         .select(`
           *,
           customer:customers(*),
-          seller:profiles!orders_seller_id_fkey(*)
+          seller:profiles!seller_id(*)
         `)
         .eq('id', id)
         .single();
