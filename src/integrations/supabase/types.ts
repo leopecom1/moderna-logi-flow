@@ -14,6 +14,86 @@ export type Database = {
   }
   public: {
     Tables: {
+      cadete_profiles: {
+        Row: {
+          address: string | null
+          bank_account_number: string | null
+          bank_name: string | null
+          cadete_id: string
+          city: string | null
+          created_at: string
+          date_of_birth: string | null
+          departamento: string | null
+          driver_license_category: string | null
+          driver_license_expiry: string | null
+          driver_license_number: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          emergency_contact_relation: string | null
+          health_insurance_company: string | null
+          health_insurance_number: string | null
+          id: string
+          identification_number: string | null
+          marital_status: string | null
+          neighborhood: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          cadete_id: string
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          departamento?: string | null
+          driver_license_category?: string | null
+          driver_license_expiry?: string | null
+          driver_license_number?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
+          health_insurance_company?: string | null
+          health_insurance_number?: string | null
+          id?: string
+          identification_number?: string | null
+          marital_status?: string | null
+          neighborhood?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          bank_account_number?: string | null
+          bank_name?: string | null
+          cadete_id?: string
+          city?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          departamento?: string | null
+          driver_license_category?: string | null
+          driver_license_expiry?: string | null
+          driver_license_number?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          emergency_contact_relation?: string | null
+          health_insurance_company?: string | null
+          health_insurance_number?: string | null
+          id?: string
+          identification_number?: string | null
+          marital_status?: string | null
+          neighborhood?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cadete_profiles_cadete_id_fkey"
+            columns: ["cadete_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string
@@ -358,6 +438,71 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      vehicles: {
+        Row: {
+          brand: string
+          cadete_id: string
+          color: string | null
+          created_at: string
+          id: string
+          insurance_company: string | null
+          insurance_expiry: string | null
+          insurance_policy: string | null
+          license_plate: string
+          model: string
+          notes: string | null
+          status: string
+          technical_inspection_expiry: string | null
+          updated_at: string
+          vehicle_type: string
+          year: number | null
+        }
+        Insert: {
+          brand: string
+          cadete_id: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          insurance_company?: string | null
+          insurance_expiry?: string | null
+          insurance_policy?: string | null
+          license_plate: string
+          model: string
+          notes?: string | null
+          status?: string
+          technical_inspection_expiry?: string | null
+          updated_at?: string
+          vehicle_type?: string
+          year?: number | null
+        }
+        Update: {
+          brand?: string
+          cadete_id?: string
+          color?: string | null
+          created_at?: string
+          id?: string
+          insurance_company?: string | null
+          insurance_expiry?: string | null
+          insurance_policy?: string | null
+          license_plate?: string
+          model?: string
+          notes?: string | null
+          status?: string
+          technical_inspection_expiry?: string | null
+          updated_at?: string
+          vehicle_type?: string
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_cadete_id_fkey"
+            columns: ["cadete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
     }
     Views: {

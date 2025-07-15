@@ -47,6 +47,8 @@ export const AppSidebar = () => {
     { title: 'Clientes', url: '/customers', icon: Users },
     { title: 'Entregas', url: '/deliveries', icon: Truck },
     { title: 'Rutas', url: '/routes', icon: Route },
+    { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
+    { title: 'Vehículos', url: '/vehiculos', icon: Truck },
     { title: 'Usuarios', url: '/users', icon: Crown },
     { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
     { title: 'Pagos', url: '/payments', icon: CreditCard },
