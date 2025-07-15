@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Play, Square, Clock, MapPin, Package, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { RouteMap } from '@/components/ui/route-map';
 import { AssignOrdersModal } from '@/components/forms/AssignOrdersModal';
+import { RouteTimeCalculator } from '@/components/ui/route-time-calculator';
 
 interface RouteData {
   id: string;
@@ -438,6 +439,20 @@ const RouteDetailPage = () => {
               />
             </CardContent>
           </Card>
+
+          {/* Route Time Calculator */}
+          <RouteTimeCalculator 
+            deliveries={deliveries.map(d => ({
+              id: d.id,
+              address: d.order.delivery_address,
+              customer_name: d.order.customer.name,
+              order_number: d.order.order_number,
+              status: d.status,
+              lat: d.latitude || undefined,
+              lng: d.longitude || undefined,
+            }))}
+            className="lg:col-span-2"
+          />
         </div>
 
         {/* Deliveries List */}
