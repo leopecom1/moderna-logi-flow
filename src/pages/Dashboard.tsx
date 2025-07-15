@@ -207,25 +207,25 @@ export default function Dashboard() {
 
   const getGerenciaDashboard = () => (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-element animate-delay-100">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard Gerencia</h1>
-          <p className="text-muted-foreground">Resumen general del sistema logístico</p>
+          <h1 className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight">Dashboard Gerencia</h1>
+          <p className="text-muted-foreground mt-2">Resumen general del sistema logístico</p>
         </div>
-        <Badge variant="outline" className="bg-purple-100 text-purple-800">
+        <Badge variant="outline" className="bg-purple-100 text-purple-800 smooth-transition">
           <span className="capitalize">{profile?.role}</span>
         </Badge>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center h-64 animate-element animate-delay-200">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : (
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="animate-element animate-delay-200 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pedidos Totales</CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
@@ -238,7 +238,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-300 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Entregas Completadas</CardTitle>
                 <CheckCircle className="h-4 w-4 text-green-600" />
@@ -251,7 +251,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-400 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Cadetes Activos</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -264,7 +264,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-500 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Incidencias</CardTitle>
                 <AlertTriangle className="h-4 w-4 text-orange-600" />
@@ -347,25 +347,25 @@ export default function Dashboard() {
 
   const getVendedorDashboard = () => (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-element animate-delay-100">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard Vendedor</h1>
-          <p className="text-muted-foreground">Gestiona tus pedidos y clientes</p>
+          <h1 className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight">Dashboard Vendedor</h1>
+          <p className="text-muted-foreground mt-2">Gestiona tus pedidos y clientes</p>
         </div>
-        <Badge variant="outline" className="bg-blue-100 text-blue-800">
+        <Badge variant="outline" className="bg-blue-100 text-blue-800 smooth-transition">
           <span className="capitalize">{profile?.role}</span>
         </Badge>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center h-64 animate-element animate-delay-200">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : (
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="animate-element animate-delay-200 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Mis Pedidos Hoy</CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
@@ -376,7 +376,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-300 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Entregas Pendientes</CardTitle>
                 <Clock className="h-4 w-4 text-orange-600" />
@@ -387,7 +387,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-400 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Ventas del Día</CardTitle>
                 <DollarSign className="h-4 w-4 text-green-600" />
@@ -398,7 +398,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-500 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Clientes Atendidos</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
@@ -484,25 +484,25 @@ export default function Dashboard() {
 
   const getCadeteDashboard = () => (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between animate-element animate-delay-100">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard Cadete</h1>
-          <p className="text-muted-foreground">Tu ruta de entregas de hoy</p>
+          <h1 className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight">Dashboard Cadete</h1>
+          <p className="text-muted-foreground mt-2">Tu ruta de entregas de hoy</p>
         </div>
-        <Badge variant="outline" className="bg-green-100 text-green-800">
+        <Badge variant="outline" className="bg-green-100 text-green-800 smooth-transition">
           <span className="capitalize">{profile?.role}</span>
         </Badge>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center h-64 animate-element animate-delay-200">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : (
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
+            <Card className="animate-element animate-delay-200 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Entregas Asignadas</CardTitle>
                 <Package className="h-4 w-4 text-muted-foreground" />
@@ -513,7 +513,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-300 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Completadas</CardTitle>
                 <CheckCircle className="h-4 w-4 text-green-600" />
@@ -526,7 +526,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-400 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
                 <Clock className="h-4 w-4 text-orange-600" />
@@ -537,7 +537,7 @@ export default function Dashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="animate-element animate-delay-500 card-hover glass-card">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Eficiencia</CardTitle>
                 <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -637,7 +637,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="container mx-auto">
+    <div className="container mx-auto animate-element animate-delay-100">
       {getDashboard()}
     </div>
   );

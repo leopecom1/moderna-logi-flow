@@ -45,27 +45,31 @@ export const Header = () => {
   if (!profile) return null;
 
   return (
-    <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 animate-element animate-delay-100">
       <div className="h-full flex items-center justify-between px-4">
-        <div className="flex items-center gap-4">
-          <SidebarTrigger />
+        <div className="flex items-center gap-4 animate-element animate-delay-200">
+          <SidebarTrigger className="smooth-transition" />
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-semibold">MODERNA</h1>
-            <Badge variant="outline" className={getRoleColor(profile.role)}>
+            <img 
+              src="/lovable-uploads/629c5c32-2f75-4980-89b7-b7666a341b25.png" 
+              alt="RutaMOD Logo" 
+              className="h-8 w-auto object-contain"
+            />
+            <Badge variant="outline" className={`${getRoleColor(profile.role)} smooth-transition`}>
               {getRoleIcon(profile.role)}
               <span className="ml-1 capitalize">{profile.role}</span>
             </Badge>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
+        <div className="flex items-center gap-2 animate-element animate-delay-300">
+          <Button variant="ghost" size="icon" className="smooth-transition">
             <Bell className="h-4 w-4" />
           </Button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full smooth-transition">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback>
                     {profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
@@ -73,7 +77,7 @@ export const Header = () => {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent className="w-56 glass-card" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">{profile.full_name}</p>

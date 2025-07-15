@@ -209,6 +209,14 @@ All colors MUST be HSL.
   animation-delay: 0.7s;
 }
 
+.animate-delay-800 {
+  animation-delay: 0.8s;
+}
+
+.animate-delay-900 {
+  animation-delay: 0.9s;
+}
+
 .animate-delay-1000 {
   animation-delay: 1.0s;
 }
@@ -219,6 +227,46 @@ All colors MUST be HSL.
 
 .animate-delay-1400 {
   animation-delay: 1.4s;
+}
+
+/* Glassmorphism effect for cards and containers */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.glass-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.dark .glass-card {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .glass-card:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Smooth transitions for interactive elements */
+.smooth-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
 }
 
 .custom-checkbox {
