@@ -90,13 +90,14 @@ export const AssignOrdersModal = ({ open, onOpenChange, routeId, onOrdersAssigne
       if (ordersError) throw ordersError;
       console.log('Orders found:', ordersData?.length || 0);
 
-      // Get orders that already have deliveries
+      // Get orders that already have deliveries (excluding "no_entregado" ones)
       const { data: existingDeliveries } = await supabase
         .from('deliveries')
-        .select('order_id');
+        .select('order_id')
+        .neq('status', 'no_entregado'); // Exclude "no_entregado" deliveries
 
       const orderIdsWithDeliveries = existingDeliveries?.map(d => d.order_id) || [];
-      console.log('Orders with deliveries:', orderIdsWithDeliveries.length);
+      console.log('Orders with active deliveries:', orderIdsWithDeliveries.length);
       
       const availableOrders = ordersData?.filter(order => !orderIdsWithDeliveries.includes(order.id)) || [];
       console.log('Available orders after filtering:', availableOrders.length);
@@ -127,6 +128,13 @@ export const AssignOrdersModal = ({ open, onOpenChange, routeId, onOrdersAssigne
 
     try {
       setSubmitting(true);
+
+      // First, delete any existing "no_entregado" deliveries for selected orders
+      await supabase
+        .from('deliveries')
+        .delete()
+        .in('order_id', selectedOrders)
+        .eq('status', 'no_entregado');
 
       // Create deliveries for selected orders
       const deliveriesToCreate = selectedOrders.map(orderId => ({
