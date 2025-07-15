@@ -194,7 +194,16 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => {
+          // Prevent closing when clicking on Google Places dropdown
+          const target = e.target as Element;
+          if (target.closest('.pac-container') || target.closest('.pac-item')) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Package className="h-5 w-5" />
