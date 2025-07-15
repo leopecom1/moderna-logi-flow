@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Route, Plus, Clock, MapPin } from 'lucide-react';
+import { Route, Plus, Clock, MapPin, Eye } from 'lucide-react';
 import { CreateRouteModal } from '@/components/forms/CreateRouteModal';
 
 interface RouteData {
@@ -17,11 +18,13 @@ interface RouteData {
   end_time?: string;
   total_deliveries: number;
   completed_deliveries: number;
+  cadete_id: string;
   created_at: string;
 }
 
 const RoutesPage = () => {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -104,7 +107,7 @@ const RoutesPage = () => {
 
         <div className="grid gap-4">
           {routes.map((route) => (
-            <Card key={route.id}>
+            <Card key={route.id} className="cursor-pointer hover:shadow-md transition-shadow">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -158,9 +161,22 @@ const RoutesPage = () => {
                     </div>
                   </div>
                   
-                  <p className="text-sm text-muted-foreground">
-                    Creado: {new Date(route.created_at).toLocaleString()}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Creado: {new Date(route.created_at).toLocaleString()}
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/routes/${route.id}`);
+                      }}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver Detalle
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

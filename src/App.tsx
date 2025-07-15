@@ -10,6 +10,7 @@ import UsersPage from "./pages/UsersPage";
 import OrdersPage from "./pages/OrdersPage";
 import DeliveriesPage from "./pages/DeliveriesPage";
 import RoutesPage from "./pages/RoutesPage";
+import RouteDetailPage from "./pages/RouteDetailPage";
 import IncidentsPage from "./pages/IncidentsPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -52,6 +53,7 @@ function App() {
             <Route path="/vehiculos" element={<VehiculosPage />} />
             <Route path="/deliveries" element={<DeliveriesPage />} />
             <Route path="/routes" element={<RoutesPage />} />
+            <Route path="/routes/:id" element={<RouteDetailPage />} />
             <Route path="/incidents" element={<IncidentsPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
