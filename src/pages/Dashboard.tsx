@@ -1,4 +1,6 @@
 import { useAuth } from '@/hooks/useAuth';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -14,8 +16,194 @@ import {
   MapPin
 } from 'lucide-react';
 
+interface DashboardStats {
+  totalOrders: number;
+  completedDeliveries: number;
+  pendingDeliveries: number;
+  activeCadetes: number;
+  openIncidents: number;
+  todayRevenue: number;
+  weekRevenue: number;
+  monthRevenue: number;
+  myOrdersToday: number;
+  myPendingDeliveries: number;
+  myTodayRevenue: number;
+  myCustomersCount: number;
+  assignedDeliveries: number;
+  myCompletedDeliveries: number;
+  myPendingDeliveries_cadete: number;
+  activeRoutes: number;
+}
+
 export default function Dashboard() {
   const { profile } = useAuth();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalOrders: 0,
+    completedDeliveries: 0,
+    pendingDeliveries: 0,
+    activeCadetes: 0,
+    openIncidents: 0,
+    todayRevenue: 0,
+    weekRevenue: 0,
+    monthRevenue: 0,
+    myOrdersToday: 0,
+    myPendingDeliveries: 0,
+    myTodayRevenue: 0,
+    myCustomersCount: 0,
+    assignedDeliveries: 0,
+    myCompletedDeliveries: 0,
+    myPendingDeliveries_cadete: 0,
+    activeRoutes: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (profile?.user_id) {
+      fetchDashboardStats();
+    }
+  }, [profile?.user_id]);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      const today = new Date();
+      const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - 7);
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+      // Obtener estadísticas según el rol
+      if (profile?.role === 'gerencia') {
+        await fetchGerenciaStats(startOfToday, startOfWeek, startOfMonth);
+      } else if (profile?.role === 'vendedor') {
+        await fetchVendedorStats(startOfToday, startOfWeek, startOfMonth);
+      } else if (profile?.role === 'cadete') {
+        await fetchCadeteStats(startOfToday);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchGerenciaStats = async (today: Date, week: Date, month: Date) => {
+    // Total de pedidos
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('total_amount, created_at, status');
+
+    // Entregas completadas
+    const { data: deliveries } = await supabase
+      .from('deliveries')
+      .select('status, delivered_at');
+
+    // Cadetes activos
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'cadete')
+      .eq('is_active', true);
+
+    // Incidencias abiertas
+    const { data: incidents } = await supabase
+      .from('incidents')
+      .select('status')
+      .eq('status', 'abierto');
+
+    // Rutas activas
+    const { data: routes } = await supabase
+      .from('routes')
+      .select('*')
+      .is('end_time', null);
+
+    const totalOrders = orders?.length || 0;
+    const completedDeliveries = deliveries?.filter(d => d.status === 'entregado').length || 0;
+    const pendingDeliveries = deliveries?.filter(d => d.status === 'pendiente').length || 0;
+    const activeCadetes = profiles?.length || 0;
+    const openIncidents = incidents?.length || 0;
+    const activeRoutes = routes?.length || 0;
+
+    // Ingresos
+    const todayRevenue = orders?.filter(o => new Date(o.created_at) >= today)
+      .reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
+    const weekRevenue = orders?.filter(o => new Date(o.created_at) >= week)
+      .reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
+    const monthRevenue = orders?.filter(o => new Date(o.created_at) >= month)
+      .reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
+
+    setStats(prev => ({
+      ...prev,
+      totalOrders,
+      completedDeliveries,
+      pendingDeliveries,
+      activeCadetes,
+      openIncidents,
+      todayRevenue,
+      weekRevenue,
+      monthRevenue,
+      activeRoutes
+    }));
+  };
+
+  const fetchVendedorStats = async (today: Date, week: Date, month: Date) => {
+    // Mis pedidos
+    const { data: myOrders } = await supabase
+      .from('orders')
+      .select('id, total_amount, created_at, status')
+      .eq('seller_id', profile?.user_id);
+
+    // Mis entregas
+    const { data: myDeliveries } = await supabase
+      .from('deliveries')
+      .select('status, order_id')
+      .in('order_id', myOrders?.map(o => o.id) || []);
+
+    // Mis clientes únicos
+    const { data: myCustomers } = await supabase
+      .from('orders')
+      .select('customer_id')
+      .eq('seller_id', profile?.user_id);
+
+    const myOrdersToday = myOrders?.filter(o => new Date(o.created_at) >= today).length || 0;
+    const myPendingDeliveries = myDeliveries?.filter(d => d.status === 'pendiente').length || 0;
+    const myTodayRevenue = myOrders?.filter(o => new Date(o.created_at) >= today)
+      .reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
+    const uniqueCustomers = new Set(myCustomers?.map(c => c.customer_id));
+    const myCustomersCount = uniqueCustomers.size;
+
+    setStats(prev => ({
+      ...prev,
+      myOrdersToday,
+      myPendingDeliveries,
+      myTodayRevenue,
+      myCustomersCount
+    }));
+  };
+
+  const fetchCadeteStats = async (today: Date) => {
+    // Mis entregas asignadas
+    const { data: myDeliveries } = await supabase
+      .from('deliveries')
+      .select('status, delivered_at')
+      .eq('cadete_id', profile?.user_id);
+
+    const todayDeliveries = myDeliveries?.filter(d => {
+      const deliveryDate = d.delivered_at ? new Date(d.delivered_at) : new Date();
+      return deliveryDate >= today;
+    }) || [];
+
+    const assignedDeliveries = myDeliveries?.length || 0;
+    const myCompletedDeliveries = myDeliveries?.filter(d => d.status === 'entregado').length || 0;
+    const myPendingDeliveries_cadete = myDeliveries?.filter(d => d.status === 'pendiente').length || 0;
+
+    setStats(prev => ({
+      ...prev,
+      assignedDeliveries,
+      myCompletedDeliveries,
+      myPendingDeliveries_cadete
+    }));
+  };
 
   const getGerenciaDashboard = () => (
     <div className="space-y-6">
@@ -29,52 +217,64 @@ export default function Dashboard() {
         </Badge>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pedidos Totales</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,234</div>
-            <p className="text-xs text-muted-foreground">+12% desde el mes pasado</p>
-          </CardContent>
-        </Card>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pedidos Totales</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalOrders}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.pendingDeliveries} pendientes
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entregas Completadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">1,156</div>
-            <p className="text-xs text-muted-foreground">94% tasa de éxito</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Entregas Completadas</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.completedDeliveries}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.totalOrders > 0 ? Math.round((stats.completedDeliveries / stats.totalOrders) * 100) : 0}% tasa de éxito
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cadetes Activos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">+2 nuevos esta semana</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Cadetes Activos</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeCadetes}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.activeRoutes} rutas activas
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Incidencias</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">-3 desde ayer</p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Incidencias</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.openIncidents}</div>
+                <p className="text-xs text-muted-foreground">Abiertas</p>
+              </CardContent>
+            </Card>
+          </div>
 
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -120,24 +320,28 @@ export default function Dashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Hoy</span>
-                <span className="text-sm font-bold">$12,450</span>
+                <span className="text-sm font-bold">${stats.todayRevenue.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Esta semana</span>
-                <span className="text-sm font-bold">$89,320</span>
+                <span className="text-sm font-bold">${stats.weekRevenue.toFixed(2)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Este mes</span>
-                <span className="text-sm font-bold">$245,680</span>
+                <span className="text-sm font-bold">${stats.monthRevenue.toFixed(2)}</span>
               </div>
               <div className="flex items-center gap-2 pt-2">
                 <TrendingUp className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-green-600">+15% vs mes anterior</span>
+                <span className="text-sm text-green-600">
+                  Total entregas: {stats.completedDeliveries}
+                </span>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+        </>
+      )}
     </div>
   );
 
@@ -153,52 +357,58 @@ export default function Dashboard() {
         </Badge>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Mis Pedidos Hoy</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">18</div>
-            <p className="text-xs text-muted-foreground">+3 desde ayer</p>
-          </CardContent>
-        </Card>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Mis Pedidos Hoy</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.myOrdersToday}</div>
+                <p className="text-xs text-muted-foreground">Pedidos de hoy</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entregas Pendientes</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">En proceso</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Entregas Pendientes</CardTitle>
+                <Clock className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.myPendingDeliveries}</div>
+                <p className="text-xs text-muted-foreground">En proceso</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ventas del Día</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">$3,420</div>
-            <p className="text-xs text-muted-foreground">Meta: $4,000</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Ventas del Día</CardTitle>
+                <DollarSign className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">${stats.myTodayRevenue.toFixed(2)}</div>
+                <p className="text-xs text-muted-foreground">Ingresos de hoy</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes Atendidos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">+2 nuevos</p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Clientes Atendidos</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.myCustomersCount}</div>
+                <p className="text-xs text-muted-foreground">Clientes únicos</p>
+              </CardContent>
+            </Card>
+          </div>
 
       {/* Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -267,6 +477,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+        </>
+      )}
     </div>
   );
 
@@ -282,52 +494,62 @@ export default function Dashboard() {
         </Badge>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Entregas Asignadas</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">Para hoy</p>
-          </CardContent>
-        </Card>
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      ) : (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Entregas Asignadas</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.assignedDeliveries}</div>
+                <p className="text-xs text-muted-foreground">Total asignadas</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completadas</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">63% completado</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completadas</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.myCompletedDeliveries}</div>
+                <p className="text-xs text-muted-foreground">
+                  {stats.assignedDeliveries > 0 ? Math.round((stats.myCompletedDeliveries / stats.assignedDeliveries) * 100) : 0}% completado
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-            <Clock className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">3</div>
-            <p className="text-xs text-muted-foreground">Restantes</p>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
+                <Clock className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.myPendingDeliveries_cadete}</div>
+                <p className="text-xs text-muted-foreground">Restantes</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Kilómetros</CardTitle>
-            <MapPin className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">24.5</div>
-            <p className="text-xs text-muted-foreground">km recorridos</p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Eficiencia</CardTitle>
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {stats.assignedDeliveries > 0 ? Math.round((stats.myCompletedDeliveries / stats.assignedDeliveries) * 100) : 0}%
+                </div>
+                <p className="text-xs text-muted-foreground">Tasa de éxito</p>
+              </CardContent>
+            </Card>
+          </div>
 
       {/* Route Info */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -396,6 +618,8 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+        </>
+      )}
     </div>
   );
 
