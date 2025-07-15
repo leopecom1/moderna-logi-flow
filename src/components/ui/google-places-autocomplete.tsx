@@ -25,7 +25,6 @@ export const GooglePlacesAutocomplete = ({
   const autocompleteRef = useRef<any>(null);
   const [inputValue, setInputValue] = useState(value);
   const [isManualInput, setIsManualInput] = useState(false);
-  const [isSelectingFromDropdown, setIsSelectingFromDropdown] = useState(false);
 
   // Sync with external value
   useEffect(() => {
@@ -60,24 +59,16 @@ export const GooglePlacesAutocomplete = ({
       // Place changed event
       autocomplete.addListener('place_changed', () => {
         console.log('🎯 Place changed event triggered');
-        setIsSelectingFromDropdown(true);
         
         const place = autocomplete.getPlace();
         console.log('📍 Selected place:', place);
         
         if (place && place.formatted_address) {
           const address = place.formatted_address;
-          console.log('✅ Setting address from dropdown:', address);
+          console.log('✅ Setting address:', address);
           
           setInputValue(address);
           onChange(address, place);
-          
-          // Reset flag after a short delay to allow the selection to complete
-          setTimeout(() => {
-            setIsSelectingFromDropdown(false);
-          }, 100);
-        } else {
-          setIsSelectingFromDropdown(false);
         }
       });
 
@@ -142,14 +133,7 @@ export const GooglePlacesAutocomplete = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    console.log('⌨️ Input changed:', newValue, 'isSelectingFromDropdown:', isSelectingFromDropdown);
-    
-    // Don't override if user is selecting from dropdown
-    if (isSelectingFromDropdown) {
-      console.log('🚫 Ignoring input change - selecting from dropdown');
-      return;
-    }
-    
+    console.log('⌨️ Input changed:', newValue);
     setInputValue(newValue);
     onChange(newValue);
   };
