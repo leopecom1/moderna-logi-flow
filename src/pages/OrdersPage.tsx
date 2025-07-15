@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Search } from 'lucide-react';
+import { Package, Plus, Search, Edit3 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
+import { EditOrderModal } from '@/components/forms/EditOrderModal';
 
 interface Order {
   id: string;
@@ -31,6 +32,8 @@ const OrdersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string>('');
 
   useEffect(() => {
     fetchOrders();
@@ -121,8 +124,7 @@ const OrdersPage = () => {
           {filteredOrders.map((order) => (
             <Card 
               key={order.id} 
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => navigate(`/orders/${order.id}`)}
+              className="hover:shadow-md transition-shadow"
             >
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -133,9 +135,24 @@ const OrdersPage = () => {
                       {order.status}
                     </Badge>
                   </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold">${order.total_amount}</p>
-                    <p className="text-sm text-muted-foreground">{order.payment_method}</p>
+                  <div className="flex items-center space-x-2">
+                    <div className="text-right">
+                      <p className="text-2xl font-bold">${order.total_amount}</p>
+                      <p className="text-sm text-muted-foreground">{order.payment_method}</p>
+                    </div>
+                    {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedOrderId(order.id);
+                          setShowEditModal(true);
+                        }}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <CardDescription>
@@ -149,6 +166,16 @@ const OrdersPage = () => {
                   <p className="text-sm text-muted-foreground">
                     Creado: {new Date(order.created_at).toLocaleString()}
                   </p>
+                </div>
+                <div className="mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/orders/${order.id}`)}
+                    className="w-full"
+                  >
+                    Ver Detalles
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -170,6 +197,13 @@ const OrdersPage = () => {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onOrderCreated={fetchOrders}
+      />
+      
+      <EditOrderModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        onOrderUpdated={fetchOrders}
+        orderId={selectedOrderId}
       />
     </MainLayout>
   );

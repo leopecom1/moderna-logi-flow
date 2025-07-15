@@ -5,7 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Truck, MapPin, Clock, Plus } from 'lucide-react';
+import { Truck, MapPin, Clock, Plus, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CreateDeliveryModal } from '@/components/forms/CreateDeliveryModal';
 
@@ -74,10 +74,37 @@ const DeliveriesPage = () => {
         return 'bg-blue-100 text-blue-800';
       case 'entregado':
         return 'bg-green-100 text-green-800';
-      case 'fallido':
+      case 'no_entregado':
         return 'bg-red-100 text-red-800';
+      case 'con_demora':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleDisableDelivery = async (deliveryId: string) => {
+    try {
+      const { error } = await supabase
+        .from('deliveries')
+        .update({ status: 'no_entregado' })
+        .eq('id', deliveryId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Entrega deshabilitada',
+        description: 'La entrega ha sido marcada como no entregada',
+      });
+
+      fetchDeliveries();
+    } catch (error) {
+      console.error('Error disabling delivery:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo deshabilitar la entrega',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -121,11 +148,24 @@ const DeliveriesPage = () => {
                       {delivery.status}
                     </Badge>
                   </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold">${delivery.orders.total_amount}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Cadete: Asignado
-                    </p>
+                  <div className="flex items-center space-x-2">
+                    <div className="text-right">
+                      <p className="text-lg font-bold">${delivery.orders.total_amount}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Cadete: Asignado
+                      </p>
+                    </div>
+                    {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && 
+                     delivery.status !== 'no_entregado' && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDisableDelivery(delivery.id)}
+                        className="text-red-600 hover:text-red-700"
+                      >
+                        <Ban className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <CardDescription className="flex items-center space-x-1">
