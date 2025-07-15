@@ -14,6 +14,7 @@ interface SignInPageProps {
   title?: React.ReactNode;
   description?: React.ReactNode;
   heroImageSrc?: string;
+  heroVideoSrc?: string;
   testimonials?: Testimonial[];
   onSignIn?: (event: React.FormEvent<HTMLFormElement>) => void;
   onResetPassword?: () => void;
@@ -45,6 +46,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
   title = <span className="font-light text-foreground tracking-tighter">Bienvenido</span>,
   description = "Accede a tu cuenta para continuar con tu trabajo",
   heroImageSrc,
+  heroVideoSrc,
   testimonials = [],
   onSignIn,
   onResetPassword,
@@ -101,10 +103,23 @@ export const SignInPage: React.FC<SignInPageProps> = ({
         </div>
       </section>
 
-      {/* Right column: hero image only */}
-      {heroImageSrc && (
+      {/* Right column: hero video or image */}
+      {(heroVideoSrc || heroImageSrc) && (
         <section className="hidden md:block flex-1 relative p-4">
-          <div className="animate-slide-right animate-delay-300 absolute inset-4 rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${heroImageSrc})` }}></div>
+          <div className="animate-slide-right animate-delay-300 absolute inset-4 rounded-3xl overflow-hidden">
+            {heroVideoSrc ? (
+              <video
+                src={heroVideoSrc}
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${heroImageSrc})` }}></div>
+            )}
+          </div>
         </section>
       )}
     </div>

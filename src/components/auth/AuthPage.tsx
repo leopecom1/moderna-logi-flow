@@ -212,7 +212,7 @@ export const AuthPage = () => {
         </div>
       }
       description="Sistema de Logística - Accede a tu cuenta para continuar"
-      heroImageSrc="https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=2160&q=80"
+      heroVideoSrc="https://ndusxjrjrjpauuqeruzg.supabase.co/storage/v1/object/public/media//0715.mp4"
       testimonials={testimonials}
       onSignIn={handleSignIn}
       onResetPassword={() => {
