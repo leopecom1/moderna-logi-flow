@@ -69,18 +69,41 @@ export default function OrderDetailPage() {
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Primero obtenemos el pedido
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          customer:customers(*),
-          seller:profiles!seller_id(*)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
 
-      if (error) throw error;
-      setOrder(data as any);
+      if (orderError) throw orderError;
+
+      // Luego obtenemos el cliente
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', orderData.customer_id)
+        .single();
+
+      if (customerError) throw customerError;
+
+      // Obtenemos el vendedor
+      const { data: sellerData, error: sellerError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', orderData.seller_id)
+        .single();
+
+      if (sellerError) throw sellerError;
+
+      // Combinamos los datos
+      const combinedData = {
+        ...orderData,
+        customer: customerData,
+        seller: sellerData
+      };
+
+      setOrder(combinedData as any);
     } catch (error) {
       console.error('Error fetching order detail:', error);
       toast({
