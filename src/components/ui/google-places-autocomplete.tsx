@@ -21,13 +21,11 @@ export const GooglePlacesAutocomplete = ({
   const { isLoaded, loadError } = useGoogleMaps();
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
-  const [displayValue, setDisplayValue] = useState(value);
+  const [inputValue, setInputValue] = useState(value);
 
   // Sync with external value
   useEffect(() => {
-    if (value !== displayValue) {
-      setDisplayValue(value);
-    }
+    setInputValue(value);
   }, [value]);
 
   // Initialize autocomplete
@@ -36,13 +34,13 @@ export const GooglePlacesAutocomplete = ({
       return;
     }
 
-    if (!window.google?.maps?.places) {
-      console.error('Google Maps Places API not loaded');
+    if (!window.google?.maps?.places?.Autocomplete) {
+      console.error('Google Maps Places Autocomplete not available');
       return;
     }
 
     try {
-      console.log('Initializing Google Places Autocomplete...');
+      console.log('🗺️ Initializing Google Places Autocomplete...');
       
       const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
         types: ['address'],
@@ -50,24 +48,41 @@ export const GooglePlacesAutocomplete = ({
         fields: ['formatted_address', 'geometry', 'address_components', 'place_id']
       });
 
-      // Set up the place changed listener
-      const handlePlaceChanged = () => {
+      // Set up the place changed listener with immediate execution
+      autocomplete.addListener('place_changed', () => {
+        console.log('🎯 Place changed event triggered');
+        
         const place = autocomplete.getPlace();
-        console.log('Place changed:', place);
+        console.log('📍 Selected place:', place);
         
         if (place && place.formatted_address) {
-          console.log('Setting address:', place.formatted_address);
-          setDisplayValue(place.formatted_address);
-          onChange(place.formatted_address, place);
+          const address = place.formatted_address;
+          console.log('✅ Updating address to:', address);
+          
+          // Update local state immediately
+          setInputValue(address);
+          
+          // Force update the input element
+          if (inputRef.current) {
+            inputRef.current.value = address;
+          }
+          
+          // Call the onChange callback with both address and place details
+          try {
+            onChange(address, place);
+            console.log('✅ onChange called successfully');
+          } catch (error) {
+            console.error('❌ Error calling onChange:', error);
+          }
+        } else {
+          console.log('⚠️ Place has no formatted_address:', place);
         }
-      };
+      });
 
-      autocomplete.addListener('place_changed', handlePlaceChanged);
       autocompleteRef.current = autocomplete;
-
-      console.log('Google Places Autocomplete initialized successfully');
+      console.log('✅ Google Places Autocomplete initialized successfully');
     } catch (error) {
-      console.error('Error initializing Google Places Autocomplete:', error);
+      console.error('❌ Error initializing Google Places Autocomplete:', error);
     }
 
     return () => {
@@ -77,101 +92,125 @@ export const GooglePlacesAutocomplete = ({
             window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
           }
           autocompleteRef.current = null;
+          console.log('🧹 Autocomplete cleaned up');
         } catch (error) {
-          console.error('Error cleaning up autocomplete:', error);
+          console.error('❌ Error cleaning up autocomplete:', error);
         }
       }
     };
   }, [isLoaded, disabled, onChange]);
 
-  // Set up CSS styles for dropdown
+  // Enhanced CSS for dropdown visibility
   useEffect(() => {
     if (!isLoaded) return;
 
-    const styleId = 'google-places-styles';
+    const styleId = 'google-places-enhanced-styles';
     if (document.getElementById(styleId)) return;
 
     const style = document.createElement('style');
     style.id = styleId;
     style.textContent = `
       .pac-container {
-        z-index: 99999 !important;
-        border-radius: 6px !important;
-        border: 1px solid #e5e7eb !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-        background: white !important;
+        z-index: 999999 !important;
+        border-radius: 8px !important;
+        border: 2px solid #3b82f6 !important;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        background: #ffffff !important;
         font-family: inherit !important;
-        margin-top: 4px !important;
-        overflow: hidden !important;
+        margin-top: 8px !important;
+        overflow: visible !important;
+        min-width: 300px !important;
       }
       .pac-item {
-        padding: 12px 16px !important;
-        border-bottom: 1px solid #f3f4f6 !important;
+        padding: 16px 20px !important;
+        border-bottom: 1px solid #e5e7eb !important;
         cursor: pointer !important;
         font-size: 14px !important;
-        line-height: 1.4 !important;
-        color: #374151 !important;
-        background: white !important;
-        transition: background-color 0.2s ease !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
+        line-height: 1.5 !important;
+        color: #1f2937 !important;
+        background: #ffffff !important;
+        transition: all 0.2s ease !important;
+        display: block !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
       }
       .pac-item:hover {
-        background: #f9fafb !important;
+        background: #3b82f6 !important;
+        color: #ffffff !important;
+      }
+      .pac-item:active {
+        background: #1d4ed8 !important;
+        color: #ffffff !important;
       }
       .pac-item:last-child {
         border-bottom: none !important;
+        border-radius: 0 0 8px 8px !important;
+      }
+      .pac-item:first-child {
+        border-radius: 8px 8px 0 0 !important;
       }
       .pac-item-selected {
-        background: #f3f4f6 !important;
+        background: #3b82f6 !important;
+        color: #ffffff !important;
       }
       .pac-matched {
         font-weight: 600 !important;
-        color: #1f2937 !important;
       }
       .pac-icon {
-        margin-right: 8px !important;
+        margin-right: 12px !important;
+        width: 20px !important;
+        height: 20px !important;
       }
       .pac-item-query {
-        color: #6b7280 !important;
+        color: inherit !important;
       }
     `;
     document.head.appendChild(style);
 
     return () => {
       const existingStyle = document.getElementById(styleId);
-      if (existingStyle) {
-        existingStyle.remove();
+      if (existingStyle && document.head.contains(existingStyle)) {
+        document.head.removeChild(existingStyle);
       }
     };
   }, [isLoaded]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-    setDisplayValue(newValue);
+    console.log('⌨️ Input changed to:', newValue);
+    setInputValue(newValue);
     onChange(newValue);
   };
 
   const handleInputFocus = () => {
-    console.log('Input focused');
-    if (autocompleteRef.current) {
-      console.log('Autocomplete already exists');
-    }
+    console.log('🎯 Input focused');
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      // Don't submit form when pressing Enter in autocomplete
-    }
+  const handleInputClick = () => {
+    console.log('🖱️ Input clicked');
   };
+
+  // Add a global click listener to debug pac-item clicks
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target && target.classList.contains('pac-item')) {
+        console.log('🖱️ PAC item clicked:', target.textContent);
+      }
+    };
+
+    document.addEventListener('click', handleDocumentClick, true);
+    
+    return () => {
+      document.removeEventListener('click', handleDocumentClick, true);
+    };
+  }, []);
 
   if (loadError) {
-    console.error('Google Maps load error:', loadError);
+    console.error('❌ Google Maps load error:', loadError);
     return (
       <Input
-        value={displayValue}
+        value={inputValue}
         onChange={handleInputChange}
         placeholder={placeholder}
         className={className}
@@ -193,10 +232,10 @@ export const GooglePlacesAutocomplete = ({
   return (
     <Input
       ref={inputRef}
-      value={displayValue}
+      value={inputValue}
       onChange={handleInputChange}
       onFocus={handleInputFocus}
-      onKeyDown={handleKeyDown}
+      onClick={handleInputClick}
       placeholder={placeholder}
       className={cn("w-full", className)}
       disabled={disabled}
