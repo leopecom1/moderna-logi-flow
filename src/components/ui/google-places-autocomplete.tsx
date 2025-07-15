@@ -28,19 +28,19 @@ export const GooglePlacesAutocomplete = ({
     setInputValue(value);
   }, [value]);
 
-  // Initialize autocomplete
+  // Initialize autocomplete with multiple event listeners
   useEffect(() => {
     if (!isLoaded || !inputRef.current || disabled || autocompleteRef.current) {
       return;
     }
 
     if (!window.google?.maps?.places?.Autocomplete) {
-      console.error('Google Maps Places Autocomplete not available');
+      console.error('❌ Google Maps Places Autocomplete not available');
       return;
     }
 
     try {
-      console.log('🗺️ Initializing Google Places Autocomplete...');
+      console.log('🗺️ Initializing Google Places Autocomplete with enhanced event handling...');
       
       const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
         types: ['address'],
@@ -48,41 +48,73 @@ export const GooglePlacesAutocomplete = ({
         fields: ['formatted_address', 'geometry', 'address_components', 'place_id']
       });
 
-      // Set up the place changed listener with immediate execution
-      autocomplete.addListener('place_changed', () => {
-        console.log('🎯 Place changed event triggered');
+      // Multiple event listeners for better detection
+      const handlePlaceChanged = () => {
+        console.log('🎯 PLACE_CHANGED EVENT TRIGGERED!');
         
         const place = autocomplete.getPlace();
-        console.log('📍 Selected place:', place);
+        console.log('📍 Place object:', place);
         
         if (place && place.formatted_address) {
           const address = place.formatted_address;
-          console.log('✅ Updating address to:', address);
+          console.log('✅ Setting address to:', address);
           
-          // Update local state immediately
+          // Update everything immediately
           setInputValue(address);
           
-          // Force update the input element
+          // Force update input element
           if (inputRef.current) {
             inputRef.current.value = address;
+            inputRef.current.blur(); // Remove focus to trigger any change events
           }
           
-          // Call the onChange callback with both address and place details
-          try {
+          // Call onChange with delay to ensure everything is updated
+          setTimeout(() => {
             onChange(address, place);
-            console.log('✅ onChange called successfully');
-          } catch (error) {
-            console.error('❌ Error calling onChange:', error);
-          }
+            console.log('✅ onChange called with:', address);
+          }, 0);
         } else {
-          console.log('⚠️ Place has no formatted_address:', place);
+          console.log('⚠️ Place has no formatted_address');
         }
+      };
+
+      autocomplete.addListener('place_changed', handlePlaceChanged);
+      
+      // Additional listeners for debugging
+      autocomplete.addListener('places_changed', () => {
+        console.log('🔄 places_changed event');
       });
 
       autocompleteRef.current = autocomplete;
-      console.log('✅ Google Places Autocomplete initialized successfully');
+      console.log('✅ Autocomplete with enhanced events initialized');
+
+      // Also listen for clicks on pac-items directly
+      const handlePacItemClick = (e: Event) => {
+        const target = e.target as HTMLElement;
+        if (target && (target.classList.contains('pac-item') || target.closest('.pac-item'))) {
+          console.log('🖱️ Direct PAC item click detected!');
+          
+          // Small delay to let Google handle the click first
+          setTimeout(() => {
+            const place = autocomplete.getPlace();
+            console.log('📍 Place from direct click:', place);
+            
+            if (place && place.formatted_address) {
+              handlePlaceChanged();
+            }
+          }, 100);
+        }
+      };
+
+      // Listen for clicks on the document to catch pac-item clicks
+      document.addEventListener('click', handlePacItemClick, true);
+      
+      return () => {
+        document.removeEventListener('click', handlePacItemClick, true);
+      };
+
     } catch (error) {
-      console.error('❌ Error initializing Google Places Autocomplete:', error);
+      console.error('❌ Error initializing autocomplete:', error);
     }
 
     return () => {
@@ -94,17 +126,17 @@ export const GooglePlacesAutocomplete = ({
           autocompleteRef.current = null;
           console.log('🧹 Autocomplete cleaned up');
         } catch (error) {
-          console.error('❌ Error cleaning up autocomplete:', error);
+          console.error('❌ Error cleaning up:', error);
         }
       }
     };
   }, [isLoaded, disabled, onChange]);
 
-  // Enhanced CSS for dropdown visibility
+  // Enhanced CSS with better interaction
   useEffect(() => {
     if (!isLoaded) return;
 
-    const styleId = 'google-places-enhanced-styles';
+    const styleId = 'google-places-super-enhanced';
     if (document.getElementById(styleId)) return;
 
     const style = document.createElement('style');
@@ -112,57 +144,73 @@ export const GooglePlacesAutocomplete = ({
     style.textContent = `
       .pac-container {
         z-index: 999999 !important;
-        border-radius: 8px !important;
-        border: 2px solid #3b82f6 !important;
-        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        border-radius: 12px !important;
+        border: 3px solid #ef4444 !important;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
         background: #ffffff !important;
         font-family: inherit !important;
         margin-top: 8px !important;
         overflow: visible !important;
-        min-width: 300px !important;
+        min-width: 350px !important;
+        position: absolute !important;
       }
       .pac-item {
-        padding: 16px 20px !important;
-        border-bottom: 1px solid #e5e7eb !important;
+        padding: 20px 24px !important;
+        border-bottom: 2px solid #f3f4f6 !important;
         cursor: pointer !important;
-        font-size: 14px !important;
-        line-height: 1.5 !important;
+        font-size: 16px !important;
+        font-weight: 500 !important;
+        line-height: 1.6 !important;
         color: #1f2937 !important;
         background: #ffffff !important;
-        transition: all 0.2s ease !important;
+        transition: all 0.3s ease !important;
         display: block !important;
         width: 100% !important;
         box-sizing: border-box !important;
+        position: relative !important;
+        user-select: none !important;
+        -webkit-tap-highlight-color: transparent !important;
       }
       .pac-item:hover {
-        background: #3b82f6 !important;
+        background: #ef4444 !important;
         color: #ffffff !important;
+        transform: translateX(4px) !important;
+        box-shadow: inset 4px 0 0 #dc2626 !important;
       }
       .pac-item:active {
-        background: #1d4ed8 !important;
+        background: #dc2626 !important;
         color: #ffffff !important;
+        transform: translateX(6px) !important;
       }
       .pac-item:last-child {
         border-bottom: none !important;
-        border-radius: 0 0 8px 8px !important;
+        border-radius: 0 0 12px 12px !important;
       }
       .pac-item:first-child {
-        border-radius: 8px 8px 0 0 !important;
+        border-radius: 12px 12px 0 0 !important;
       }
       .pac-item-selected {
-        background: #3b82f6 !important;
+        background: #ef4444 !important;
         color: #ffffff !important;
+        transform: translateX(4px) !important;
       }
       .pac-matched {
-        font-weight: 600 !important;
+        font-weight: 700 !important;
+        text-decoration: underline !important;
       }
       .pac-icon {
-        margin-right: 12px !important;
-        width: 20px !important;
-        height: 20px !important;
+        margin-right: 16px !important;
+        width: 24px !important;
+        height: 24px !important;
+        filter: brightness(0) invert(1) !important;
       }
       .pac-item-query {
         color: inherit !important;
+      }
+      .pac-item::before {
+        content: "📍" !important;
+        margin-right: 8px !important;
+        font-size: 18px !important;
       }
     `;
     document.head.appendChild(style);
@@ -190,21 +238,15 @@ export const GooglePlacesAutocomplete = ({
     console.log('🖱️ Input clicked');
   };
 
-  // Add a global click listener to debug pac-item clicks
-  useEffect(() => {
-    const handleDocumentClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (target && target.classList.contains('pac-item')) {
-        console.log('🖱️ PAC item clicked:', target.textContent);
-      }
-    };
-
-    document.addEventListener('click', handleDocumentClick, true);
-    
-    return () => {
-      document.removeEventListener('click', handleDocumentClick, true);
-    };
-  }, []);
+  const handleInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      console.log('⏎ Enter pressed - preventing form submission');
+    }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      console.log('⬆️⬇️ Arrow key pressed:', e.key);
+    }
+  };
 
   if (loadError) {
     console.error('❌ Google Maps load error:', loadError);
@@ -236,6 +278,7 @@ export const GooglePlacesAutocomplete = ({
       onChange={handleInputChange}
       onFocus={handleInputFocus}
       onClick={handleInputClick}
+      onKeyDown={handleInputKeyDown}
       placeholder={placeholder}
       className={cn("w-full", className)}
       disabled={disabled}
