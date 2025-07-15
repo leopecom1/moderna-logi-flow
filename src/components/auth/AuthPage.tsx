@@ -97,20 +97,7 @@ export const AuthPage = () => {
     }
   };
 
-  const testimonials = [
-    {
-      avatarSrc: "https://randomuser.me/api/portraits/men/64.jpg",
-      name: "Marcus Johnson",
-      handle: "@marcustech",
-      text: "This service has transformed how I work. Clean design, powerful features, and excellent support."
-    },
-    {
-      avatarSrc: "https://randomuser.me/api/portraits/men/32.jpg", 
-      name: "David Martinez",
-      handle: "@davidcreates",
-      text: "I've tried many platforms, but this one stands out. Intuitive, reliable, and genuinely helpful for productivity."
-    }
-  ];
+  const testimonials: never[] = []; // Sin testimoniales
 
   if (showSignup) {
     return (

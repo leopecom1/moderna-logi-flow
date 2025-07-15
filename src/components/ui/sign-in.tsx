@@ -42,8 +42,8 @@ const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, del
 // --- MAIN COMPONENT ---
 
 export const SignInPage: React.FC<SignInPageProps> = ({
-  title = <span className="font-light text-foreground tracking-tighter">Welcome</span>,
-  description = "Access your account and continue your journey with us",
+  title = <span className="font-light text-foreground tracking-tighter">Bienvenido</span>,
+  description = "Accede a tu cuenta para continuar con tu trabajo",
   heroImageSrc,
   testimonials = [],
   onSignIn,
@@ -63,17 +63,17 @@ export const SignInPage: React.FC<SignInPageProps> = ({
 
             <form className="space-y-5" onSubmit={onSignIn}>
               <div className="animate-element animate-delay-300">
-                <label className="text-sm font-medium text-muted-foreground">Email Address</label>
+                <label className="text-sm font-medium text-muted-foreground">Correo Electrónico</label>
                 <GlassInputWrapper>
-                  <input name="email" type="email" placeholder="Enter your email address" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none" />
+                  <input name="email" type="email" placeholder="Ingresa tu correo electrónico" className="w-full bg-transparent text-sm p-4 rounded-2xl focus:outline-none" />
                 </GlassInputWrapper>
               </div>
 
               <div className="animate-element animate-delay-400">
-                <label className="text-sm font-medium text-muted-foreground">Password</label>
+                <label className="text-sm font-medium text-muted-foreground">Contraseña</label>
                 <GlassInputWrapper>
                   <div className="relative">
-                    <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Enter your password" className="w-full bg-transparent text-sm p-4 pr-12 rounded-2xl focus:outline-none" />
+                    <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Ingresa tu contraseña" className="w-full bg-transparent text-sm p-4 pr-12 rounded-2xl focus:outline-none" />
                     <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-3 flex items-center">
                       {showPassword ? <EyeOff className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" /> : <Eye className="w-5 h-5 text-muted-foreground hover:text-foreground transition-colors" />}
                     </button>
@@ -84,34 +84,27 @@ export const SignInPage: React.FC<SignInPageProps> = ({
               <div className="animate-element animate-delay-500 flex items-center justify-between text-sm">
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input type="checkbox" name="rememberMe" className="custom-checkbox" />
-                  <span className="text-foreground/90">Keep me signed in</span>
+                  <span className="text-foreground/90">Mantenerme conectado</span>
                 </label>
-                <a href="#" onClick={(e) => { e.preventDefault(); onResetPassword?.(); }} className="hover:underline text-primary transition-colors">Reset password</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); onResetPassword?.(); }} className="hover:underline text-primary transition-colors">Recuperar contraseña</a>
               </div>
 
               <button type="submit" className="animate-element animate-delay-600 w-full rounded-2xl bg-primary py-4 font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-                Sign In
+                Iniciar Sesión
               </button>
             </form>
 
             <p className="animate-element animate-delay-700 text-center text-sm text-muted-foreground">
-              New to our platform? <a href="#" onClick={(e) => { e.preventDefault(); onCreateAccount?.(); }} className="text-primary hover:underline transition-colors">Create Account</a>
+              ¿Nuevo en nuestra plataforma? <a href="#" onClick={(e) => { e.preventDefault(); onCreateAccount?.(); }} className="text-primary hover:underline transition-colors">Crear Cuenta</a>
             </p>
           </div>
         </div>
       </section>
 
-      {/* Right column: hero image + testimonials */}
+      {/* Right column: hero image only */}
       {heroImageSrc && (
         <section className="hidden md:block flex-1 relative p-4">
           <div className="animate-slide-right animate-delay-300 absolute inset-4 rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${heroImageSrc})` }}></div>
-          {testimonials.length > 0 && (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 px-8 w-full justify-center">
-              <TestimonialCard testimonial={testimonials[0]} delay="animate-delay-1000" />
-              {testimonials[1] && <div className="hidden xl:flex"><TestimonialCard testimonial={testimonials[1]} delay="animate-delay-1200" /></div>}
-              {testimonials[2] && <div className="hidden 2xl:flex"><TestimonialCard testimonial={testimonials[2]} delay="animate-delay-1400" /></div>}
-            </div>
-          )}
         </section>
       )}
     </div>
