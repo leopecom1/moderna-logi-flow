@@ -16,6 +16,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ReportsPage from "./pages/ReportsPage";
 import { CustomersPage } from "./pages/CustomersPage";
 import CadetesPage from "./pages/CadetesPage";
+import CadeteDetailPage from "./pages/CadeteDetailPage";
 import VehiculosPage from "./pages/VehiculosPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
@@ -45,6 +46,7 @@ function App() {
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/cadetes" element={<CadetesPage />} />
+            <Route path="/cadetes/:id" element={<CadeteDetailPage />} />
             <Route path="/vehiculos" element={<VehiculosPage />} />
             <Route path="/deliveries" element={<DeliveriesPage />} />
             <Route path="/routes" element={<RoutesPage />} />

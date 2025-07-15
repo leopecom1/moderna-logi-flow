@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ interface CadeteProfile {
 }
 
 export default function CadetesPage() {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const [cadetes, setCadetes] = useState<CadeteProfile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +173,11 @@ export default function CadetesPage() {
 
       <div className="grid gap-4">
         {filteredCadetes.map((cadete) => (
-          <Card key={cadete.id} className="hover:shadow-md transition-shadow">
+          <Card 
+            key={cadete.id} 
+            className="hover:shadow-md transition-shadow cursor-pointer"
+            onClick={() => navigate(`/cadetes/${cadete.cadete_id}`)}
+          >
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">{cadete.profile?.full_name}</CardTitle>
