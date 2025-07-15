@@ -69,8 +69,18 @@ export const GooglePlacesAutocomplete = ({
           
           setInputValue(address);
           onChange(address, place);
+        } else {
+          console.log('⚠️ No valid place selected');
         }
       });
+
+      // Add click debugging
+      const container = document.querySelector('.pac-container');
+      if (container) {
+        container.addEventListener('click', (e) => {
+          console.log('🖱️ Click detected on pac-container:', e.target);
+        });
+      }
 
       autocompleteRef.current = autocomplete;
       console.log('✅ Autocomplete initialized successfully');
@@ -108,13 +118,19 @@ export const GooglePlacesAutocomplete = ({
         border: 1px solid #e2e8f0 !important;
         border-radius: 8px !important;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-        position: fixed !important;
-        margin-top: -200px !important;
+        position: absolute !important;
+        bottom: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        margin-bottom: 8px !important;
+        max-height: 200px !important;
+        overflow-y: auto !important;
       }
       .pac-item {
         padding: 8px 12px !important;
         border-bottom: 1px solid #f1f5f9 !important;
         cursor: pointer !important;
+        background: white !important;
       }
       .pac-item:hover {
         background-color: #f8fafc !important;
@@ -201,16 +217,18 @@ export const GooglePlacesAutocomplete = ({
         </label>
       </div>
       
-      <Input
-        ref={inputRef}
-        value={inputValue}
-        onChange={handleInputChange}
-        onFocus={handleInputFocus}
-        placeholder={isManualInput ? "Escriba la dirección completa..." : placeholder}
-        className={cn("w-full", className)}
-        disabled={disabled}
-        autoComplete="off"
-      />
+      <div className="relative">
+        <Input
+          ref={inputRef}
+          value={inputValue}
+          onChange={handleInputChange}
+          onFocus={handleInputFocus}
+          placeholder={isManualInput ? "Escriba la dirección completa..." : placeholder}
+          className={cn("w-full", className)}
+          disabled={disabled}
+          autoComplete="off"
+        />
+      </div>
     </div>
   );
 };
