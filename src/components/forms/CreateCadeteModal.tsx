@@ -67,58 +67,40 @@ export const CreateCadeteModal = ({ open, onOpenChange, onCadeteCreated }: Creat
     try {
       setLoading(true);
 
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        user_metadata: {
-          full_name: formData.full_name,
-          role: 'cadete'
+      // Call the edge function to create the cadete
+      const { data, error } = await supabase.functions.invoke('create-cadete', {
+        body: {
+          cadeteData: {
+            email: formData.email,
+            password: formData.password,
+            full_name: formData.full_name,
+            phone: formData.phone,
+            driver_license_number: formData.driver_license_number,
+            driver_license_category: formData.driver_license_category,
+            driver_license_expiry: formData.driver_license_expiry,
+            emergency_contact_name: formData.emergency_contact_name,
+            emergency_contact_phone: formData.emergency_contact_phone,
+            emergency_contact_relation: formData.emergency_contact_relation,
+            health_insurance_company: formData.health_insurance_company,
+            health_insurance_number: formData.health_insurance_number,
+            address: formData.address,
+            neighborhood: formData.neighborhood,
+            city: formData.city,
+            departamento: formData.departamento,
+            bank_account_number: formData.bank_account_number,
+            bank_name: formData.bank_name,
+            date_of_birth: formData.date_of_birth,
+            identification_number: formData.identification_number,
+            marital_status: formData.marital_status,
+          }
         }
       });
 
-      if (authError) throw authError;
+      if (error) throw error;
 
-      const userId = authData.user.id;
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert([{
-          user_id: userId,
-          full_name: formData.full_name,
-          phone: formData.phone,
-          role: 'cadete',
-          is_active: true,
-        }]);
-
-      if (profileError) throw profileError;
-
-      // Create extended cadete profile
-      const { error: cadeteProfileError } = await supabase
-        .from('cadete_profiles')
-        .insert([{
-          cadete_id: userId,
-          driver_license_number: formData.driver_license_number,
-          driver_license_category: formData.driver_license_category,
-          driver_license_expiry: formData.driver_license_expiry || null,
-          emergency_contact_name: formData.emergency_contact_name,
-          emergency_contact_phone: formData.emergency_contact_phone,
-          emergency_contact_relation: formData.emergency_contact_relation,
-          health_insurance_company: formData.health_insurance_company,
-          health_insurance_number: formData.health_insurance_number,
-          address: formData.address,
-          neighborhood: formData.neighborhood,
-          city: formData.city,
-          departamento: formData.departamento,
-          bank_account_number: formData.bank_account_number,
-          bank_name: formData.bank_name,
-          date_of_birth: formData.date_of_birth || null,
-          identification_number: formData.identification_number,
-          marital_status: formData.marital_status,
-        }]);
-
-      if (cadeteProfileError) throw cadeteProfileError;
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       toast({
         title: 'Cadete creado',
