@@ -106,14 +106,16 @@ export const GooglePlacesAutocomplete = ({
     style.id = styleId;
     style.textContent = `
       .pac-container {
-        z-index: 99999 !important;
+        z-index: 999999 !important;
         background: white !important;
         border: 1px solid #e2e8f0 !important;
         border-radius: 8px !important;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
         margin-top: 4px !important;
         max-height: 200px !important;
         overflow-y: auto !important;
+        position: fixed !important;
+        pointer-events: auto !important;
       }
       .pac-item {
         padding: 12px 16px !important;
@@ -121,6 +123,9 @@ export const GooglePlacesAutocomplete = ({
         cursor: pointer !important;
         background: white !important;
         line-height: 1.4 !important;
+        pointer-events: auto !important;
+        position: relative !important;
+        z-index: 999999 !important;
       }
       .pac-item:hover {
         background-color: #f8fafc !important;
@@ -131,10 +136,15 @@ export const GooglePlacesAutocomplete = ({
       .pac-item-query {
         font-size: 14px !important;
         color: #1f2937 !important;
+        pointer-events: auto !important;
       }
       .pac-matched {
         font-weight: 600 !important;
         color: #2563eb !important;
+        pointer-events: auto !important;
+      }
+      .pac-item * {
+        pointer-events: none !important;
       }
     `;
     document.head.appendChild(style);
