@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
+import { GooglePlacesAutocomplete } from '@/components/ui/google-places-autocomplete';
 import { Plus, Package } from 'lucide-react';
 
 const DEPARTAMENTOS_URUGUAY = [
@@ -334,12 +335,24 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
           <div className="space-y-2">
             <Label htmlFor="delivery_address">Dirección de Entrega *</Label>
-            <Input
-              id="delivery_address"
-              placeholder="Dirección completa"
+            <GooglePlacesAutocomplete
               value={formData.delivery_address}
-              onChange={(e) => setFormData(prev => ({ ...prev, delivery_address: e.target.value }))}
-              required
+              onChange={(value, placeDetails) => {
+                setFormData(prev => ({ ...prev, delivery_address: value }));
+                
+                // Extraer información adicional del lugar si está disponible
+                if (placeDetails?.address_components) {
+                  const addressComponents = placeDetails.address_components;
+                  const neighborhood = addressComponents.find((comp: any) => 
+                    comp.types.includes('sublocality') || comp.types.includes('neighborhood')
+                  )?.long_name;
+                  
+                  if (neighborhood) {
+                    setFormData(prev => ({ ...prev, delivery_neighborhood: neighborhood }));
+                  }
+                }
+              }}
+              placeholder="Comience a escribir la dirección..."
             />
           </div>
 
