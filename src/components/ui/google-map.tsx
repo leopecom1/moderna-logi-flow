@@ -109,13 +109,18 @@ export const GoogleMap = ({
   return (
     <div className="space-y-2">
       {allowLocationSelect && (
-        <div className="text-sm text-muted-foreground">
-          💡 Haz clic en el mapa para seleccionar una ubicación
+        <div className="flex items-center gap-2 text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+          <span>💡 Haz clic en el mapa para colocar un pin de ubicación</span>
         </div>
       )}
       <div 
         ref={mapRef} 
-        className={`rounded-lg border ${className} ${allowLocationSelect ? 'cursor-crosshair' : ''}`}
+        className={`rounded-lg border transition-all duration-200 ${className} ${
+          allowLocationSelect 
+            ? 'cursor-crosshair ring-2 ring-blue-200 dark:ring-blue-800 border-blue-300 dark:border-blue-700 shadow-lg' 
+            : 'border-border'
+        }`}
         style={{ height }}
       />
     </div>
