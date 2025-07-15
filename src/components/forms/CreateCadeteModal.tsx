@@ -66,6 +66,7 @@ export const CreateCadeteModal = ({ open, onOpenChange, onCadeteCreated }: Creat
 
     try {
       setLoading(true);
+      console.log('🚀 Iniciando creación de cadete...');
 
       // Call the edge function to create the cadete
       const { data, error } = await supabase.functions.invoke('create-cadete', {
@@ -96,11 +97,19 @@ export const CreateCadeteModal = ({ open, onOpenChange, onCadeteCreated }: Creat
         }
       });
 
-      if (error) throw error;
+      console.log('📋 Respuesta de función edge:', { data, error });
+
+      if (error) {
+        console.error('❌ Error de función edge:', error);
+        throw error;
+      }
 
       if (data?.error) {
+        console.error('❌ Error en respuesta:', data.error);
         throw new Error(data.error);
       }
+
+      console.log('✅ Cadete creado exitosamente');
 
       toast({
         title: 'Cadete creado',
@@ -111,10 +120,19 @@ export const CreateCadeteModal = ({ open, onOpenChange, onCadeteCreated }: Creat
       onOpenChange(false);
       resetForm();
     } catch (error) {
-      console.error('Error creating cadete:', error);
+      console.error('❌ Error creating cadete:', error);
+      
+      let errorMessage = 'No se pudo crear el cadete';
+      
+      if (error.message?.includes('already registered')) {
+        errorMessage = 'Este email ya está registrado';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: 'Error',
-        description: 'No se pudo crear el cadete',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

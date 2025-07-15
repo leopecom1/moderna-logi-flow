@@ -1,4 +1,3 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -6,12 +5,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    console.log('🚀 Starting cadete creation process...')
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -23,7 +24,17 @@ serve(async (req) => {
       }
     )
 
-    const { cadeteData } = await req.json()
+    const body = await req.json()
+    console.log('📋 Request body received:', Object.keys(body))
+    
+    const { cadeteData } = body
+
+    if (!cadeteData) {
+      console.error('❌ Missing cadeteData in request body')
+      throw new Error('Missing cadeteData in request body')
+    }
+
+    console.log('👤 Creating auth user for email:', cadeteData.email)
 
     // Create auth user
     const { data: authData, error: authError } = await supabaseClient.auth.admin.createUser({
@@ -35,11 +46,21 @@ serve(async (req) => {
       }
     })
 
-    if (authError) throw authError
+    if (authError) {
+      console.error('❌ Auth error:', authError)
+      throw authError
+    }
+
+    if (!authData.user) {
+      console.error('❌ No user returned from auth creation')
+      throw new Error('Failed to create user')
+    }
 
     const userId = authData.user.id
+    console.log('✅ User created with ID:', userId)
 
     // Update the profile created by the trigger
+    console.log('📝 Updating profile...')
     const { error: profileError } = await supabaseClient
       .from('profiles')
       .update({
@@ -49,9 +70,15 @@ serve(async (req) => {
       })
       .eq('user_id', userId)
 
-    if (profileError) throw profileError
+    if (profileError) {
+      console.error('❌ Profile update error:', profileError)
+      throw profileError
+    }
+
+    console.log('✅ Profile updated successfully')
 
     // Create extended cadete profile
+    console.log('👷 Creating cadete profile...')
     const { error: cadeteProfileError } = await supabaseClient
       .from('cadete_profiles')
       .insert([{
@@ -75,7 +102,12 @@ serve(async (req) => {
         marital_status: cadeteData.marital_status,
       }])
 
-    if (cadeteProfileError) throw cadeteProfileError
+    if (cadeteProfileError) {
+      console.error('❌ Cadete profile creation error:', cadeteProfileError)
+      throw cadeteProfileError
+    }
+
+    console.log('✅ Cadete profile created successfully')
 
     return new Response(
       JSON.stringify({ success: true, userId }),
@@ -88,7 +120,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error creating cadete:', error)
+    console.error('❌ Error creating cadete:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
