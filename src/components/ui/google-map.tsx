@@ -6,13 +6,17 @@ interface GoogleMapProps {
   placeDetails?: any;
   className?: string;
   height?: string;
+  onLocationSelect?: (location: { lat: number; lng: number }, address: string) => void;
+  allowLocationSelect?: boolean;
 }
 
 export const GoogleMap = ({
   address,
   placeDetails,
   className = "w-full h-64",
-  height = "256px"
+  height = "256px",
+  onLocationSelect,
+  allowLocationSelect = false
 }: GoogleMapProps) => {
   const { isLoaded, loadError } = useGoogleMaps();
   const mapRef = useRef<HTMLDivElement>(null);
@@ -31,8 +35,35 @@ export const GoogleMap = ({
         streetViewControl: false,
         fullscreenControl: false,
       });
+
+      // Add click listener for manual location selection
+      if (allowLocationSelect && onLocationSelect) {
+        mapInstanceRef.current.addListener('click', (event: any) => {
+          const lat = event.latLng.lat();
+          const lng = event.latLng.lng();
+          
+          // Use Geocoding API to get address
+          const geocoder = new window.google.maps.Geocoder();
+          geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+            if (status === 'OK' && results[0]) {
+              const address = results[0].formatted_address;
+              onLocationSelect({ lat, lng }, address);
+              
+              // Update marker
+              if (markerRef.current) {
+                markerRef.current.setMap(null);
+              }
+              markerRef.current = new window.google.maps.Marker({
+                position: { lat, lng },
+                map: mapInstanceRef.current,
+                title: address
+              });
+            }
+          });
+        });
+      }
     }
-  }, [isLoaded]);
+  }, [isLoaded, allowLocationSelect, onLocationSelect]);
 
   useEffect(() => {
     if (mapInstanceRef.current && placeDetails?.geometry?.location && window.google) {
@@ -76,10 +107,17 @@ export const GoogleMap = ({
   }
 
   return (
-    <div 
-      ref={mapRef} 
-      className={`rounded-lg border ${className}`}
-      style={{ height }}
-    />
+    <div className="space-y-2">
+      {allowLocationSelect && (
+        <div className="text-sm text-muted-foreground">
+          💡 Haz clic en el mapa para seleccionar una ubicación
+        </div>
+      )}
+      <div 
+        ref={mapRef} 
+        className={`rounded-lg border ${className} ${allowLocationSelect ? 'cursor-crosshair' : ''}`}
+        style={{ height }}
+      />
+    </div>
   );
 };

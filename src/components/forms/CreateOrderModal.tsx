@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { GooglePlacesAutocomplete } from '@/components/ui/google-places-autocomplete';
 import { GoogleMap } from '@/components/ui/google-map';
-import { Plus, Package } from 'lucide-react';
+import { Plus, Package, MapPin, Search } from 'lucide-react';
 
 const DEPARTAMENTOS_URUGUAY = [
   'Artigas', 'Canelones', 'Cerro Largo', 'Colonia', 'Durazno', 'Flores',
@@ -38,6 +38,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPlaceDetails, setSelectedPlaceDetails] = useState<any>(null);
+  const [isManualInput, setIsManualInput] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const [formData, setFormData] = useState({
     customer_id: '',
     products: '',
@@ -185,6 +187,9 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       new_customer_phone: '',
       new_customer_departamento: '',
     });
+    setSelectedPlaceDetails(null);
+    setIsManualInput(false);
+    setShowMap(false);
   };
 
   return (
@@ -360,14 +365,50 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                 }
               }}
               placeholder="Comience a escribir la dirección..."
+              onManualInput={(manual) => {
+                setIsManualInput(manual);
+                setShowMap(manual);
+              }}
             />
             
-            {(formData.delivery_address || selectedPlaceDetails) && (
+            {/* Manual input: show search button */}
+            {isManualInput && formData.delivery_address && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setShowMap(true)}
+                className="flex items-center space-x-2"
+              >
+                <Search className="h-4 w-4" />
+                <span>Buscar en mapa</span>
+              </Button>
+            )}
+            
+            {/* Show map when there's data or manual input is enabled */}
+            {(showMap || formData.delivery_address || selectedPlaceDetails) && (
               <div className="mt-4">
                 <GoogleMap
                   address={formData.delivery_address}
                   placeDetails={selectedPlaceDetails}
                   className="w-full h-48"
+                  allowLocationSelect={isManualInput}
+                  onLocationSelect={(location, address) => {
+                    setFormData(prev => ({ ...prev, delivery_address: address }));
+                    setSelectedPlaceDetails({
+                      geometry: {
+                        location: {
+                          lat: () => location.lat,
+                          lng: () => location.lng
+                        }
+                      }
+                    });
+                    
+                    toast({
+                      title: "Ubicación seleccionada",
+                      description: "La dirección se ha actualizado desde el mapa",
+                    });
+                  }}
                 />
               </div>
             )}
