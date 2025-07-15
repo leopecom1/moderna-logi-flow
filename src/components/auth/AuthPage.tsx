@@ -207,7 +207,7 @@ export const AuthPage = () => {
           <img 
             src="/lovable-uploads/629c5c32-2f75-4980-89b7-b7666a341b25.png" 
             alt="RutaMOD Logo" 
-            className="h-16 w-auto object-contain"
+            className="h-20 w-auto object-contain"
           />
         </div>
       }
