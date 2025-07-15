@@ -48,7 +48,17 @@ Deno.serve(async (req) => {
 
     if (authError) {
       console.error('❌ Auth error:', authError)
-      throw authError
+      
+      // Handle specific error cases
+      if (authError.message?.includes('already been registered')) {
+        throw new Error('Este email ya está registrado. Por favor usa otro email.')
+      } else if (authError.message?.includes('Password should be at least')) {
+        throw new Error('La contraseña debe tener al menos 6 caracteres.')
+      } else if (authError.message?.includes('Invalid email')) {
+        throw new Error('El formato del email no es válido.')
+      }
+      
+      throw new Error(`Error al crear usuario: ${authError.message}`)
     }
 
     if (!authData.user) {
