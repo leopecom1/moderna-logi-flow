@@ -202,7 +202,15 @@ export const AuthPage = () => {
 
   return (
     <SignInPage
-      title={<span className="font-bold text-foreground tracking-tight">MODERNA</span>}
+      title={
+        <div className="flex flex-col items-center gap-4">
+          <img 
+            src="/lovable-uploads/629c5c32-2f75-4980-89b7-b7666a341b25.png" 
+            alt="RutaMOD Logo" 
+            className="h-16 w-auto object-contain"
+          />
+        </div>
+      }
       description="Sistema de Logística - Accede a tu cuenta para continuar"
       heroImageSrc="https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=2160&q=80"
       testimonials={testimonials}
