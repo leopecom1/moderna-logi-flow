@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -120,163 +121,167 @@ export default function CadetesPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
+      <MainLayout>
+        <div className="">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2">
+              <Users className="h-6 w-6" />
+              <h1 className="text-2xl font-bold">Cadetes</h1>
+            </div>
+          </div>
+          <div className="grid gap-4">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-6 w-48" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-4 w-full mb-2" />
+                  <Skeleton className="h-4 w-3/4" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
+
+  return (
+    <MainLayout>
+      <div className="">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2">
             <Users className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Cadetes</h1>
           </div>
+          {canManageCadetes && (
+            <Button onClick={() => setShowCreateModal(true)} className="flex items-center space-x-2">
+              <Plus className="h-4 w-4" />
+              <span>Agregar Cadete</span>
+            </Button>
+          )}
         </div>
+
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar cadetes por nombre, cédula o libreta..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
         <div className="grid gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-48" />
+          {filteredCadetes.map((cadete) => (
+            <Card 
+              key={cadete.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(`/cadetes/${cadete.cadete_id}`)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{cadete.profile?.full_name}</CardTitle>
+                  <Badge className={getStatusColor(cadete.profile?.is_active || false)}>
+                    {cadete.profile?.is_active ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                </div>
               </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Cédula</p>
+                      <p className="text-sm text-muted-foreground">
+                        {cadete.identification_number || 'No especificado'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Teléfono</p>
+                      <p className="text-sm text-muted-foreground">
+                        {cadete.profile?.phone || 'No especificado'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Dirección</p>
+                      <p className="text-sm text-muted-foreground">
+                        {cadete.address || 'No especificado'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Libreta</p>
+                      <p className="text-sm text-muted-foreground">
+                        {cadete.driver_license_number || 'No especificado'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Vence Libreta</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(cadete.driver_license_expiry)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Contacto Emergencia</p>
+                      <p className="text-sm text-muted-foreground">
+                        {cadete.emergency_contact_name || 'No especificado'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {cadete.health_insurance_company && (
+                  <div className="pt-2 border-t">
+                    <p className="text-sm font-medium">Seguro de Salud</p>
+                    <p className="text-sm text-muted-foreground">
+                      {cadete.health_insurance_company} - {cadete.health_insurance_number}
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-2">
-          <Users className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Cadetes</h1>
-        </div>
-        {canManageCadetes && (
-          <Button onClick={() => setShowCreateModal(true)} className="flex items-center space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Agregar Cadete</span>
-          </Button>
+        {filteredCadetes.length === 0 && !loading && (
+          <div className="text-center py-12">
+            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No se encontraron cadetes</h3>
+            <p className="text-muted-foreground">
+              {searchTerm ? 'No hay cadetes que coincidan con tu búsqueda.' : 'No hay cadetes registrados.'}
+            </p>
+          </div>
         )}
+
+        <CreateCadeteModal
+          open={showCreateModal}
+          onOpenChange={setShowCreateModal}
+          onCadeteCreated={fetchCadetes}
+        />
       </div>
-
-      <div className="mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar cadetes por nombre, cédula o libreta..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
-
-      <div className="grid gap-4">
-        {filteredCadetes.map((cadete) => (
-          <Card 
-            key={cadete.id} 
-            className="hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => navigate(`/cadetes/${cadete.cadete_id}`)}
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{cadete.profile?.full_name}</CardTitle>
-                <Badge className={getStatusColor(cadete.profile?.is_active || false)}>
-                  {cadete.profile?.is_active ? 'Activo' : 'Inactivo'}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="flex items-center space-x-2">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Cédula</p>
-                    <p className="text-sm text-muted-foreground">
-                      {cadete.identification_number || 'No especificado'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Teléfono</p>
-                    <p className="text-sm text-muted-foreground">
-                      {cadete.profile?.phone || 'No especificado'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Dirección</p>
-                    <p className="text-sm text-muted-foreground">
-                      {cadete.address || 'No especificado'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <CreditCard className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Libreta</p>
-                    <p className="text-sm text-muted-foreground">
-                      {cadete.driver_license_number || 'No especificado'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Vence Libreta</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(cadete.driver_license_expiry)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">Contacto Emergencia</p>
-                    <p className="text-sm text-muted-foreground">
-                      {cadete.emergency_contact_name || 'No especificado'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {cadete.health_insurance_company && (
-                <div className="pt-2 border-t">
-                  <p className="text-sm font-medium">Seguro de Salud</p>
-                  <p className="text-sm text-muted-foreground">
-                    {cadete.health_insurance_company} - {cadete.health_insurance_number}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredCadetes.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No se encontraron cadetes</h3>
-          <p className="text-muted-foreground">
-            {searchTerm ? 'No hay cadetes que coincidan con tu búsqueda.' : 'No hay cadetes registrados.'}
-          </p>
-        </div>
-      )}
-
-      <CreateCadeteModal
-        open={showCreateModal}
-        onOpenChange={setShowCreateModal}
-        onCadeteCreated={fetchCadetes}
-      />
-    </div>
+    </MainLayout>
   );
 }
