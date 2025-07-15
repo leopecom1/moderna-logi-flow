@@ -108,13 +108,18 @@ export const GooglePlacesAutocomplete = ({
         border: 1px solid #e2e8f0 !important;
         border-radius: 8px !important;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
-        position: fixed !important;
-        margin-top: -200px !important;
+        position: absolute !important;
+        bottom: 100% !important;
+        left: 0 !important;
+        margin-bottom: 8px !important;
+        pointer-events: auto !important;
+        width: 100% !important;
       }
       .pac-item {
         padding: 8px 12px !important;
         border-bottom: 1px solid #f1f5f9 !important;
         cursor: pointer !important;
+        pointer-events: auto !important;
       }
       .pac-item:hover {
         background-color: #f8fafc !important;
