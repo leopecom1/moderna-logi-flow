@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -24,6 +25,7 @@ interface Order {
 }
 
 const OrdersPage = () => {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -117,7 +119,11 @@ const OrdersPage = () => {
 
         <div className="grid gap-4">
           {filteredOrders.map((order) => (
-            <Card key={order.id}>
+            <Card 
+              key={order.id} 
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(`/orders/${order.id}`)}
+            >
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">

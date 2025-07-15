@@ -15,6 +15,7 @@ import PaymentsPage from "./pages/PaymentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ReportsPage from "./pages/ReportsPage";
 import { CustomersPage } from "./pages/CustomersPage";
+import OrderDetailPage from "./pages/OrderDetailPage";
 import CadetesPage from "./pages/CadetesPage";
 import CadeteDetailPage from "./pages/CadeteDetailPage";
 import VehiculosPage from "./pages/VehiculosPage";
@@ -44,6 +45,7 @@ function App() {
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/orders/:id" element={<OrderDetailPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/cadetes" element={<CadetesPage />} />
             <Route path="/cadetes/:id" element={<CadeteDetailPage />} />
