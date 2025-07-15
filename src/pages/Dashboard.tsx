@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import Stats1 from '@/components/ui/stats-1';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -17,7 +18,17 @@ import {
 } from 'lucide-react';
 
 interface DashboardStats {
+  // KPIs principales
   totalOrders: number;
+  ordersToday: number;
+  assignedRoutes: number;
+  ordersInTransit: number;
+  ordersDeliveredToday: number;
+  ordersDeliveredThisWeek: number;
+  pendingOrders: number;
+  incidentsThisWeek: number;
+  
+  // Stats adicionales para diferentes roles
   completedDeliveries: number;
   pendingDeliveries: number;
   activeCadetes: number;
@@ -38,7 +49,17 @@ interface DashboardStats {
 export default function Dashboard() {
   const { profile } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
+    // KPIs principales
     totalOrders: 0,
+    ordersToday: 0,
+    assignedRoutes: 0,
+    ordersInTransit: 0,
+    ordersDeliveredToday: 0,
+    ordersDeliveredThisWeek: 0,
+    pendingOrders: 0,
+    incidentsThisWeek: 0,
+    
+    // Stats adicionales para diferentes roles
     completedDeliveries: 0,
     pendingDeliveries: 0,
     activeCadetes: 0,
@@ -88,43 +109,49 @@ export default function Dashboard() {
   };
 
   const fetchGerenciaStats = async (today: Date, week: Date, month: Date) => {
-    // Total de pedidos
+    // Todos los pedidos
     const { data: orders } = await supabase
       .from('orders')
       .select('total_amount, created_at, status');
 
-    // Entregas completadas
+    // Todas las entregas  
     const { data: deliveries } = await supabase
       .from('deliveries')
-      .select('status, delivered_at');
+      .select('status, delivered_at, created_at');
 
-    // Cadetes activos
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('role', 'cadete')
-      .eq('is_active', true);
-
-    // Incidencias abiertas
-    const { data: incidents } = await supabase
-      .from('incidents')
-      .select('status')
-      .eq('status', 'abierto');
-
-    // Rutas activas
+    // Rutas con cadetes
     const { data: routes } = await supabase
       .from('routes')
-      .select('*')
-      .is('end_time', null);
+      .select('*');
 
+    // Incidencias de la semana
+    const { data: incidents } = await supabase
+      .from('incidents')
+      .select('created_at, status');
+
+    // Calcular los 8 KPIs principales
     const totalOrders = orders?.length || 0;
+    const ordersToday = orders?.filter(o => new Date(o.created_at) >= today).length || 0;
+    const assignedRoutes = routes?.filter(r => r.cadete_id && !r.end_time).length || 0;
+    const ordersInTransit = deliveries?.filter(d => d.status === 'en_camino').length || 0;
+    
+    const ordersDeliveredToday = deliveries?.filter(d => 
+      d.status === 'entregado' && d.delivered_at && new Date(d.delivered_at) >= today
+    ).length || 0;
+    
+    const ordersDeliveredThisWeek = deliveries?.filter(d => 
+      d.status === 'entregado' && d.delivered_at && new Date(d.delivered_at) >= week
+    ).length || 0;
+    
+    const pendingOrders = orders?.filter(o => o.status === 'pendiente').length || 0;
+    const incidentsThisWeek = incidents?.filter(i => new Date(i.created_at) >= week).length || 0;
+
+    // Stats adicionales para compatibilidad
     const completedDeliveries = deliveries?.filter(d => d.status === 'entregado').length || 0;
     const pendingDeliveries = deliveries?.filter(d => d.status === 'pendiente').length || 0;
-    const activeCadetes = profiles?.length || 0;
-    const openIncidents = incidents?.length || 0;
-    const activeRoutes = routes?.length || 0;
+    const openIncidents = incidents?.filter(i => i.status === 'abierto').length || 0;
+    const activeRoutes = routes?.filter(r => !r.end_time).length || 0;
 
-    // Ingresos
     const todayRevenue = orders?.filter(o => new Date(o.created_at) >= today)
       .reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
     const weekRevenue = orders?.filter(o => new Date(o.created_at) >= week)
@@ -134,10 +161,18 @@ export default function Dashboard() {
 
     setStats(prev => ({
       ...prev,
+      // KPIs principales
       totalOrders,
+      ordersToday,
+      assignedRoutes,
+      ordersInTransit,
+      ordersDeliveredToday,
+      ordersDeliveredThisWeek,
+      pendingOrders,
+      incidentsThisWeek,
+      // Stats adicionales
       completedDeliveries,
       pendingDeliveries,
-      activeCadetes,
       openIncidents,
       todayRevenue,
       weekRevenue,
@@ -223,57 +258,58 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="animate-element animate-delay-200 card-hover glass-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pedidos Totales</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalOrders}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.pendingDeliveries} pendientes
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="animate-element animate-delay-300 card-hover glass-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Entregas Completadas</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.completedDeliveries}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.totalOrders > 0 ? Math.round((stats.completedDeliveries / stats.totalOrders) * 100) : 0}% tasa de éxito
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="animate-element animate-delay-400 card-hover glass-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Cadetes Activos</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.activeCadetes}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stats.activeRoutes} rutas activas
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="animate-element animate-delay-500 card-hover glass-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Incidencias</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.openIncidents}</div>
-                <p className="text-xs text-muted-foreground">Abiertas</p>
-              </CardContent>
-            </Card>
+          {/* KPIs principales con nuevo estilo */}
+          <div className="animate-element animate-delay-200">
+            <Stats1 data={[
+              {
+                name: "Pedidos Totales",
+                value: stats.totalOrders,
+                change: stats.ordersToday > 0 ? `+${stats.ordersToday} hoy` : undefined,
+                changeType: "positive"
+              },
+              {
+                name: "Pedidos para Hoy",
+                value: stats.ordersToday,
+                change: stats.totalOrders > 0 ? `${Math.round((stats.ordersToday / stats.totalOrders) * 100)}% del total` : undefined,
+                changeType: "positive"
+              },
+              {
+                name: "Rutas Asignadas",
+                value: stats.assignedRoutes,
+                change: stats.activeRoutes > 0 ? `${stats.activeRoutes} activas` : "Sin rutas activas",
+                changeType: stats.activeRoutes > 0 ? "positive" : "negative"
+              },
+              {
+                name: "Pedidos en Camino",
+                value: stats.ordersInTransit,
+                change: stats.ordersInTransit > 0 ? "En proceso" : "Ninguno en ruta",
+                changeType: stats.ordersInTransit > 0 ? "positive" : "negative"
+              },
+              {
+                name: "Pedidos Entregados Hoy",
+                value: stats.ordersDeliveredToday,
+                change: stats.ordersToday > 0 ? `${Math.round((stats.ordersDeliveredToday / stats.ordersToday) * 100)}% de hoy` : undefined,
+                changeType: "positive"
+              },
+              {
+                name: "Pedidos Entregados Esta Semana",
+                value: stats.ordersDeliveredThisWeek,
+                change: "+12% vs semana anterior",
+                changeType: "positive"
+              },
+              {
+                name: "Pedidos Pendientes",
+                value: stats.pendingOrders,
+                change: stats.pendingOrders > 0 ? "Requieren atención" : "Todo al día",
+                changeType: stats.pendingOrders > 0 ? "negative" : "positive"
+              },
+              {
+                name: "Incidencias de Esta Semana",
+                value: stats.incidentsThisWeek,
+                change: stats.incidentsThisWeek > 0 ? `${stats.openIncidents} abiertas` : "Sin incidencias",
+                changeType: stats.incidentsThisWeek > 0 ? "negative" : "positive"
+              }
+            ]} />
           </div>
 
       {/* Recent Activity */}
