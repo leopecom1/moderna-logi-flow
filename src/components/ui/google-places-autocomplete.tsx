@@ -119,24 +119,39 @@ export const GooglePlacesAutocomplete = ({
         border-radius: 8px !important;
         box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
         position: absolute !important;
-        bottom: 100% !important;
+        top: 100% !important;
         left: 0 !important;
         right: 0 !important;
-        margin-bottom: 8px !important;
+        margin-top: 4px !important;
         max-height: 200px !important;
         overflow-y: auto !important;
+        display: block !important;
+        visibility: visible !important;
+        width: 100% !important;
       }
       .pac-item {
-        padding: 8px 12px !important;
+        padding: 12px 16px !important;
         border-bottom: 1px solid #f1f5f9 !important;
         cursor: pointer !important;
         background: white !important;
+        display: block !important;
+        min-height: 44px !important;
+        line-height: 1.4 !important;
+        word-wrap: break-word !important;
       }
       .pac-item:hover {
         background-color: #f8fafc !important;
       }
       .pac-item:last-child {
         border-bottom: none !important;
+      }
+      .pac-item-query {
+        font-size: 14px !important;
+        color: #1f2937 !important;
+      }
+      .pac-matched {
+        font-weight: 600 !important;
+        color: #2563eb !important;
       }
     `;
     document.head.appendChild(style);
