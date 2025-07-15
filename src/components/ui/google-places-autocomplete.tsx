@@ -28,9 +28,14 @@ export const GooglePlacesAutocomplete = ({
     setInputValue(value);
   }, [value]);
 
-  // Initialize autocomplete with simple approach
+  // Initialize autocomplete once when loaded
   useEffect(() => {
-    if (!isLoaded || !inputRef.current || disabled || autocompleteRef.current) {
+    if (!isLoaded || !inputRef.current || disabled) {
+      return;
+    }
+
+    // Don't re-initialize if already exists
+    if (autocompleteRef.current) {
       return;
     }
 
@@ -39,10 +44,8 @@ export const GooglePlacesAutocomplete = ({
       return;
     }
 
-    let keydownListener: ((e: KeyboardEvent) => void) | null = null;
-
     try {
-      console.log('🗺️ Initializing simple Google Places Autocomplete...');
+      console.log('🗺️ Initializing Google Places Autocomplete...');
       
       const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
         types: ['address'],
@@ -50,12 +53,12 @@ export const GooglePlacesAutocomplete = ({
         fields: ['formatted_address', 'geometry', 'address_components', 'place_id']
       });
 
-      // Simple place_changed event
+      // Place changed event
       autocomplete.addListener('place_changed', () => {
-        console.log('🎯 Place changed event');
+        console.log('🎯 Place changed event triggered');
         
         const place = autocomplete.getPlace();
-        console.log('📍 Place:', place);
+        console.log('📍 Selected place:', place);
         
         if (place && place.formatted_address) {
           const address = place.formatted_address;
@@ -66,30 +69,8 @@ export const GooglePlacesAutocomplete = ({
         }
       });
 
-      // Listen for Enter key and manual selection
-      keydownListener = (e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          console.log('⏎ Enter pressed');
-          
-          // Small delay to let Google process the selection
-          setTimeout(() => {
-            const place = autocomplete.getPlace();
-            if (place && place.formatted_address) {
-              console.log('✅ Enter selection:', place.formatted_address);
-              setInputValue(place.formatted_address);
-              onChange(place.formatted_address, place);
-            }
-          }, 100);
-        }
-      };
-
-      if (inputRef.current) {
-        inputRef.current.addEventListener('keydown', keydownListener);
-      }
       autocompleteRef.current = autocomplete;
-
-      console.log('✅ Simple autocomplete initialized');
+      console.log('✅ Autocomplete initialized successfully');
     } catch (error) {
       console.error('❌ Error initializing autocomplete:', error);
     }
@@ -100,16 +81,13 @@ export const GooglePlacesAutocomplete = ({
           if (window.google?.maps?.event) {
             window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
           }
-          if (inputRef.current && keydownListener) {
-            inputRef.current.removeEventListener('keydown', keydownListener);
-          }
           autocompleteRef.current = null;
         } catch (error) {
           console.error('❌ Error cleaning up:', error);
         }
       }
     };
-  }, [isLoaded, disabled, onChange]);
+  }, [isLoaded, disabled]);
 
   // Only basic styling to ensure dropdown is visible
   useEffect(() => {
