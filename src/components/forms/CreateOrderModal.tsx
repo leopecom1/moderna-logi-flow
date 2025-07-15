@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { GooglePlacesAutocomplete } from '@/components/ui/google-places-autocomplete';
+import { GoogleMap } from '@/components/ui/google-map';
 import { Plus, Package } from 'lucide-react';
 
 const DEPARTAMENTOS_URUGUAY = [
@@ -36,6 +37,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const { profile } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedPlaceDetails, setSelectedPlaceDetails] = useState<any>(null);
   const [formData, setFormData] = useState({
     customer_id: '',
     products: '',
@@ -351,9 +353,24 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                     setFormData(prev => ({ ...prev, delivery_neighborhood: neighborhood }));
                   }
                 }
+                
+                // Store place details for map
+                if (placeDetails) {
+                  setSelectedPlaceDetails(placeDetails);
+                }
               }}
               placeholder="Comience a escribir la dirección..."
             />
+            
+            {(formData.delivery_address || selectedPlaceDetails) && (
+              <div className="mt-4">
+                <GoogleMap
+                  address={formData.delivery_address}
+                  placeDetails={selectedPlaceDetails}
+                  className="w-full h-48"
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

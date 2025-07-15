@@ -33,7 +33,12 @@ export const GooglePlacesAutocomplete = ({
 
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
+          console.log('Place selected:', place);
           if (place.formatted_address) {
+            // Force update the input value
+            if (inputRef.current) {
+              inputRef.current.value = place.formatted_address;
+            }
             onChange(place.formatted_address, place);
           }
         });
