@@ -46,6 +46,33 @@ interface DashboardStats {
   activeRoutes: number;
 }
 
+interface RecentActivity {
+  id: string;
+  type: 'order' | 'delivery' | 'incident';
+  title: string;
+  description: string;
+  timestamp: string;
+  status?: string;
+}
+
+interface RecentOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  total_amount: number;
+  status: string;
+  delivery_address: string;
+  created_at: string;
+}
+
+interface PendingDelivery {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  delivery_address: string;
+  status: string;
+}
+
 export default function Dashboard() {
   const { profile } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
@@ -77,6 +104,9 @@ export default function Dashboard() {
     activeRoutes: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [pendingDeliveries, setPendingDeliveries] = useState<PendingDelivery[]>([]);
 
   useEffect(() => {
     if (profile?.user_id) {
@@ -96,10 +126,13 @@ export default function Dashboard() {
       // Obtener estadísticas según el rol
       if (profile?.role === 'gerencia') {
         await fetchGerenciaStats(startOfToday, startOfWeek, startOfMonth);
+        await fetchRecentActivities();
       } else if (profile?.role === 'vendedor') {
         await fetchVendedorStats(startOfToday, startOfWeek, startOfMonth);
+        await fetchRecentOrders();
       } else if (profile?.role === 'cadete') {
         await fetchCadeteStats(startOfToday);
+        await fetchPendingDeliveries();
       }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -240,6 +273,144 @@ export default function Dashboard() {
     }));
   };
 
+  const fetchRecentActivities = async () => {
+    const activities: RecentActivity[] = [];
+    
+    // Obtener entregas recientes completadas
+    const { data: deliveries } = await supabase
+      .from('deliveries')
+      .select(`
+        id,
+        delivered_at,
+        status,
+        order_id,
+        orders (
+          order_number,
+          customers (name)
+        )
+      `)
+      .eq('status', 'entregado')
+      .order('delivered_at', { ascending: false })
+      .limit(5);
+
+    // Obtener pedidos recientes
+    const { data: orders } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        created_at,
+        customers (name)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Obtener incidencias recientes
+    const { data: incidents } = await supabase
+      .from('incidents')
+      .select('id, title, created_at, incident_type')
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    // Agregar entregas completadas
+    deliveries?.forEach(delivery => {
+      activities.push({
+        id: delivery.id,
+        type: 'delivery',
+        title: 'Entrega completada',
+        description: `Pedido #${delivery.orders?.order_number} - ${delivery.orders?.customers?.name}`,
+        timestamp: delivery.delivered_at || '',
+        status: delivery.status
+      });
+    });
+
+    // Agregar nuevos pedidos
+    orders?.forEach(order => {
+      activities.push({
+        id: order.id,
+        type: 'order',
+        title: 'Nuevo pedido creado',
+        description: `Pedido #${order.order_number} - ${order.customers?.name}`,
+        timestamp: order.created_at,
+        status: 'nuevo'
+      });
+    });
+
+    // Agregar incidencias
+    incidents?.forEach(incident => {
+      activities.push({
+        id: incident.id,
+        type: 'incident',
+        title: 'Incidencia reportada',
+        description: incident.title,
+        timestamp: incident.created_at,
+        status: 'reportado'
+      });
+    });
+
+    // Ordenar por timestamp más reciente
+    activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    setRecentActivities(activities.slice(0, 5));
+  };
+
+  const fetchRecentOrders = async () => {
+    const { data: orders } = await supabase
+      .from('orders')
+      .select(`
+        id,
+        order_number,
+        total_amount,
+        status,
+        delivery_address,
+        created_at,
+        customers (name)
+      `)
+      .eq('seller_id', profile?.user_id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (orders) {
+      setRecentOrders(orders.map(order => ({
+        id: order.id,
+        order_number: order.order_number,
+        customer_name: order.customers?.name || 'Cliente',
+        total_amount: order.total_amount,
+        status: order.status,
+        delivery_address: order.delivery_address,
+        created_at: order.created_at
+      })));
+    }
+  };
+
+  const fetchPendingDeliveries = async () => {
+    const { data: deliveries } = await supabase
+      .from('deliveries')
+      .select(`
+        id,
+        status,
+        orders (
+          order_number,
+          delivery_address,
+          customers (name)
+        )
+      `)
+      .eq('cadete_id', profile?.user_id)
+      .in('status', ['pendiente', 'en_camino'])
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (deliveries) {
+      setPendingDeliveries(deliveries.map(delivery => ({
+        id: delivery.id,
+        order_number: delivery.orders?.order_number || '',
+        customer_name: delivery.orders?.customers?.name || 'Cliente',
+        delivery_address: delivery.orders?.delivery_address || '',
+        status: delivery.status
+      })));
+    }
+  };
+
   const getGerenciaDashboard = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between animate-element animate-delay-100">
@@ -320,30 +491,37 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Entrega completada</p>
-                  <p className="text-xs text-muted-foreground">Pedido #1234 - Juan Pérez</p>
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-center gap-3">
+                    {activity.type === 'delivery' && (
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    )}
+                    {activity.type === 'order' && (
+                      <Package className="h-4 w-4 text-blue-600" />
+                    )}
+                    {activity.type === 'incident' && (
+                      <AlertTriangle className="h-4 w-4 text-orange-600" />
+                    )}
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground">{activity.description}</p>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(activity.timestamp).toLocaleString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        day: '2-digit',
+                        month: '2-digit'
+                      })}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No hay actividades recientes</p>
                 </div>
-                <span className="text-xs text-muted-foreground">hace 5 min</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Package className="h-4 w-4 text-blue-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Nuevo pedido creado</p>
-                  <p className="text-xs text-muted-foreground">Pedido #1235 - María López</p>
-                </div>
-                <span className="text-xs text-muted-foreground">hace 12 min</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Incidencia reportada</p>
-                  <p className="text-xs text-muted-foreground">Dirección incorrecta</p>
-                </div>
-                <span className="text-xs text-muted-foreground">hace 25 min</span>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -454,33 +632,33 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">#1234 - Juan Pérez</p>
-                  <p className="text-sm text-muted-foreground">Zona Norte - $340</p>
+              {recentOrders.length > 0 ? (
+                recentOrders.map((order) => (
+                  <div key={order.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">#{order.order_number} - {order.customer_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {order.delivery_address} - ${order.total_amount}
+                      </p>
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={
+                        order.status === 'entregado' ? 'bg-green-100 text-green-800' :
+                        order.status === 'en_ruta' ? 'bg-blue-100 text-blue-800' :
+                        order.status === 'asignado' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-orange-100 text-orange-800'
+                      }
+                    >
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No hay pedidos recientes</p>
                 </div>
-                <Badge variant="outline" className="bg-green-100 text-green-800">
-                  Entregado
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">#1235 - María López</p>
-                  <p className="text-sm text-muted-foreground">Zona Centro - $280</p>
-                </div>
-                <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                  En ruta
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">#1236 - Carlos García</p>
-                  <p className="text-sm text-muted-foreground">Zona Sur - $520</p>
-                </div>
-                <Badge variant="outline" className="bg-orange-100 text-orange-800">
-                  Pendiente
-                </Badge>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -595,33 +773,29 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 border rounded-md">
-                <div>
-                  <p className="font-medium">#1237 - Ana Martínez</p>
-                  <p className="text-sm text-muted-foreground">Av. San Martín 1234 - Zona Norte</p>
+              {pendingDeliveries.length > 0 ? (
+                pendingDeliveries.map((delivery) => (
+                  <div key={delivery.id} className="flex items-center justify-between p-3 border rounded-md">
+                    <div>
+                      <p className="font-medium">#{delivery.order_number} - {delivery.customer_name}</p>
+                      <p className="text-sm text-muted-foreground">{delivery.delivery_address}</p>
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={
+                        delivery.status === 'en_camino' ? 'bg-blue-100 text-blue-800' :
+                        'bg-orange-100 text-orange-800'
+                      }
+                    >
+                      {delivery.status === 'en_camino' ? 'En ruta' : 'Pendiente'}
+                    </Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No hay entregas pendientes</p>
                 </div>
-                <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                  En ruta
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-md">
-                <div>
-                  <p className="font-medium">#1238 - Pedro Rodríguez</p>
-                  <p className="text-sm text-muted-foreground">Calle Mitre 567 - Zona Centro</p>
-                </div>
-                <Badge variant="outline" className="bg-orange-100 text-orange-800">
-                  Pendiente
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between p-3 border rounded-md">
-                <div>
-                  <p className="font-medium">#1239 - Laura Fernández</p>
-                  <p className="text-sm text-muted-foreground">Bv. Pellegrini 890 - Zona Sur</p>
-                </div>
-                <Badge variant="outline" className="bg-orange-100 text-orange-800">
-                  Pendiente
-                </Badge>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
