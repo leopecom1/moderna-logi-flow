@@ -7,6 +7,13 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import UsersPage from "./pages/UsersPage";
+import OrdersPage from "./pages/OrdersPage";
+import DeliveriesPage from "./pages/DeliveriesPage";
+import RoutesPage from "./pages/RoutesPage";
+import IncidentsPage from "./pages/IncidentsPage";
+import PaymentsPage from "./pages/PaymentsPage";
+import SettingsPage from "./pages/SettingsPage";
+import ReportsPage from "./pages/ReportsPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +39,13 @@ function App() {
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/deliveries" element={<DeliveriesPage />} />
+            <Route path="/routes" element={<RoutesPage />} />
+            <Route path="/incidents" element={<IncidentsPage />} />
+            <Route path="/payments" element={<PaymentsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
