@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Package, Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
 
 interface Order {
   id: string;
@@ -27,6 +28,7 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -96,7 +98,7 @@ const OrdersPage = () => {
             <p className="text-muted-foreground">Gestiona todos los pedidos del sistema</p>
           </div>
           {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
-            <Button>
+            <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nuevo Pedido
             </Button>
@@ -157,6 +159,12 @@ const OrdersPage = () => {
           </div>
         )}
       </div>
+
+      <CreateOrderModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onOrderCreated={fetchOrders}
+      />
     </MainLayout>
   );
 };

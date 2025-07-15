@@ -5,7 +5,9 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { CreditCard, DollarSign, Clock } from 'lucide-react';
+import { CreditCard, DollarSign, Clock, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CreatePaymentModal } from '@/components/forms/CreatePaymentModal';
 
 interface Payment {
   id: string;
@@ -27,6 +29,7 @@ const PaymentsPage = () => {
   const { profile } = useAuth();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchPayments();
@@ -112,9 +115,17 @@ const PaymentsPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Pagos</h1>
-          <p className="text-muted-foreground">Gestiona los pagos y cobros del sistema</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Pagos</h1>
+            <p className="text-muted-foreground">Gestiona los pagos y cobros del sistema</p>
+          </div>
+          {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Registrar Pago
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -220,6 +231,12 @@ const PaymentsPage = () => {
           </div>
         )}
       </div>
+
+      <CreatePaymentModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onPaymentCreated={fetchPayments}
+      />
     </MainLayout>
   );
 };

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { AlertTriangle, Plus, Clock, User } from 'lucide-react';
+import { CreateIncidentModal } from '@/components/forms/CreateIncidentModal';
 
 interface Incident {
   id: string;
@@ -27,6 +28,7 @@ const IncidentsPage = () => {
   const { profile } = useAuth();
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchIncidents();
@@ -108,7 +110,7 @@ const IncidentsPage = () => {
             <h1 className="text-3xl font-bold">Incidencias</h1>
             <p className="text-muted-foreground">Gestiona y resuelve incidencias del sistema</p>
           </div>
-          <Button>
+          <Button onClick={() => setShowCreateModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Nueva Incidencia
           </Button>
@@ -182,6 +184,12 @@ const IncidentsPage = () => {
           </div>
         )}
       </div>
+
+      <CreateIncidentModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onIncidentCreated={fetchIncidents}
+      />
     </MainLayout>
   );
 };

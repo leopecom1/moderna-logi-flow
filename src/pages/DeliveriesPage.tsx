@@ -5,7 +5,9 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Truck, MapPin, Clock } from 'lucide-react';
+import { Truck, MapPin, Clock, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CreateDeliveryModal } from '@/components/forms/CreateDeliveryModal';
 
 interface Delivery {
   id: string;
@@ -29,6 +31,7 @@ const DeliveriesPage = () => {
   const { profile } = useAuth();
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchDeliveries();
@@ -91,9 +94,17 @@ const DeliveriesPage = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Entregas</h1>
-          <p className="text-muted-foreground">Gestiona y monitorea todas las entregas</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Entregas</h1>
+            <p className="text-muted-foreground">Gestiona y monitorea todas las entregas</p>
+          </div>
+          {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Entrega
+            </Button>
+          )}
         </div>
 
         <div className="grid gap-4">
@@ -168,6 +179,12 @@ const DeliveriesPage = () => {
           </div>
         )}
       </div>
+
+      <CreateDeliveryModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onDeliveryCreated={fetchDeliveries}
+      />
     </MainLayout>
   );
 };

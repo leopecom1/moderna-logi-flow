@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Route, Plus, Clock, MapPin } from 'lucide-react';
+import { CreateRouteModal } from '@/components/forms/CreateRouteModal';
 
 interface RouteData {
   id: string;
@@ -23,6 +24,7 @@ const RoutesPage = () => {
   const { profile } = useAuth();
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     fetchRoutes();
@@ -93,7 +95,7 @@ const RoutesPage = () => {
             <p className="text-muted-foreground">Gestiona las rutas de entrega</p>
           </div>
           {profile?.role === 'gerencia' && (
-            <Button>
+            <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nueva Ruta
             </Button>
@@ -175,6 +177,12 @@ const RoutesPage = () => {
           </div>
         )}
       </div>
+
+      <CreateRouteModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        onRouteCreated={fetchRoutes}
+      />
     </MainLayout>
   );
 };
