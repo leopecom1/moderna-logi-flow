@@ -4,18 +4,12 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { LogOut, Bell, User, Crown, Users, Truck } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 export const Header = () => {
-  const { profile, signOut } = useAuth();
-
+  const {
+    profile,
+    signOut
+  } = useAuth();
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'gerencia':
@@ -28,7 +22,6 @@ export const Header = () => {
         return <User className="h-3 w-3" />;
     }
   };
-
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'gerencia':
@@ -41,20 +34,13 @@ export const Header = () => {
         return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
     }
   };
-
   if (!profile) return null;
-
-  return (
-    <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 animate-element animate-delay-100">
+  return <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 animate-element animate-delay-100">
       <div className="h-full flex items-center justify-between px-4">
         <div className="flex items-center gap-4 animate-element animate-delay-200">
           <SidebarTrigger className="smooth-transition" />
           <div className="flex items-center gap-2">
-            <img 
-              src="/lovable-uploads/629c5c32-2f75-4980-89b7-b7666a341b25.png" 
-              alt="RutaMOD Logo" 
-              className="h-8 w-auto object-contain"
-            />
+            
             <Badge variant="outline" className={`${getRoleColor(profile.role)} smooth-transition`}>
               {getRoleIcon(profile.role)}
               <span className="ml-1 capitalize">{profile.role}</span>
@@ -100,6 +86,5 @@ export const Header = () => {
           </DropdownMenu>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 };
