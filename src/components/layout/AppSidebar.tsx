@@ -91,19 +91,30 @@ export const AppSidebar = () => {
   return (
     <Sidebar className={state === 'collapsed' ? 'w-14' : 'w-60'} collapsible="icon">
       <SidebarContent>
+        {/* Logo Section */}
+        <div className="p-4 border-b border-sidebar-border animate-element animate-delay-100">
+          <div className="flex items-center justify-center">
+            <img 
+              src="/lovable-uploads/629c5c32-2f75-4980-89b7-b7666a341b25.png" 
+              alt="RutaMOD Logo" 
+              className={`object-contain smooth-transition ${
+                state === 'collapsed' ? 'h-8 w-8' : 'h-12 w-auto'
+              }`}
+            />
+          </div>
+        </div>
+
         <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2">
-            {profile?.role === 'gerencia' && <Crown className="h-4 w-4" />}
-            {profile?.role === 'vendedor' && <Users className="h-4 w-4" />}
-            {profile?.role === 'cadete' && <Truck className="h-4 w-4" />}
-            {state !== 'collapsed' && <span className="capitalize">{profile?.role}</span>}
-          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => (
+              {menuItems.map((item, index) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavCls}>
+                    <NavLink 
+                      to={item.url} 
+                      className={`${getNavCls} smooth-transition animate-element`}
+                      style={{ animationDelay: `${0.2 + index * 0.05}s` }}
+                    >
                       <item.icon className="h-4 w-4" />
                       {state !== 'collapsed' && <span>{item.title}</span>}
                     </NavLink>
