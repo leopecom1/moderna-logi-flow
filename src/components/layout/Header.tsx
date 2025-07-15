@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { LogOut, Bell, User, Crown, Users, Truck } from 'lucide-react';
+import { LogOut, User, Crown, Users, Truck } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 export const Header = () => {
   const {
     profile,
@@ -49,9 +50,7 @@ export const Header = () => {
         </div>
 
         <div className="flex items-center gap-2 animate-element animate-delay-300">
-          <Button variant="ghost" size="icon" className="smooth-transition">
-            <Bell className="h-4 w-4" />
-          </Button>
+          <NotificationDropdown />
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

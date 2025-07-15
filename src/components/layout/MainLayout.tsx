@@ -2,6 +2,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { Header } from './Header';
+import { Toaster } from '@/components/ui/toaster';
+import { useNotificationToast } from '@/hooks/useNotificationToast';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,6 +11,7 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ children }: MainLayoutProps) => {
   const { profile } = useAuth();
+  useNotificationToast(); // Hook para mostrar toast de notificaciones
 
   if (!profile) {
     return (
@@ -31,6 +34,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           </main>
         </div>
       </SidebarProvider>
+      <Toaster />
     </div>
   );
 };

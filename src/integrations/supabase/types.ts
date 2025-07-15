@@ -249,6 +249,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          message: string
+          read: boolean
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           cadete_id: string | null
@@ -527,6 +563,16 @@ export type Database = {
         | "direccion_incorrecta"
         | "cliente_ausente"
         | "otro"
+      notification_type:
+        | "nuevo_pedido"
+        | "pedido_asignado"
+        | "entrega_completada"
+        | "entrega_fallida"
+        | "incidencia_creada"
+        | "incidencia_resuelta"
+        | "ruta_creada"
+        | "ruta_iniciada"
+        | "problema_pedido"
       order_status:
         | "pendiente"
         | "asignado"
@@ -680,6 +726,17 @@ export const Constants = {
         "direccion_incorrecta",
         "cliente_ausente",
         "otro",
+      ],
+      notification_type: [
+        "nuevo_pedido",
+        "pedido_asignado",
+        "entrega_completada",
+        "entrega_fallida",
+        "incidencia_creada",
+        "incidencia_resuelta",
+        "ruta_creada",
+        "ruta_iniciada",
+        "problema_pedido",
       ],
       order_status: [
         "pendiente",
