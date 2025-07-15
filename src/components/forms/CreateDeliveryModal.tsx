@@ -42,7 +42,7 @@ export const CreateDeliveryModal = ({ open, onOpenChange, onDeliveryCreated }: C
   const [formData, setFormData] = useState({
     order_id: '',
     cadete_id: '',
-    route_id: '',
+    route_id: 'none',
     delivery_notes: '',
   });
 
@@ -115,7 +115,7 @@ export const CreateDeliveryModal = ({ open, onOpenChange, onDeliveryCreated }: C
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.id) return;
+    if (!profile?.user_id) return;
 
     try {
       setLoading(true);
@@ -123,7 +123,7 @@ export const CreateDeliveryModal = ({ open, onOpenChange, onDeliveryCreated }: C
       const deliveryData = {
         order_id: formData.order_id,
         cadete_id: formData.cadete_id,
-        route_id: formData.route_id || null,
+        route_id: formData.route_id && formData.route_id !== 'none' ? formData.route_id : null,
         status: 'pendiente' as const,
         delivery_notes: formData.delivery_notes,
       };
@@ -135,7 +135,7 @@ export const CreateDeliveryModal = ({ open, onOpenChange, onDeliveryCreated }: C
       if (error) throw error;
 
       // Update route total_deliveries if route is selected
-      if (formData.route_id) {
+      if (formData.route_id && formData.route_id !== 'none') {
         const { data: route } = await supabase
           .from('routes')
           .select('total_deliveries')
@@ -160,7 +160,7 @@ export const CreateDeliveryModal = ({ open, onOpenChange, onDeliveryCreated }: C
       setFormData({
         order_id: '',
         cadete_id: '',
-        route_id: '',
+        route_id: 'none',
         delivery_notes: '',
       });
     } catch (error) {
@@ -233,7 +233,7 @@ export const CreateDeliveryModal = ({ open, onOpenChange, onDeliveryCreated }: C
                 <SelectValue placeholder="Seleccionar ruta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Sin asignar a ruta</SelectItem>
+                <SelectItem value="none">Sin asignar a ruta</SelectItem>
                 {routes.map((route) => (
                   <SelectItem key={route.id} value={route.id}>
                     {route.route_name} - {new Date(route.route_date).toLocaleDateString()}

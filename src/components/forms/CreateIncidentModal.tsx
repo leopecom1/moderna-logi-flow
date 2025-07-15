@@ -38,8 +38,8 @@ export const CreateIncidentModal = ({ open, onOpenChange, onIncidentCreated }: C
     title: '',
     description: '',
     incident_type: '',
-    order_id: '',
-    delivery_id: '',
+    order_id: 'none',
+    delivery_id: 'none',
   });
 
   useEffect(() => {
@@ -87,7 +87,7 @@ export const CreateIncidentModal = ({ open, onOpenChange, onIncidentCreated }: C
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.id) return;
+    if (!profile?.user_id) return;
 
     try {
       setLoading(true);
@@ -96,9 +96,9 @@ export const CreateIncidentModal = ({ open, onOpenChange, onIncidentCreated }: C
         title: formData.title,
         description: formData.description,
         incident_type: formData.incident_type as 'reclamo' | 'problema_entrega' | 'direccion_incorrecta' | 'cliente_ausente' | 'otro',
-        order_id: formData.order_id || null,
-        delivery_id: formData.delivery_id || null,
-        reported_by: profile.id,
+        order_id: formData.order_id && formData.order_id !== 'none' ? formData.order_id : null,
+        delivery_id: formData.delivery_id && formData.delivery_id !== 'none' ? formData.delivery_id : null,
+        reported_by: profile.user_id,
         status: 'abierto' as const,
       };
 
@@ -119,8 +119,8 @@ export const CreateIncidentModal = ({ open, onOpenChange, onIncidentCreated }: C
         title: '',
         description: '',
         incident_type: '',
-        order_id: '',
-        delivery_id: '',
+        order_id: 'none',
+        delivery_id: 'none',
       });
     } catch (error) {
       console.error('Error creating incident:', error);
@@ -195,7 +195,7 @@ export const CreateIncidentModal = ({ open, onOpenChange, onIncidentCreated }: C
                   <SelectValue placeholder="Seleccionar pedido" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ninguno</SelectItem>
+                  <SelectItem value="none">Ninguno</SelectItem>
                   {orders.map((order) => (
                     <SelectItem key={order.id} value={order.id}>
                       {order.order_number}
@@ -212,7 +212,7 @@ export const CreateIncidentModal = ({ open, onOpenChange, onIncidentCreated }: C
                   <SelectValue placeholder="Seleccionar entrega" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Ninguna</SelectItem>
+                  <SelectItem value="none">Ninguna</SelectItem>
                   {deliveries.map((delivery) => (
                     <SelectItem key={delivery.id} value={delivery.id}>
                       Entrega - {delivery.orders.order_number}
