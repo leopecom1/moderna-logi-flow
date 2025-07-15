@@ -88,6 +88,7 @@ export const AssignOrdersModal = ({ open, onOpenChange, routeId, onOrdersAssigne
         .order('created_at', { ascending: false });
 
       if (ordersError) throw ordersError;
+      console.log('Orders found:', ordersData?.length || 0);
 
       // Get orders that already have deliveries
       const { data: existingDeliveries } = await supabase
@@ -95,7 +96,10 @@ export const AssignOrdersModal = ({ open, onOpenChange, routeId, onOrdersAssigne
         .select('order_id');
 
       const orderIdsWithDeliveries = existingDeliveries?.map(d => d.order_id) || [];
+      console.log('Orders with deliveries:', orderIdsWithDeliveries.length);
+      
       const availableOrders = ordersData?.filter(order => !orderIdsWithDeliveries.includes(order.id)) || [];
+      console.log('Available orders after filtering:', availableOrders.length);
 
       setOrders(availableOrders);
     } catch (error) {
@@ -240,8 +244,11 @@ export const AssignOrdersModal = ({ open, onOpenChange, routeId, onOrdersAssigne
                 <div className="text-center py-8">
                   <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No hay pedidos disponibles</h3>
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground mb-4">
                     Todos los pedidos ya han sido asignados a entregas
+                  </p>
+                  <p className="text-sm text-blue-600">
+                    💡 Crea un nuevo pedido desde "Pedidos → Nuevo Pedido" para poder asignarlo a rutas
                   </p>
                 </div>
               ) : (
