@@ -14,6 +14,7 @@ import IncidentsPage from "./pages/IncidentsPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ReportsPage from "./pages/ReportsPage";
+import { CustomersPage } from "./pages/CustomersPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
 
@@ -40,6 +41,7 @@ function App() {
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/users" element={<UsersPage />} />
             <Route path="/orders" element={<OrdersPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
             <Route path="/deliveries" element={<DeliveriesPage />} />
             <Route path="/routes" element={<RoutesPage />} />
             <Route path="/incidents" element={<IncidentsPage />} />

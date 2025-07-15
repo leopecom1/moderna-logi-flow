@@ -7,8 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Package } from 'lucide-react';
+
+const DEPARTAMENTOS_URUGUAY = [
+  'Artigas', 'Canelones', 'Cerro Largo', 'Colonia', 'Durazno', 'Flores',
+  'Florida', 'Lavalleja', 'Maldonado', 'Montevideo', 'Paysandú', 'Río Negro',
+  'Rivera', 'Rocha', 'Salto', 'San José', 'Soriano', 'Tacuarembó', 'Treinta y Tres'
+];
 
 interface CreateOrderModalProps {
   open: boolean;
@@ -21,6 +28,7 @@ interface Customer {
   name: string;
   address: string;
   neighborhood?: string;
+  departamento?: string;
 }
 
 export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateOrderModalProps) => {
@@ -35,8 +43,15 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     delivery_date: '',
     delivery_address: '',
     delivery_neighborhood: '',
+    delivery_departamento: '',
     delivery_time_slot: '',
     notes: '',
+    // Campos para nuevo cliente
+    create_new_customer: false,
+    new_customer_name: '',
+    new_customer_email: '',
+    new_customer_phone: '',
+    new_customer_departamento: '',
   });
 
   useEffect(() => {
@@ -50,7 +65,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     try {
       const { data, error } = await supabase
         .from('customers')
-        .select('id, name, address, neighborhood')
+        .select('id, name, address, neighborhood, departamento')
         .order('name');
 
       if (error) throw error;
@@ -74,6 +89,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         customer_id: customerId,
         delivery_address: customer.address,
         delivery_neighborhood: customer.neighborhood || '',
+        delivery_departamento: customer.departamento || '',
       }));
     }
   };
@@ -84,16 +100,38 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
     try {
       setLoading(true);
+      let customerId = formData.customer_id;
+
+      // Si se está creando un nuevo cliente
+      if (formData.create_new_customer) {
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert([{
+            name: formData.new_customer_name,
+            email: formData.new_customer_email || null,
+            phone: formData.new_customer_phone || null,
+            address: formData.delivery_address,
+            neighborhood: formData.delivery_neighborhood || null,
+            city: 'Santa Fe',
+            departamento: formData.new_customer_departamento || null,
+          }])
+          .select()
+          .single();
+
+        if (customerError) throw customerError;
+        customerId = newCustomer.id;
+      }
 
       const orderData = {
-        customer_id: formData.customer_id,
+        customer_id: customerId,
         seller_id: profile.id,
-        products: JSON.parse(formData.products || '[]'),
+        products: formData.products, // Ahora es texto simple
         total_amount: parseFloat(formData.total_amount),
         payment_method: formData.payment_method as 'efectivo' | 'tarjeta' | 'transferencia' | 'cuenta_corriente',
         delivery_date: formData.delivery_date,
         delivery_address: formData.delivery_address,
         delivery_neighborhood: formData.delivery_neighborhood,
+        delivery_departamento: formData.delivery_departamento,
         delivery_time_slot: formData.delivery_time_slot,
         notes: formData.notes,
         order_number: generateOrderNumber(),
@@ -113,17 +151,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
       onOrderCreated();
       onOpenChange(false);
-      setFormData({
-        customer_id: '',
-        products: '',
-        total_amount: '',
-        payment_method: '',
-        delivery_date: '',
-        delivery_address: '',
-        delivery_neighborhood: '',
-        delivery_time_slot: '',
-        notes: '',
-      });
+      resetForm();
     } catch (error) {
       console.error('Error creating order:', error);
       toast({
@@ -134,6 +162,26 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     } finally {
       setLoading(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      customer_id: '',
+      products: '',
+      total_amount: '',
+      payment_method: '',
+      delivery_date: '',
+      delivery_address: '',
+      delivery_neighborhood: '',
+      delivery_departamento: '',
+      delivery_time_slot: '',
+      notes: '',
+      create_new_customer: false,
+      new_customer_name: '',
+      new_customer_email: '',
+      new_customer_phone: '',
+      new_customer_departamento: '',
+    });
   };
 
   return (
@@ -150,23 +198,88 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="customer">Cliente *</Label>
-              <Select value={formData.customer_id} onValueChange={handleCustomerChange} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar cliente" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Cliente */}
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="create_new_customer"
+                checked={formData.create_new_customer}
+                onCheckedChange={(checked) => setFormData(prev => ({ 
+                  ...prev, 
+                  create_new_customer: !!checked,
+                  customer_id: checked ? '' : prev.customer_id
+                }))}
+              />
+              <Label htmlFor="create_new_customer">Crear nuevo cliente</Label>
             </div>
 
+            {!formData.create_new_customer ? (
+              <div className="space-y-2">
+                <Label htmlFor="customer">Cliente *</Label>
+                <Select value={formData.customer_id} onValueChange={handleCustomerChange} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {customers.map((customer) => (
+                      <SelectItem key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new_customer_name">Nombre del Cliente *</Label>
+                  <Input
+                    id="new_customer_name"
+                    placeholder="Nombre completo"
+                    value={formData.new_customer_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, new_customer_name: e.target.value }))}
+                    required={formData.create_new_customer}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new_customer_email">Email</Label>
+                  <Input
+                    id="new_customer_email"
+                    type="email"
+                    placeholder="correo@ejemplo.com"
+                    value={formData.new_customer_email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, new_customer_email: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new_customer_phone">Teléfono</Label>
+                  <Input
+                    id="new_customer_phone"
+                    placeholder="099 123 456"
+                    value={formData.new_customer_phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, new_customer_phone: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new_customer_departamento">Departamento</Label>
+                  <Select value={formData.new_customer_departamento} onValueChange={(value) => setFormData(prev => ({ ...prev, new_customer_departamento: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar departamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DEPARTAMENTOS_URUGUAY.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="payment_method">Método de Pago *</Label>
               <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))} required>
@@ -182,20 +295,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="products">Productos (JSON) *</Label>
-            <Textarea
-              id="products"
-              placeholder='[{"name": "Producto 1", "quantity": 2, "price": 100}]'
-              value={formData.products}
-              onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="total_amount">Monto Total *</Label>
               <Input
@@ -208,17 +308,28 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                 required
               />
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="delivery_date">Fecha de Entrega *</Label>
-              <Input
-                id="delivery_date"
-                type="date"
-                value={formData.delivery_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="products">Productos *</Label>
+            <Textarea
+              id="products"
+              placeholder="Descripción de los productos..."
+              value={formData.products}
+              onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="delivery_date">Fecha de Entrega *</Label>
+            <Input
+              id="delivery_date"
+              type="date"
+              value={formData.delivery_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -232,7 +343,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="delivery_neighborhood">Barrio</Label>
               <Input
@@ -241,6 +352,22 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                 value={formData.delivery_neighborhood}
                 onChange={(e) => setFormData(prev => ({ ...prev, delivery_neighborhood: e.target.value }))}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delivery_departamento">Departamento</Label>
+              <Select value={formData.delivery_departamento} onValueChange={(value) => setFormData(prev => ({ ...prev, delivery_departamento: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTAMENTOS_URUGUAY.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -265,7 +392,10 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => {
+              onOpenChange(false);
+              resetForm();
+            }}>
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>

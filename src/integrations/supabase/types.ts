@@ -19,6 +19,7 @@ export type Database = {
           address: string
           city: string
           created_at: string
+          departamento: string | null
           email: string | null
           id: string
           name: string
@@ -31,6 +32,7 @@ export type Database = {
           address: string
           city?: string
           created_at?: string
+          departamento?: string | null
           email?: string | null
           id?: string
           name: string
@@ -43,6 +45,7 @@ export type Database = {
           address?: string
           city?: string
           created_at?: string
+          departamento?: string | null
           email?: string | null
           id?: string
           name?: string
@@ -173,6 +176,7 @@ export type Database = {
           customer_id: string
           delivery_address: string
           delivery_date: string | null
+          delivery_departamento: string | null
           delivery_neighborhood: string | null
           delivery_time_slot: string | null
           id: string
@@ -191,6 +195,7 @@ export type Database = {
           customer_id: string
           delivery_address: string
           delivery_date?: string | null
+          delivery_departamento?: string | null
           delivery_neighborhood?: string | null
           delivery_time_slot?: string | null
           id?: string
@@ -209,6 +214,7 @@ export type Database = {
           customer_id?: string
           delivery_address?: string
           delivery_date?: string | null
+          delivery_departamento?: string | null
           delivery_neighborhood?: string | null
           delivery_time_slot?: string | null
           id?: string
