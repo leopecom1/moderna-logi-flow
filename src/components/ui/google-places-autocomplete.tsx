@@ -75,12 +75,24 @@ export const GooglePlacesAutocomplete = ({
       });
 
       // Add click debugging
-      const container = document.querySelector('.pac-container');
-      if (container) {
-        container.addEventListener('click', (e) => {
-          console.log('🖱️ Click detected on pac-container:', e.target);
-        });
-      }
+      setTimeout(() => {
+        const container = document.querySelector('.pac-container');
+        if (container) {
+          container.addEventListener('click', (e) => {
+            console.log('🖱️ Click detected on pac-container:', e.target);
+            e.stopPropagation();
+          });
+          
+          // Add debugging to pac-items
+          const items = container.querySelectorAll('.pac-item');
+          items.forEach(item => {
+            item.addEventListener('click', (e) => {
+              console.log('🎯 Click on pac-item:', e.target);
+              e.stopPropagation();
+            });
+          });
+        }
+      }, 100);
 
       autocompleteRef.current = autocomplete;
       console.log('✅ Autocomplete initialized successfully');
@@ -128,6 +140,7 @@ export const GooglePlacesAutocomplete = ({
         display: block !important;
         visibility: visible !important;
         width: 100% !important;
+        pointer-events: auto !important;
       }
       .pac-item {
         padding: 12px 16px !important;
@@ -138,6 +151,8 @@ export const GooglePlacesAutocomplete = ({
         min-height: 44px !important;
         line-height: 1.4 !important;
         word-wrap: break-word !important;
+        pointer-events: auto !important;
+        user-select: none !important;
       }
       .pac-item:hover {
         background-color: #f8fafc !important;
@@ -148,10 +163,15 @@ export const GooglePlacesAutocomplete = ({
       .pac-item-query {
         font-size: 14px !important;
         color: #1f2937 !important;
+        pointer-events: none !important;
       }
       .pac-matched {
         font-weight: 600 !important;
         color: #2563eb !important;
+        pointer-events: none !important;
+      }
+      .pac-item span {
+        pointer-events: none !important;
       }
     `;
     document.head.appendChild(style);
