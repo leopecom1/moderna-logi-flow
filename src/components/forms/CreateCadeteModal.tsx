@@ -166,8 +166,28 @@ export const CreateCadeteModal = ({ open, onOpenChange, onCadeteCreated }: Creat
     });
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    // Prevent closing when clicking on Google Places autocomplete
+    if (!newOpen) {
+      // Check if there's an active Google Places dropdown
+      const isGooglePlacesClick = document.querySelector('.pac-container:hover') !== null;
+      
+      // Also check if any pac-container elements exist (more robust)
+      const pacContainers = document.querySelectorAll('.pac-container');
+      const hasVisiblePacContainer = Array.from(pacContainers).some(container => {
+        const style = window.getComputedStyle(container);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      });
+      
+      if (isGooglePlacesClick || hasVisiblePacContainer) {
+        return;
+      }
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -457,7 +477,7 @@ export const CreateCadeteModal = ({ open, onOpenChange, onCadeteCreated }: Creat
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" disabled={loading}>
