@@ -69,23 +69,50 @@ Deno.serve(async (req) => {
     const userId = authData.user.id
     console.log('✅ User created with ID:', userId)
 
-    // Update the profile created by the trigger
-    console.log('📝 Updating profile...')
-    const { error: profileError } = await supabaseClient
+    // Wait a moment for the trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // Check if profile exists, if not create it
+    console.log('🔍 Checking if profile exists...')
+    const { data: existingProfile } = await supabaseClient
       .from('profiles')
-      .update({
-        full_name: cadeteData.full_name,
-        phone: cadeteData.phone,
-        role: 'cadete'
-      })
+      .select('*')
       .eq('user_id', userId)
+      .single()
 
-    if (profileError) {
-      console.error('❌ Profile update error:', profileError)
-      throw profileError
+    if (!existingProfile) {
+      console.log('📝 Creating profile...')
+      const { error: profileCreateError } = await supabaseClient
+        .from('profiles')
+        .insert({
+          user_id: userId,
+          full_name: cadeteData.full_name,
+          phone: cadeteData.phone,
+          role: 'cadete'
+        })
+
+      if (profileCreateError) {
+        console.error('❌ Profile creation error:', profileCreateError)
+        throw profileCreateError
+      }
+    } else {
+      console.log('📝 Updating existing profile...')
+      const { error: profileUpdateError } = await supabaseClient
+        .from('profiles')
+        .update({
+          full_name: cadeteData.full_name,
+          phone: cadeteData.phone,
+          role: 'cadete'
+        })
+        .eq('user_id', userId)
+
+      if (profileUpdateError) {
+        console.error('❌ Profile update error:', profileUpdateError)
+        throw profileUpdateError
+      }
     }
 
-    console.log('✅ Profile updated successfully')
+    console.log('✅ Profile handled successfully')
 
     // Create extended cadete profile
     console.log('👷 Creating cadete profile...')
