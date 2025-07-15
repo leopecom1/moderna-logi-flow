@@ -101,7 +101,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile?.id) return;
+    if (!profile?.user_id) return;
 
     try {
       setLoading(true);
@@ -129,7 +129,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
       const orderData = {
         customer_id: customerId,
-        seller_id: profile.id,
+        seller_id: profile.user_id,
         products: formData.products, // Ahora es texto simple
         total_amount: parseFloat(formData.total_amount),
         payment_method: formData.payment_method as 'efectivo' | 'tarjeta' | 'transferencia' | 'cuenta_corriente',
