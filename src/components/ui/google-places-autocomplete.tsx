@@ -21,6 +21,12 @@ export const GooglePlacesAutocomplete = ({
   const { isLoaded, loadError } = useGoogleMaps();
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<any>(null);
+  const [inputValue, setInputValue] = useState(value);
+
+  // Sync external value changes
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
 
   useEffect(() => {
     if (isLoaded && inputRef.current && !autocompleteRef.current && !disabled && window.google) {
@@ -31,30 +37,23 @@ export const GooglePlacesAutocomplete = ({
           fields: ['formatted_address', 'geometry', 'address_components', 'place_id']
         });
 
-        // Ensure the dropdown is properly styled and clickable
-        const pacContainer = document.querySelector('.pac-container');
-        if (pacContainer) {
-          (pacContainer as HTMLElement).style.zIndex = '9999';
-        }
-
         autocomplete.addListener('place_changed', () => {
           const place = autocomplete.getPlace();
           console.log('Place selected:', place);
+          
           if (place.formatted_address) {
-            // Force update the input value
-            if (inputRef.current) {
-              inputRef.current.value = place.formatted_address;
-            }
+            setInputValue(place.formatted_address);
             onChange(place.formatted_address, place);
-          }
-        });
-
-        // Add focus event to ensure dropdown appears
-        inputRef.current.addEventListener('focus', () => {
-          const pacContainer = document.querySelector('.pac-container');
-          if (pacContainer) {
-            (pacContainer as HTMLElement).style.zIndex = '9999';
-            (pacContainer as HTMLElement).style.pointerEvents = 'auto';
+            
+            // Force input blur and focus to ensure UI updates
+            if (inputRef.current) {
+              inputRef.current.blur();
+              setTimeout(() => {
+                if (inputRef.current) {
+                  inputRef.current.focus();
+                }
+              }, 10);
+            }
           }
         });
 
@@ -83,38 +82,49 @@ export const GooglePlacesAutocomplete = ({
           border: 1px solid hsl(var(--border));
           box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
           font-family: inherit;
+          background-color: hsl(var(--background)) !important;
         }
         .pac-item {
           padding: 8px 12px;
           cursor: pointer !important;
           border-bottom: 1px solid hsl(var(--border));
+          background-color: hsl(var(--background)) !important;
+          color: hsl(var(--foreground)) !important;
         }
         .pac-item:hover {
-          background-color: hsl(var(--accent));
+          background-color: hsl(var(--accent)) !important;
         }
         .pac-item-selected {
-          background-color: hsl(var(--accent));
+          background-color: hsl(var(--accent)) !important;
         }
         .pac-matched {
           font-weight: 600;
+          color: hsl(var(--primary)) !important;
+        }
+        .pac-icon {
+          display: none;
         }
       `;
       document.head.appendChild(style);
       
       return () => {
-        document.head.removeChild(style);
+        if (document.head.contains(style)) {
+          document.head.removeChild(style);
+        }
       };
     }
   }, [isLoaded]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onChange(e.target.value);
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    onChange(newValue);
   };
 
   if (loadError) {
     return (
       <Input
-        value={value}
+        value={inputValue}
         onChange={handleInputChange}
         placeholder={placeholder}
         className={className}
@@ -136,7 +146,7 @@ export const GooglePlacesAutocomplete = ({
   return (
     <Input
       ref={inputRef}
-      value={value}
+      value={inputValue}
       onChange={handleInputChange}
       placeholder={placeholder}
       className={cn("w-full", className)}
