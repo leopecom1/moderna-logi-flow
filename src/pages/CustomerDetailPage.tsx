@@ -473,7 +473,7 @@ export default function CustomerDetailPage() {
       <ImportMovementsModal
         open={showImportModal}
         onOpenChange={setShowImportModal}
-        customerId={id!}
+        customerId={id}
         onImportComplete={fetchCustomerData}
       />
     </div>

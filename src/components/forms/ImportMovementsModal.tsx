@@ -12,7 +12,7 @@ import { read, utils } from 'xlsx';
 interface ImportMovementsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  customerId: string;
+  customerId?: string; // Optional - if not provided, will create/update customer
   onImportComplete: () => void;
 }
 
@@ -132,32 +132,80 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
 
     try {
       setLoading(true);
+      let finalCustomerId = customerId;
 
-      // Update customer information
-      const { error: customerError } = await supabase
-        .from('customers')
-        .update({
-          name: previewData.name,
-          cedula_identidad: previewData.cedula,
-          phone: previewData.phone,
-          address: previewData.address,
-          margen: previewData.margen,
-        })
-        .eq('id', customerId);
+      // If no customerId provided, search for existing customer or create new one
+      if (!customerId) {
+        // First, try to find customer by cedula
+        const { data: existingCustomer, error: searchError } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('cedula_identidad', previewData.cedula)
+          .maybeSingle();
 
-      if (customerError) throw customerError;
+        if (searchError) throw searchError;
+
+        if (existingCustomer) {
+          // Customer exists, update it
+          finalCustomerId = existingCustomer.id;
+          
+          const { error: updateError } = await supabase
+            .from('customers')
+            .update({
+              name: previewData.name,
+              cedula_identidad: previewData.cedula,
+              phone: previewData.phone,
+              address: previewData.address,
+              margen: previewData.margen,
+            })
+            .eq('id', finalCustomerId);
+
+          if (updateError) throw updateError;
+        } else {
+          // Customer doesn't exist, create new one
+          const { data: newCustomer, error: createError } = await supabase
+            .from('customers')
+            .insert({
+              name: previewData.name,
+              cedula_identidad: previewData.cedula,
+              phone: previewData.phone,
+              address: previewData.address,
+              city: 'Santa Fe', // Default city
+              margen: previewData.margen,
+            })
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          finalCustomerId = newCustomer.id;
+        }
+      } else {
+        // Customer ID provided, just update the existing customer
+        const { error: customerError } = await supabase
+          .from('customers')
+          .update({
+            name: previewData.name,
+            cedula_identidad: previewData.cedula,
+            phone: previewData.phone,
+            address: previewData.address,
+            margen: previewData.margen,
+          })
+          .eq('id', customerId);
+
+        if (customerError) throw customerError;
+      }
 
       // Delete existing movements for this customer
       const { error: deleteError } = await supabase
         .from('customer_movements')
         .delete()
-        .eq('customer_id', customerId);
+        .eq('customer_id', finalCustomerId);
 
       if (deleteError) throw deleteError;
 
       // Insert new movements
       const movementsToInsert = previewData.movements.map(movement => ({
-        customer_id: customerId,
+        customer_id: finalCustomerId,
         movement_date: movement.date,
         delivery_info: movement.delivery,
         balance_amount: movement.balance,
@@ -171,9 +219,10 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
         if (insertError) throw insertError;
       }
 
+      const actionType = customerId ? 'actualizados' : 'importados';
       toast({
         title: 'Importación exitosa',
-        description: `Se importaron ${previewData.movements.length} movimientos correctamente`,
+        description: `Cliente ${customerId ? 'actualizado' : 'creado'} y ${previewData.movements.length} movimientos ${actionType} correctamente`,
       });
 
       onImportComplete();
@@ -202,7 +251,10 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
             <span>Importar Movimientos desde Excel</span>
           </DialogTitle>
           <DialogDescription>
-            Carga un archivo Excel con los movimientos del cliente
+            {customerId 
+              ? 'Actualiza la información del cliente y carga sus movimientos desde Excel'
+              : 'Crea un nuevo cliente o actualiza uno existente y carga sus movimientos desde Excel'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -233,6 +285,11 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
               <li>• <strong>A5:A200:</strong> Fechas</li>
               <li>• <strong>B5:B200:</strong> Información de entrega</li>
               <li>• <strong>C5:C200:</strong> Saldos</li>
+              {!customerId && (
+                <li className="text-blue-600 font-medium">
+                  • El cliente se creará automáticamente o se actualizará si ya existe (por cédula)
+                </li>
+              )}
             </ul>
           </div>
 
@@ -284,7 +341,7 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
               onClick={handleImport}
               disabled={loading || !previewData}
             >
-              {loading ? 'Importando...' : 'Importar Movimientos'}
+              {loading ? 'Importando...' : customerId ? 'Actualizar y Cargar Movimientos' : 'Crear Cliente y Cargar Movimientos'}
             </Button>
           </div>
         </div>

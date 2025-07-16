@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Users, Phone, Mail, MapPin, Eye } from 'lucide-react';
+import { Plus, Search, Users, Phone, Mail, MapPin, Eye, Upload } from 'lucide-react';
 import { CreateCustomerModal } from '@/components/forms/CreateCustomerModal';
+import { ImportMovementsModal } from '@/components/forms/ImportMovementsModal';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,6 +33,7 @@ export const CustomersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const canManageCustomers = profile?.role === 'gerencia' || profile?.role === 'vendedor';
 
@@ -89,10 +91,16 @@ export const CustomersPage = () => {
           </p>
         </div>
         {canManageCustomers && (
-          <Button onClick={() => setShowCreateModal(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Cliente
-          </Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={() => setShowImportModal(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Importar Excel
+            </Button>
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Cliente
+            </Button>
+          </div>
         )}
       </div>
 
@@ -185,6 +193,12 @@ export const CustomersPage = () => {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onCustomerCreated={fetchCustomers}
+      />
+
+      <ImportMovementsModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+        onImportComplete={fetchCustomers}
       />
     </div>
   );
