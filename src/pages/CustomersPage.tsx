@@ -19,6 +19,8 @@ interface Customer {
   city: string;
   departamento: string | null;
   notes: string | null;
+  cedula_identidad: string | null;
+  margen: number | null;
   created_at: string;
 }
 
@@ -134,6 +136,16 @@ export const CustomersPage = () => {
                 <div className="flex items-center space-x-2 text-sm">
                   <Mail className="h-4 w-4 text-muted-foreground" />
                   <span>{customer.email}</span>
+                </div>
+              )}
+              {customer.cedula_identidad && (
+                <div className="text-sm text-muted-foreground">
+                  <strong>CI:</strong> {customer.cedula_identidad}
+                </div>
+              )}
+              {customer.margen && (
+                <div className="text-sm text-muted-foreground">
+                  <strong>Margen:</strong> {customer.margen}%
                 </div>
               )}
               {customer.notes && (

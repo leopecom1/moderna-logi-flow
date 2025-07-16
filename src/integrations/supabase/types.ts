@@ -97,11 +97,13 @@ export type Database = {
       customers: {
         Row: {
           address: string
+          cedula_identidad: string | null
           city: string
           created_at: string
           departamento: string | null
           email: string | null
           id: string
+          margen: number | null
           name: string
           neighborhood: string | null
           notes: string | null
@@ -110,11 +112,13 @@ export type Database = {
         }
         Insert: {
           address: string
+          cedula_identidad?: string | null
           city?: string
           created_at?: string
           departamento?: string | null
           email?: string | null
           id?: string
+          margen?: number | null
           name: string
           neighborhood?: string | null
           notes?: string | null
@@ -123,11 +127,13 @@ export type Database = {
         }
         Update: {
           address?: string
+          cedula_identidad?: string | null
           city?: string
           created_at?: string
           departamento?: string | null
           email?: string | null
           id?: string
+          margen?: number | null
           name?: string
           neighborhood?: string | null
           notes?: string | null

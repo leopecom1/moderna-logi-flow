@@ -34,6 +34,8 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
     city: 'Santa Fe',
     departamento: '',
     notes: '',
+    cedula_identidad: '',
+    margen: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -54,6 +56,8 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
           city: formData.city,
           departamento: formData.departamento || null,
           notes: formData.notes || null,
+          cedula_identidad: formData.cedula_identidad || null,
+          margen: formData.margen ? parseFloat(formData.margen) : null,
         }]);
 
       if (error) throw error;
@@ -74,6 +78,8 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
         city: 'Santa Fe',
         departamento: '',
         notes: '',
+        cedula_identidad: '',
+        margen: '',
       });
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -183,6 +189,30 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="cedula_identidad">Cédula de Identidad</Label>
+              <Input
+                id="cedula_identidad"
+                placeholder="12.345.678-9"
+                value={formData.cedula_identidad}
+                onChange={(e) => setFormData(prev => ({ ...prev, cedula_identidad: e.target.value }))}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="margen">Margen (%)</Label>
+              <Input
+                id="margen"
+                type="number"
+                step="0.01"
+                placeholder="15.50"
+                value={formData.margen}
+                onChange={(e) => setFormData(prev => ({ ...prev, margen: e.target.value }))}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
