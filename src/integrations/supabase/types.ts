@@ -99,27 +99,27 @@ export type Database = {
           balance_amount: number
           created_at: string
           customer_id: string
-          delivery_info: string | null
           id: string
           movement_date: string
+          payment_info: string | null
           updated_at: string
         }
         Insert: {
           balance_amount?: number
           created_at?: string
           customer_id: string
-          delivery_info?: string | null
           id?: string
           movement_date: string
+          payment_info?: string | null
           updated_at?: string
         }
         Update: {
           balance_amount?: number
           created_at?: string
           customer_id?: string
-          delivery_info?: string | null
           id?: string
           movement_date?: string
+          payment_info?: string | null
           updated_at?: string
         }
         Relationships: []

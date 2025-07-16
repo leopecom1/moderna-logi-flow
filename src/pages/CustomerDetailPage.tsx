@@ -60,7 +60,7 @@ interface Delivery {
 interface Movement {
   id: string;
   movement_date: string;
-  delivery_info: string | null;
+  payment_info: string | null;
   balance_amount: number;
   created_at: string;
 }
@@ -359,9 +359,9 @@ export default function CustomerDetailPage() {
                       ${Number(movement.balance_amount).toFixed(2)}
                     </span>
                   </CardTitle>
-                  {movement.delivery_info && (
+                  {movement.payment_info && (
                     <CardDescription>
-                      {movement.delivery_info}
+                      Pago: {movement.payment_info}
                     </CardDescription>
                   )}
                 </CardHeader>

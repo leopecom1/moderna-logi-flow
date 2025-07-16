@@ -18,7 +18,7 @@ interface ImportMovementsModalProps {
 
 interface MovementData {
   date: string;
-  delivery: string;
+  payment: string;
   balance: number;
 }
 
@@ -69,12 +69,12 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
       
       for (let row = 5; row <= 200; row++) {
         const dateCell = worksheet[`A${row}`];
-        const deliveryCell = worksheet[`B${row}`];
+        const paymentCell = worksheet[`B${row}`];
         const balanceCell = worksheet[`C${row}`];
         
         if (dateCell?.v) {
           const date = dateCell.v;
-          const delivery = deliveryCell?.v || '';
+          const payment = paymentCell?.v || '';
           const balance = Number(balanceCell?.v) || 0;
           
           // Convert Excel date to proper format if needed
@@ -93,7 +93,7 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
           
           movements.push({
             date: formattedDate,
-            delivery: String(delivery),
+            payment: String(payment),
             balance: balance
           });
         }
@@ -207,7 +207,7 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
       const movementsToInsert = previewData.movements.map(movement => ({
         customer_id: finalCustomerId,
         movement_date: movement.date,
-        delivery_info: movement.delivery,
+        payment_info: movement.payment,
         balance_amount: movement.balance,
       }));
 
@@ -283,7 +283,7 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
               <li>• <strong>A3:</strong> Dirección</li>
               <li>• <strong>E2:</strong> Margen</li>
               <li>• <strong>A5:A200:</strong> Fechas</li>
-              <li>• <strong>B5:B200:</strong> Información de entrega</li>
+              <li>• <strong>B5:B200:</strong> Pagos</li>
               <li>• <strong>C5:C200:</strong> Saldos</li>
               {!customerId && (
                 <li className="text-blue-600 font-medium">
@@ -313,7 +313,7 @@ export const ImportMovementsModal = ({ open, onOpenChange, customerId, onImportC
                 {previewData.movements.slice(0, 5).map((movement, index) => (
                   <div key={index} className="text-sm grid grid-cols-3 gap-2 py-1">
                     <span>{movement.date}</span>
-                    <span>{movement.delivery || 'Sin info'}</span>
+                    <span>{movement.payment || 'Sin pago'}</span>
                     <span>${movement.balance.toFixed(2)}</span>
                   </div>
                 ))}
