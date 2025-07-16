@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Users, Phone, Mail, MapPin } from 'lucide-react';
+import { Plus, Search, Users, Phone, Mail, MapPin, Eye } from 'lucide-react';
 import { CreateCustomerModal } from '@/components/forms/CreateCustomerModal';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface Customer {
   id: string;
@@ -25,6 +26,7 @@ interface Customer {
 }
 
 export const CustomersPage = () => {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -154,6 +156,17 @@ export const CustomersPage = () => {
                 </div>
               )}
             </CardContent>
+            <div className="p-4 pt-0">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate(`/customers/${customer.id}`)}
+                className="w-full"
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Ver Historial
+              </Button>
+            </div>
           </Card>
         ))}
       </div>

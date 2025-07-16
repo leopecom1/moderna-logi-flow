@@ -16,6 +16,7 @@ import PaymentsPage from "./pages/PaymentsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ReportsPage from "./pages/ReportsPage";
 import { CustomersPage } from "./pages/CustomersPage";
+import CustomerDetailPage from "./pages/CustomerDetailPage";
 import OrderDetailPage from "./pages/OrderDetailPage";
 import CadetesPage from "./pages/CadetesPage";
 import CadeteDetailPage from "./pages/CadeteDetailPage";
@@ -48,6 +49,7 @@ function App() {
             <Route path="/orders" element={<OrdersPage />} />
             <Route path="/orders/:id" element={<OrderDetailPage />} />
             <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/customers/:id" element={<CustomerDetailPage />} />
             <Route path="/cadetes" element={<CadetesPage />} />
             <Route path="/cadetes/:id" element={<CadeteDetailPage />} />
             <Route path="/vehiculos" element={<VehiculosPage />} />
