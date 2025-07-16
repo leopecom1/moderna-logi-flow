@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator } from 'lucide-react';
+import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator, Upload } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { ImportMovementsModal } from '@/components/forms/ImportMovementsModal';
 
 interface Customer {
   id: string;
@@ -56,6 +57,14 @@ interface Delivery {
   order_id: string;
 }
 
+interface Movement {
+  id: string;
+  movement_date: string;
+  delivery_info: string | null;
+  balance_amount: number;
+  created_at: string;
+}
+
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -64,7 +73,9 @@ export default function CustomerDetailPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -118,6 +129,17 @@ export default function CustomerDetailPage() {
         if (deliveriesError) throw deliveriesError;
         setDeliveries(deliveriesData || []);
       }
+
+      // Fetch customer movements
+      const { data: movementsData, error: movementsError } = await supabase
+        .from('customer_movements')
+        .select('*')
+        .eq('customer_id', id)
+        .order('movement_date', { ascending: false });
+
+      if (movementsError) throw movementsError;
+      setMovements(movementsData || []);
+
     } catch (error) {
       console.error('Error fetching customer data:', error);
       toast({
@@ -135,7 +157,11 @@ export default function CustomerDetailPage() {
     const totalPaid = payments
       .filter(payment => payment.status === 'completado')
       .reduce((sum, payment) => sum + Number(payment.amount), 0);
-    return totalOrders - totalPaid;
+    
+    // Include movements in balance calculation
+    const movementsBalance = movements.reduce((sum, movement) => sum + Number(movement.balance_amount), 0);
+    
+    return totalOrders - totalPaid + movementsBalance;
   };
 
   const getStatusBadge = (status: string, type: 'order' | 'payment' | 'delivery') => {
@@ -190,6 +216,10 @@ export default function CustomerDetailPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver a Clientes
         </Button>
+        <Button onClick={() => setShowImportModal(true)}>
+          <Upload className="h-4 w-4 mr-2" />
+          Importar Movimientos
+        </Button>
       </div>
 
       {/* Customer Info Header */}
@@ -242,10 +272,14 @@ export default function CustomerDetailPage() {
 
       {/* Tabs for History */}
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="summary">
             <Calculator className="h-4 w-4 mr-2" />
             Resumen
+          </TabsTrigger>
+          <TabsTrigger value="movements">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Movimientos ({movements.length})
           </TabsTrigger>
           <TabsTrigger value="orders">
             <ShoppingCart className="h-4 w-4 mr-2" />
@@ -262,7 +296,7 @@ export default function CustomerDetailPage() {
         </TabsList>
 
         <TabsContent value="summary">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Total Órdenes</CardTitle>
@@ -293,6 +327,16 @@ export default function CustomerDetailPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Saldo desde Movimientos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  ${movements.reduce((sum, movement) => sum + Number(movement.balance_amount), 0).toFixed(2)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Órdenes Completadas</CardTitle>
               </CardHeader>
               <CardContent>
@@ -301,6 +345,33 @@ export default function CustomerDetailPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="movements">
+          <div className="space-y-4">
+            {movements.map((movement) => (
+              <Card key={movement.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{new Date(movement.movement_date).toLocaleDateString()}</span>
+                    <span className={`text-lg font-bold ${Number(movement.balance_amount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      ${Number(movement.balance_amount).toFixed(2)}
+                    </span>
+                  </CardTitle>
+                  {movement.delivery_info && (
+                    <CardDescription>
+                      {movement.delivery_info}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+              </Card>
+            ))}
+            {movements.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No hay movimientos registrados
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -398,6 +469,13 @@ export default function CustomerDetailPage() {
           </div>
         </TabsContent>
       </Tabs>
+
+      <ImportMovementsModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+        customerId={id!}
+        onImportComplete={fetchCustomerData}
+      />
     </div>
   );
 }

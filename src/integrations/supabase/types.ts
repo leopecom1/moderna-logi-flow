@@ -94,6 +94,36 @@ export type Database = {
           },
         ]
       }
+      customer_movements: {
+        Row: {
+          balance_amount: number
+          created_at: string
+          customer_id: string
+          delivery_info: string | null
+          id: string
+          movement_date: string
+          updated_at: string
+        }
+        Insert: {
+          balance_amount?: number
+          created_at?: string
+          customer_id: string
+          delivery_info?: string | null
+          id?: string
+          movement_date: string
+          updated_at?: string
+        }
+        Update: {
+          balance_amount?: number
+          created_at?: string
+          customer_id?: string
+          delivery_info?: string | null
+          id?: string
+          movement_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string
