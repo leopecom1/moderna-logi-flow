@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Users, Phone, Mail, MapPin, Eye, Upload } from 'lucide-react';
+import { Plus, Search, Users, Phone, Mail, MapPin, Eye, Upload, Trash2 } from 'lucide-react';
 import { CreateCustomerModal } from '@/components/forms/CreateCustomerModal';
 import { ImportMovementsModal } from '@/components/forms/ImportMovementsModal';
+import { DeleteCustomerModal } from '@/components/forms/DeleteCustomerModal';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -34,8 +35,11 @@ export const CustomersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
 
   const canManageCustomers = profile?.role === 'gerencia' || profile?.role === 'vendedor';
+  const canDeleteCustomers = profile?.role === 'gerencia';
 
   useEffect(() => {
     fetchCustomers();
@@ -69,6 +73,11 @@ export const CustomersPage = () => {
     customer.phone?.includes(searchTerm) ||
     customer.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleDeleteCustomer = (customer: Customer) => {
+    setCustomerToDelete(customer);
+    setShowDeleteModal(true);
+  };
 
   if (loading) {
     return (
@@ -165,15 +174,27 @@ export const CustomersPage = () => {
               )}
             </CardContent>
             <div className="p-4 pt-0">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => navigate(`/customers/${customer.id}`)}
-                className="w-full"
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Ver Historial
-              </Button>
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate(`/customers/${customer.id}`)}
+                  className="flex-1"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ver Historial
+                </Button>
+                {canDeleteCustomers && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDeleteCustomer(customer)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </Card>
         ))}
@@ -199,6 +220,13 @@ export const CustomersPage = () => {
         open={showImportModal}
         onOpenChange={setShowImportModal}
         onImportComplete={fetchCustomers}
+      />
+
+      <DeleteCustomerModal
+        open={showDeleteModal}
+        onOpenChange={setShowDeleteModal}
+        customer={customerToDelete}
+        onCustomerDeleted={fetchCustomers}
       />
     </div>
   );
