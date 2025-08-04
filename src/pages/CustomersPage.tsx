@@ -27,6 +27,8 @@ interface Customer {
   created_at: string;
 }
 
+import { MainLayout } from '@/components/layout/MainLayout';
+
 export const CustomersPage = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -81,14 +83,14 @@ export const CustomersPage = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <MainLayout>
         <div className="text-center">Cargando clientes...</div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <MainLayout>
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold flex items-center space-x-2">
@@ -228,6 +230,6 @@ export const CustomersPage = () => {
         customer={customerToDelete}
         onCustomerDeleted={fetchCustomers}
       />
-    </div>
+    </MainLayout>
   );
 };

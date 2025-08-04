@@ -36,6 +36,7 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
     notes: '',
     cedula_identidad: '',
     margen: '',
+    customer_number: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,6 +59,7 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
           notes: formData.notes || null,
           cedula_identidad: formData.cedula_identidad || null,
           margen: formData.margen ? parseFloat(formData.margen) : null,
+          customer_number: formData.customer_number || null,
         }]);
 
       if (error) throw error;
@@ -80,6 +82,7 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
         notes: '',
         cedula_identidad: '',
         margen: '',
+        customer_number: '',
       });
     } catch (error) {
       console.error('Error creating customer:', error);
@@ -203,16 +206,26 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="margen">Margen (%)</Label>
+              <Label htmlFor="customer_number">Número de Cliente</Label>
               <Input
-                id="margen"
-                type="number"
-                step="0.01"
-                placeholder="15.50"
-                value={formData.margen}
-                onChange={(e) => setFormData(prev => ({ ...prev, margen: e.target.value }))}
+                id="customer_number"
+                placeholder="CLI-001"
+                value={formData.customer_number}
+                onChange={(e) => setFormData(prev => ({ ...prev, customer_number: e.target.value }))}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="margen">Margen (%)</Label>
+            <Input
+              id="margen"
+              type="number"
+              step="0.01"
+              placeholder="15.50"
+              value={formData.margen}
+              onChange={(e) => setFormData(prev => ({ ...prev, margen: e.target.value }))}
+            />
           </div>
 
           <div className="space-y-2">

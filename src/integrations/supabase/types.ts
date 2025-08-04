@@ -130,6 +130,7 @@ export type Database = {
           cedula_identidad: string | null
           city: string
           created_at: string
+          customer_number: string | null
           departamento: string | null
           email: string | null
           id: string
@@ -145,6 +146,7 @@ export type Database = {
           cedula_identidad?: string | null
           city?: string
           created_at?: string
+          customer_number?: string | null
           departamento?: string | null
           email?: string | null
           id?: string
@@ -160,6 +162,7 @@ export type Database = {
           cedula_identidad?: string | null
           city?: string
           created_at?: string
+          customer_number?: string | null
           departamento?: string | null
           email?: string | null
           id?: string

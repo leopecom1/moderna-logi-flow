@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator, Upload } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator, Upload, Edit } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ImportMovementsModal } from '@/components/forms/ImportMovementsModal';
+import { EditMovementModal } from '@/components/forms/EditMovementModal';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Customer {
   id: string;
@@ -76,6 +79,8 @@ export default function CustomerDetailPage() {
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -164,6 +169,11 @@ export default function CustomerDetailPage() {
     return totalOrders - totalPaid + movementsBalance;
   };
 
+  const handleEditMovement = (movement: Movement) => {
+    setSelectedMovement(movement);
+    setShowEditModal(true);
+  };
+
   const getStatusBadge = (status: string, type: 'order' | 'payment' | 'delivery') => {
     const statusConfig = {
       order: {
@@ -193,24 +203,24 @@ export default function CustomerDetailPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <MainLayout>
         <div className="text-center">Cargando información del cliente...</div>
-      </div>
+      </MainLayout>
     );
   }
 
   if (!customer) {
     return (
-      <div className="container mx-auto p-6">
+      <MainLayout>
         <div className="text-center">Cliente no encontrado</div>
-      </div>
+      </MainLayout>
     );
   }
 
   const balance = calculateBalance();
 
   return (
-    <div className="container mx-auto p-6">
+    <MainLayout>
       <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" onClick={() => navigate('/customers')}>
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -349,30 +359,59 @@ export default function CustomerDetailPage() {
         </TabsContent>
 
         <TabsContent value="movements">
-          <div className="space-y-4">
-            {movements.map((movement) => (
-              <Card key={movement.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{new Date(movement.movement_date).toLocaleDateString()}</span>
-                    <span className={`text-lg font-bold ${Number(movement.balance_amount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      ${Number(movement.balance_amount).toFixed(2)}
-                    </span>
-                  </CardTitle>
-                  {movement.payment_info && (
-                    <CardDescription>
-                      Pago: {movement.payment_info}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-              </Card>
-            ))}
-            {movements.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No hay movimientos registrados
-              </div>
-            )}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Historial de Movimientos</CardTitle>
+              <CardDescription>
+                Gestiona los movimientos del cliente
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {movements.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Información de Pago</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movements.map((movement) => (
+                      <TableRow key={movement.id}>
+                        <TableCell>
+                          {new Date(movement.movement_date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`font-medium ${Number(movement.balance_amount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            ${Number(movement.balance_amount).toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {movement.payment_info || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditMovement(movement)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No hay movimientos registrados
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="orders">
@@ -476,6 +515,13 @@ export default function CustomerDetailPage() {
         customerId={id}
         onImportComplete={fetchCustomerData}
       />
-    </div>
+
+      <EditMovementModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        movement={selectedMovement}
+        onMovementUpdated={fetchCustomerData}
+      />
+    </MainLayout>
   );
 }
