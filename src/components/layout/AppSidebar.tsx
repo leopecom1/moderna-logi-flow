@@ -27,7 +27,9 @@ import {
   FileText,
   DollarSign,
   ShoppingCart,
-  Package2
+  Package2,
+  Receipt,
+  PiggyBank
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -54,6 +56,8 @@ export const AppSidebar = () => {
     { title: 'Usuarios', url: '/users', icon: Crown },
     { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
     { title: 'Pagos', url: '/payments', icon: CreditCard },
+    { title: 'Cobros', url: '/collections', icon: Receipt },
+    { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
     { title: 'Productos', url: '/products', icon: Package2 },
     { title: 'Ventas', url: '/sales', icon: ShoppingCart },
     { title: 'Configuración', url: '/settings', icon: Settings },
@@ -67,6 +71,7 @@ export const AppSidebar = () => {
     { title: 'Clientes', url: '/customers', icon: Users },
     { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
     { title: 'Pagos', url: '/payments', icon: DollarSign },
+    { title: 'Cobros', url: '/collections', icon: Receipt },
   ];
 
   const cadeteItems = [

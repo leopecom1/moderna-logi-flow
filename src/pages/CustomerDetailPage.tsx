@@ -87,6 +87,7 @@ export default function CustomerDetailPage() {
   const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
   const [showCreateMovementModal, setShowCreateMovementModal] = useState(false);
   const [showCreateSaleModal, setShowCreateSaleModal] = useState(false);
+  const [showCreateCollectionModal, setShowCreateCollectionModal] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
 
   useEffect(() => {
@@ -430,13 +431,31 @@ export default function CustomerDetailPage() {
         </TabsContent>
 
         <TabsContent value="orders">
-          <div className="space-y-4">
+           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">Órdenes del Cliente</h3>
-              <Button onClick={() => setShowCreateOrderModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Orden
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => setShowCreateOrderModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Orden
+                </Button>
+                <Button onClick={() => setShowCreateSaleModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nueva Venta
+                </Button>
+                <Button onClick={() => setShowCreatePaymentModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Pago
+                </Button>
+                <Button onClick={() => setShowCreateCollectionModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Registrar Cobro
+                </Button>
+                <Button onClick={() => setShowCreateMovementModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Movimiento
+                </Button>
+              </div>
             </div>
             {orders.map((order) => (
               <Card key={order.id}>
@@ -576,6 +595,14 @@ export default function CustomerDetailPage() {
         customerName={customer.name}
         onPaymentCreated={fetchCustomerData}
       />
+
+      {showCreateSaleModal && (
+        <CreateSaleModal customerId={id} onSaleCreated={fetchCustomerData} />
+      )}
+
+      {showCreateCollectionModal && (
+        <CreateCollectionModal customerId={id} onCollectionCreated={fetchCustomerData} />
+      )}
 
     </MainLayout>
   );

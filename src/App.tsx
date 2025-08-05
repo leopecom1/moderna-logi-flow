@@ -15,6 +15,8 @@ import IncidentsPage from "./pages/IncidentsPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import ProductsPage from "./pages/ProductsPage";
 import SalesPage from "./pages/SalesPage";
+import CollectionsPage from "./pages/CollectionsPage";
+import AccountsReceivablePage from "./pages/AccountsReceivablePage";
 import SettingsPage from "./pages/SettingsPage";
 import ReportsPage from "./pages/ReportsPage";
 import { CustomersPage } from "./pages/CustomersPage";
@@ -60,6 +62,8 @@ function App() {
             <Route path="/routes/:id" element={<RouteDetailPage />} />
             <Route path="/incidents" element={<IncidentsPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
+            <Route path="/collections" element={<CollectionsPage />} />
+            <Route path="/accounts-receivable" element={<AccountsReceivablePage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/settings" element={<SettingsPage />} />
