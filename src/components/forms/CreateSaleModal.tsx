@@ -108,12 +108,21 @@ export function CreateSaleModal({ onSaleCreated, customerId }: CreateSaleModalPr
     try {
       if (!user) throw new Error("Usuario no autenticado");
 
+      const saleData = {
+        customer_id: values.customer_id,
+        product_id: values.product_id,
+        location_id: values.location_id || null,
+        sale_date: values.sale_date,
+        quantity: values.quantity,
+        unit_price: values.unit_price,
+        unit_cost: values.unit_cost,
+        notes: values.notes || null,
+        seller_id: user.id,
+      };
+
       const { error } = await supabase
         .from("sales")
-        .insert([{
-          ...values,
-          seller_id: user.id,
-        }]);
+        .insert([saleData]);
 
       if (error) throw error;
 

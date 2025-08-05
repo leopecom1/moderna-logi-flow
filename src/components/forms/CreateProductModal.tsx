@@ -59,9 +59,19 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
 
   const onSubmit = async (values: FormValues) => {
     try {
+      const productData = {
+        code: values.code,
+        name: values.name,
+        price: values.price,
+        cost: values.cost,
+        category: values.category || null,
+        brand: values.brand || null,
+        is_active: values.is_active,
+      };
+
       const { error } = await supabase
         .from("products")
-        .insert([values]);
+        .insert([productData]);
 
       if (error) throw error;
 
