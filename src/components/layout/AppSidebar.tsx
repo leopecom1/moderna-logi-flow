@@ -25,7 +25,9 @@ import {
   Route,
   MapPin,
   FileText,
-  DollarSign
+  DollarSign,
+  ShoppingCart,
+  Package2
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -52,6 +54,8 @@ export const AppSidebar = () => {
     { title: 'Usuarios', url: '/users', icon: Crown },
     { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
     { title: 'Pagos', url: '/payments', icon: CreditCard },
+    { title: 'Productos', url: '/products', icon: Package2 },
+    { title: 'Ventas', url: '/sales', icon: ShoppingCart },
     { title: 'Configuración', url: '/settings', icon: Settings },
   ];
 

@@ -86,6 +86,7 @@ export default function CustomerDetailPage() {
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
   const [showCreateMovementModal, setShowCreateMovementModal] = useState(false);
+  const [showCreateSaleModal, setShowCreateSaleModal] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
 
   useEffect(() => {
@@ -575,6 +576,7 @@ export default function CustomerDetailPage() {
         customerName={customer.name}
         onPaymentCreated={fetchCustomerData}
       />
+
     </MainLayout>
   );
 }
