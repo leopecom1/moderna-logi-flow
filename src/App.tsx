@@ -20,8 +20,8 @@ import AccountsReceivablePage from "./pages/AccountsReceivablePage";
 import BulkImportPage from "./pages/BulkImportPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import ProfilePage from "./pages/ProfilePage";
-import UserManagementPage from "./pages/UserManagementPage";
-import SettingsPage from "./pages/SettingsPage";
+import RouteOptimizationPage from '@/pages/RouteOptimizationPage';
+import ReportsPage from "./pages/ReportsPage";
 import ReportsPage from "./pages/ReportsPage";
 import { CustomersPage } from "./pages/CustomersPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
@@ -75,7 +75,7 @@ function App() {
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/user-management" element={<UserManagementPage />} />
             <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
+            <Route path="/route-optimization" element={<RouteOptimizationPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
