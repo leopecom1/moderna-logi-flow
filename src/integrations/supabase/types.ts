@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_receivable: {
+        Row: {
+          balance_due: number | null
+          credit_limit: number | null
+          credit_status: string | null
+          customer_id: string
+          days_since_last_sale: number | null
+          id: string
+          last_collection_date: string | null
+          last_sale_date: string | null
+          total_collections: number
+          total_sales: number
+          updated_at: string
+        }
+        Insert: {
+          balance_due?: number | null
+          credit_limit?: number | null
+          credit_status?: string | null
+          customer_id: string
+          days_since_last_sale?: number | null
+          id?: string
+          last_collection_date?: string | null
+          last_sale_date?: string | null
+          total_collections?: number
+          total_sales?: number
+          updated_at?: string
+        }
+        Update: {
+          balance_due?: number | null
+          credit_limit?: number | null
+          credit_status?: string | null
+          customer_id?: string
+          days_since_last_sale?: number | null
+          id?: string
+          last_collection_date?: string | null
+          last_sale_date?: string | null
+          total_collections?: number
+          total_sales?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cadete_profiles: {
         Row: {
           address: string | null
@@ -91,6 +141,94 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      collections: {
+        Row: {
+          account_info: string | null
+          amount: number
+          bank_name: string | null
+          collection_date: string
+          collection_status: string
+          collection_time: string | null
+          collector_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          order_id: string | null
+          payment_method_type: string
+          payment_reference: string | null
+          receipt_number: string | null
+          sale_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_info?: string | null
+          amount: number
+          bank_name?: string | null
+          collection_date: string
+          collection_status?: string
+          collection_time?: string | null
+          collector_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          payment_method_type: string
+          payment_reference?: string | null
+          receipt_number?: string | null
+          sale_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_info?: string | null
+          amount?: number
+          bank_name?: string | null
+          collection_date?: string
+          collection_status?: string
+          collection_time?: string | null
+          collector_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          payment_method_type?: string
+          payment_reference?: string | null
+          receipt_number?: string | null
+          sale_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "collections_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "collections_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
           },
         ]
       }
