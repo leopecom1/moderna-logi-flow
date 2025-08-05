@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { CreateVehicleModal } from '@/components/forms/CreateVehicleModal';
 import { Car, Search, Plus, Calendar, Shield, User, AlertTriangle } from 'lucide-react';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { MessageLoading } from '@/components/ui/message-loading';
 
 interface Vehicle {
   id: string;
@@ -132,32 +133,17 @@ export default function VehiculosPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <Car className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Vehículos</h1>
-          </div>
+      <MainLayout>
+        <div className="flex justify-center items-center h-64">
+          <MessageLoading />
         </div>
-        <div className="grid gap-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-48" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="p-6">
+    <MainLayout>
+      <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-2">
           <Car className="h-6 w-6" />
@@ -305,6 +291,7 @@ export default function VehiculosPage() {
         onOpenChange={setShowCreateModal}
         onVehicleCreated={fetchVehicles}
       />
-    </div>
+      </div>
+    </MainLayout>
   );
 }

@@ -16,6 +16,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateCollectionModal } from "@/components/forms/CreateCollectionModal";
 import { Search, AlertTriangle, TrendingUp, DollarSign, Users, Phone, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { MessageLoading } from "@/components/ui/message-loading";
 
 export default function AccountsReceivablePage() {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -72,16 +74,17 @@ export default function AccountsReceivablePage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <MainLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Cargando cuentas por cobrar...</div>
+          <MessageLoading />
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <MainLayout>
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Cuentas por Cobrar</h1>
         <CreateCollectionModal onCollectionCreated={refetch} />
@@ -270,6 +273,7 @@ export default function AccountsReceivablePage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

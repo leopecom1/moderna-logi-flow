@@ -2,10 +2,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RouteOptimizer } from '@/components/routes/RouteOptimizer';
 import { RouteAnalytics } from '@/components/routes/RouteAnalytics';
 import { TrafficAnalyzer } from '@/components/routes/TrafficAnalyzer';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 export const RouteOptimizationPage = () => {
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <MainLayout>
+      <div className="container mx-auto p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold mb-2">Optimización de Rutas con IA</h1>
         <p className="text-muted-foreground">
@@ -32,6 +34,7 @@ export const RouteOptimizationPage = () => {
           <TrafficAnalyzer />
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </MainLayout>
   );
 };

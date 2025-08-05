@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Users, Shield } from 'lucide-react';
+import { Users, Shield } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { MessageLoading } from '@/components/ui/message-loading';
 
 interface UserWithProfile {
   id: string;
@@ -113,33 +115,35 @@ const UsersPage = () => {
 
   if (profile?.role !== 'gerencia') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Card className="w-96">
-          <CardContent className="pt-6 text-center">
-            <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Acceso Denegado</h2>
-            <p className="text-muted-foreground">
-              Solo usuarios con rol 'gerencia' pueden acceder a esta página.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <MainLayout>
+        <div className="min-h-screen flex items-center justify-center">
+          <Card className="w-96">
+            <CardContent className="pt-6 text-center">
+              <Shield className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h2 className="text-lg font-semibold mb-2">Acceso Denegado</h2>
+              <p className="text-muted-foreground">
+                Solo usuarios con rol 'gerencia' pueden acceder a esta página.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </MainLayout>
     );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Cargando usuarios...</span>
+      <MainLayout>
+        <div className="flex justify-center items-center h-64">
+          <MessageLoading />
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <MainLayout>
+      <div className="container mx-auto py-8 px-4">
       <div className="flex items-center gap-2 mb-8">
         <Users className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Administración de Usuarios</h1>
@@ -184,7 +188,7 @@ const UsersPage = () => {
                   </Select>
                   
                   {updating === user.id && (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <MessageLoading />
                   )}
                 </div>
               </div>
@@ -192,7 +196,8 @@ const UsersPage = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 };
 

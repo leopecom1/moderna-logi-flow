@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateProductModal } from "@/components/forms/CreateProductModal";
 import { Search, Package, TrendingUp } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { MessageLoading } from "@/components/ui/message-loading";
 
 type Product = Tables<"products">;
 
@@ -41,16 +43,17 @@ export default function ProductsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <MainLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Cargando productos...</div>
+          <MessageLoading />
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <MainLayout>
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Productos</h1>
         <CreateProductModal onProductCreated={refetch} />
@@ -176,6 +179,7 @@ export default function ProductsPage() {
           )}
         </div>
       )}
-    </div>
+      </div>
+    </MainLayout>
   );
 }

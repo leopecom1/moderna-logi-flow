@@ -14,6 +14,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { CreateCollectionModal } from "@/components/forms/CreateCollectionModal";
 import { Search, DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { MessageLoading } from "@/components/ui/message-loading";
 
 export default function CollectionsPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -75,16 +77,17 @@ export default function CollectionsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <MainLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Cargando cobros...</div>
+          <MessageLoading />
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <MainLayout>
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Cobros</h1>
         <CreateCollectionModal onCollectionCreated={refetch} />
@@ -239,6 +242,7 @@ export default function CollectionsPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }

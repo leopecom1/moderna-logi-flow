@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { CreateCadeteModal } from '@/components/forms/CreateCadeteModal';
 import { Users, Search, Plus, Phone, MapPin, Calendar, CreditCard } from 'lucide-react';
+import { MessageLoading } from '@/components/ui/message-loading';
 
 interface CadeteProfile {
   id: string;
@@ -122,26 +123,8 @@ export default function CadetesPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div className="">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-2">
-              <Users className="h-6 w-6" />
-              <h1 className="text-2xl font-bold">Cadetes</h1>
-            </div>
-          </div>
-          <div className="grid gap-4">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i}>
-                <CardHeader>
-                  <Skeleton className="h-6 w-48" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-4 w-full mb-2" />
-                  <Skeleton className="h-4 w-3/4" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        <div className="flex justify-center items-center h-64">
+          <MessageLoading />
         </div>
       </MainLayout>
     );

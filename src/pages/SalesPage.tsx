@@ -14,6 +14,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { CreateSaleModal } from "@/components/forms/CreateSaleModal";
 import { Search, ShoppingCart, TrendingUp, DollarSign } from "lucide-react";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { MessageLoading } from "@/components/ui/message-loading";
 
 export default function SalesPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -53,16 +55,17 @@ export default function SalesPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <MainLayout>
         <div className="flex justify-center items-center h-64">
-          <div className="text-lg">Cargando ventas...</div>
+          <MessageLoading />
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <MainLayout>
+      <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Ventas</h1>
         <CreateSaleModal onSaleCreated={refetch} />
@@ -212,6 +215,7 @@ export default function SalesPage() {
           )}
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
