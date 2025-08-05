@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SalesChart, RevenueChart, PerformanceMetrics } from '@/components/ui/charts';
+import { ExportManager } from './ExportManager';
+import { RealtimeAnalytics } from './RealtimeAnalytics';
+import { CustomReportBuilder } from './CustomReportBuilder';
 import { toast } from '@/hooks/use-toast';
 import { 
   Download, 
@@ -17,7 +20,9 @@ import {
   Calendar,
   BarChart3,
   PieChart,
-  Activity
+  Activity,
+  Zap,
+  Settings
 } from 'lucide-react';
 
 interface AdvancedReportData {
@@ -326,19 +331,18 @@ export const AdvancedReports = () => {
               <SelectItem value="365">1 año</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={() => exportReport('completo')}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar Todo
-          </Button>
+          <ExportManager />
         </div>
       </div>
 
       <Tabs value={reportType} onValueChange={setReportType}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
           <TabsTrigger value="sales">Ventas</TabsTrigger>
           <TabsTrigger value="delivery">Entregas</TabsTrigger>
           <TabsTrigger value="performance">Rendimiento</TabsTrigger>
+          <TabsTrigger value="realtime">Tiempo Real</TabsTrigger>
+          <TabsTrigger value="builder">Constructor</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -402,6 +406,14 @@ export const AdvancedReports = () => {
               title="Estados de Entrega"
             />
           </div>
+        </TabsContent>
+
+        <TabsContent value="realtime" className="space-y-6">
+          <RealtimeAnalytics />
+        </TabsContent>
+
+        <TabsContent value="builder" className="space-y-6">
+          <CustomReportBuilder />
         </TabsContent>
       </Tabs>
     </div>
