@@ -33,18 +33,18 @@ import VehiculosPage from "./pages/VehiculosPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
 
-// Create QueryClient outside component to avoid recreation
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-    },
-  },
-});
-
 function App() {
+  // Create QueryClient inside component to avoid potential initialization issues
+  const queryClient = React.useMemo(() => new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: 1,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+      },
+    },
+  }), []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
