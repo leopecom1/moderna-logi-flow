@@ -32,7 +32,9 @@ import {
   PiggyBank,
   Upload,
   Bell,
-  User
+  User,
+  Navigation,
+  Brain
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -64,6 +66,8 @@ export const AppSidebar = () => {
     { title: 'Productos', url: '/products', icon: Package2 },
     { title: 'Ventas', url: '/sales', icon: ShoppingCart },
     { title: 'Notificaciones', url: '/notifications', icon: Bell },
+    { title: 'Optimización Rutas', url: '/route-optimization', icon: Navigation },
+    { title: 'Analytics & ML', url: '/analytics', icon: Brain },
     { title: 'Mi Perfil', url: '/profile', icon: User },
     { title: 'Configuración', url: '/settings', icon: Settings },
   ];

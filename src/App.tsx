@@ -21,6 +21,7 @@ import BulkImportPage from "./pages/BulkImportPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import ProfilePage from "./pages/ProfilePage";
 import { RouteOptimizationPage } from './pages/RouteOptimizationPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import ReportsPage from "./pages/ReportsPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -77,6 +78,7 @@ function App() {
             <Route path="/user-management" element={<UserManagementPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/route-optimization" element={<RouteOptimizationPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
