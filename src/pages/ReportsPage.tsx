@@ -3,8 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AdvancedReports } from '@/components/reports/AdvancedReports';
 import { toast } from '@/hooks/use-toast';
-import { BarChart3, TrendingUp, Package, Truck, DollarSign, AlertTriangle, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, Package, Truck, DollarSign, AlertTriangle, Calendar, Activity } from 'lucide-react';
 
 interface ReportStats {
   totalOrders: number;
@@ -136,6 +138,14 @@ const ReportsPage = () => {
             </Select>
           </div>
         </div>
+
+        <Tabs defaultValue="overview" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="overview">Resumen General</TabsTrigger>
+            <TabsTrigger value="advanced">Reportes Avanzados</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="space-y-6">
 
         {/* KPIs Principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -283,15 +293,21 @@ const ReportsPage = () => {
           </Card>
         </div>
 
-        {stats.totalOrders === 0 && (
-          <div className="text-center py-12">
-            <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No hay datos para mostrar</h3>
-            <p className="text-muted-foreground">
-              No se encontraron datos para el período seleccionado
-            </p>
-          </div>
-        )}
+            {stats.totalOrders === 0 && (
+              <div className="text-center py-12">
+                <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No hay datos para mostrar</h3>
+                <p className="text-muted-foreground">
+                  No se encontraron datos para el período seleccionado
+                </p>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="advanced">
+            <AdvancedReports />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Stats1 from '@/components/ui/stats-1';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { KPIGrid, RealtimeActivityFeed } from '@/components/dashboard/DashboardMetrics';
 import { 
   Package, 
   Truck, 
@@ -14,7 +15,9 @@ import {
   CheckCircle, 
   XCircle,
   DollarSign,
-  MapPin
+  MapPin,
+  Target,
+  Activity
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -312,41 +315,74 @@ export default function Dashboard() {
             ]} />
           </div>
 
+      {/* KPIs Mejorados */}
+      <KPIGrid
+        title="Métricas Clave de Rendimiento"
+        columns={4}
+        kpis={[
+          {
+            id: 'delivery-rate',
+            title: 'Tasa de Entrega',
+            value: `${Math.round((stats.ordersDeliveredToday / Math.max(stats.ordersToday, 1)) * 100)}%`,
+            description: 'Entregas exitosas hoy',
+            trend: {
+              value: 5.2,
+              label: 'vs ayer',
+              direction: 'up'
+            },
+            progress: {
+              value: stats.ordersDeliveredToday,
+              max: stats.ordersToday || 1,
+              label: 'Completadas'
+            },
+            icon: <Target className="h-4 w-4" />,
+            color: 'green'
+          },
+          {
+            id: 'efficiency',
+            title: 'Eficiencia Operativa',
+            value: `${Math.round((stats.assignedRoutes / Math.max(stats.activeRoutes, 1)) * 100)}%`,
+            description: 'Rutas activas vs asignadas',
+            trend: {
+              value: -2.1,
+              label: 'vs semana anterior',
+              direction: 'down'
+            },
+            icon: <Activity className="h-4 w-4" />,
+            color: 'orange'
+          },
+          {
+            id: 'revenue-today',
+            title: 'Ingresos del Día',
+            value: `$${stats.todayRevenue.toFixed(2)}`,
+            description: 'Total de ventas hoy',
+            trend: {
+              value: 12.5,
+              label: 'vs ayer',
+              direction: 'up'
+            },
+            icon: <DollarSign className="h-4 w-4" />,
+            color: 'blue'
+          },
+          {
+            id: 'incidents',
+            title: 'Incidencias',
+            value: stats.incidentsThisWeek,
+            description: 'Reportadas esta semana',
+            trend: {
+              value: stats.incidentsThisWeek > 0 ? 15 : -100,
+              label: 'vs semana anterior',
+              direction: stats.incidentsThisWeek > 0 ? 'up' : 'down'
+            },
+            icon: <AlertTriangle className="h-4 w-4" />,
+            color: stats.incidentsThisWeek > 0 ? 'red' : 'green'
+          }
+        ]}
+      />
+
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Actividad Reciente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Entrega completada</p>
-                  <p className="text-xs text-muted-foreground">Pedido #1234 - Juan Pérez</p>
-                </div>
-                <span className="text-xs text-muted-foreground">hace 5 min</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Package className="h-4 w-4 text-blue-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Nuevo pedido creado</p>
-                  <p className="text-xs text-muted-foreground">Pedido #1235 - María López</p>
-                </div>
-                <span className="text-xs text-muted-foreground">hace 12 min</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-4 w-4 text-orange-600" />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Incidencia reportada</p>
-                  <p className="text-xs text-muted-foreground">Dirección incorrecta</p>
-                </div>
-                <span className="text-xs text-muted-foreground">hace 25 min</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <RealtimeActivityFeed />
 
         <Card>
           <CardHeader>
