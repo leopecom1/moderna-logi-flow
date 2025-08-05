@@ -7,10 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator, Upload, Edit } from 'lucide-react';
+import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator, Upload, Edit, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ImportMovementsModal } from '@/components/forms/ImportMovementsModal';
 import { EditMovementModal } from '@/components/forms/EditMovementModal';
+import { CreateCustomerOrderModal } from '@/components/forms/CreateCustomerOrderModal';
+import { CreateCustomerPaymentModal } from '@/components/forms/CreateCustomerPaymentModal';
+import { CreateCustomerMovementModal } from '@/components/forms/CreateCustomerMovementModal';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Customer {
@@ -80,6 +83,9 @@ export default function CustomerDetailPage() {
   const [loading, setLoading] = useState(true);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
+  const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
+  const [showCreateMovementModal, setShowCreateMovementModal] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
 
   useEffect(() => {
@@ -361,10 +367,18 @@ export default function CustomerDetailPage() {
         <TabsContent value="movements">
           <Card>
             <CardHeader>
-              <CardTitle>Historial de Movimientos</CardTitle>
-              <CardDescription>
-                Gestiona los movimientos del cliente
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Historial de Movimientos</CardTitle>
+                  <CardDescription>
+                    Gestiona los movimientos del cliente
+                  </CardDescription>
+                </div>
+                <Button onClick={() => setShowCreateMovementModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Movimiento
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {movements.length > 0 ? (
@@ -416,6 +430,13 @@ export default function CustomerDetailPage() {
 
         <TabsContent value="orders">
           <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Órdenes del Cliente</h3>
+              <Button onClick={() => setShowCreateOrderModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Crear Orden
+              </Button>
+            </div>
             {orders.map((order) => (
               <Card key={order.id}>
                 <CardHeader>
@@ -450,6 +471,13 @@ export default function CustomerDetailPage() {
 
         <TabsContent value="payments">
           <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Pagos del Cliente</h3>
+              <Button onClick={() => setShowCreatePaymentModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Crear Pago
+              </Button>
+            </div>
             {payments.map((payment) => (
               <Card key={payment.id}>
                 <CardHeader>
@@ -521,6 +549,31 @@ export default function CustomerDetailPage() {
         onOpenChange={setShowEditModal}
         movement={selectedMovement}
         onMovementUpdated={fetchCustomerData}
+      />
+
+      <CreateCustomerMovementModal
+        open={showCreateMovementModal}
+        onOpenChange={setShowCreateMovementModal}
+        customerId={id!}
+        customerName={customer.name}
+        onMovementCreated={fetchCustomerData}
+      />
+
+      <CreateCustomerOrderModal
+        open={showCreateOrderModal}
+        onOpenChange={setShowCreateOrderModal}
+        customerId={id!}
+        customerName={customer.name}
+        customerAddress={customer.address}
+        onOrderCreated={fetchCustomerData}
+      />
+
+      <CreateCustomerPaymentModal
+        open={showCreatePaymentModal}
+        onOpenChange={setShowCreatePaymentModal}
+        customerId={id!}
+        customerName={customer.name}
+        onPaymentCreated={fetchCustomerData}
       />
     </MainLayout>
   );
