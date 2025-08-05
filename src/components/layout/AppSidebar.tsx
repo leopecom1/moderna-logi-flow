@@ -29,7 +29,8 @@ import {
   ShoppingCart,
   Package2,
   Receipt,
-  PiggyBank
+  PiggyBank,
+  Upload
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -130,6 +131,16 @@ export const AppSidebar = () => {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {profile?.role === 'gerencia' && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink to="/bulk-import" className={`${getNavCls} smooth-transition animate-element`}>
+                      <Upload className="h-4 w-4" />
+                      {state !== 'collapsed' && <span>Importación Masiva</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
