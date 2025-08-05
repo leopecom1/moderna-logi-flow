@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+import { toZonedTime } from 'date-fns-tz';
 import { es } from 'date-fns/locale';
 import { 
   Car, 
@@ -281,7 +282,7 @@ export const TrafficAnalyzer = () => {
             </div>
             
             <div className="text-sm text-muted-foreground">
-              Última actualización: {format(lastUpdate, 'HH:mm:ss', { locale: es })}
+              Última actualización: {format(toZonedTime(lastUpdate, 'America/Montevideo'), 'HH:mm:ss', { locale: es })} (UY)
             </div>
           </div>
 
@@ -346,7 +347,7 @@ export const TrafficAnalyzer = () => {
                       )}
                       
                       <div>
-                        {format(new Date(alert.created_at), 'HH:mm', { locale: es })}
+                        {format(toZonedTime(new Date(alert.created_at), 'America/Montevideo'), 'HH:mm', { locale: es })} (UY)
                       </div>
                     </div>
                   </div>

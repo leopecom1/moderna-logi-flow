@@ -119,8 +119,8 @@ export function CreateCollectionModal({
 
       const collectionData = {
         customer_id: values.customer_id,
-        sale_id: values.sale_id || null,
-        order_id: values.order_id || null,
+        sale_id: values.sale_id === 'none' ? null : values.sale_id || null,
+        order_id: values.order_id === 'none' ? null : values.order_id || null,
         collector_id: user.id,
         collection_date: values.collection_date,
         amount: values.amount,
@@ -256,7 +256,7 @@ export function CreateCollectionModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Sin venta específica</SelectItem>
+                        <SelectItem value="none">Sin venta específica</SelectItem>
                         {sales.map((sale) => (
                           <SelectItem key={sale.id} value={sale.id}>
                             {new Date(sale.sale_date).toLocaleDateString()} - ${sale.total_amount}
@@ -282,7 +282,7 @@ export function CreateCollectionModal({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Sin orden específica</SelectItem>
+                        <SelectItem value="none">Sin orden específica</SelectItem>
                         {orders.map((order) => (
                           <SelectItem key={order.id} value={order.id}>
                             #{order.order_number} - ${order.total_amount}

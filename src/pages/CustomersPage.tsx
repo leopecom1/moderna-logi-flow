@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Users, Phone, Mail, MapPin, Eye, Upload, Trash2 } from 'lucide-react';
+import { Plus, Search, Users, Phone, Mail, MapPin, Eye, Upload, Trash2, Edit } from 'lucide-react';
 import { CreateCustomerModal } from '@/components/forms/CreateCustomerModal';
+import { EditCustomerModal } from '@/components/forms/EditCustomerModal';
 import { ImportMovementsModal } from '@/components/forms/ImportMovementsModal';
 import { DeleteCustomerModal } from '@/components/forms/DeleteCustomerModal';
 import { toast } from '@/hooks/use-toast';
@@ -36,9 +37,11 @@ export const CustomersPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [customerToEdit, setCustomerToEdit] = useState<Customer | null>(null);
 
   const canManageCustomers = profile?.role === 'gerencia' || profile?.role === 'vendedor';
   const canDeleteCustomers = profile?.role === 'gerencia';
@@ -79,6 +82,11 @@ export const CustomersPage = () => {
   const handleDeleteCustomer = (customer: Customer) => {
     setCustomerToDelete(customer);
     setShowDeleteModal(true);
+  };
+
+  const handleEditCustomer = (customer: Customer) => {
+    setCustomerToEdit(customer);
+    setShowEditModal(true);
   };
 
   if (loading) {
@@ -186,6 +194,15 @@ export const CustomersPage = () => {
                   <Eye className="h-4 w-4 mr-2" />
                   Ver Historial
                 </Button>
+                {canManageCustomers && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleEditCustomer(customer)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
                 {canDeleteCustomers && (
                   <Button 
                     variant="outline" 
@@ -216,6 +233,13 @@ export const CustomersPage = () => {
         open={showCreateModal}
         onOpenChange={setShowCreateModal}
         onCustomerCreated={fetchCustomers}
+      />
+
+      <EditCustomerModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        customer={customerToEdit}
+        onCustomerUpdated={fetchCustomers}
       />
 
       <ImportMovementsModal

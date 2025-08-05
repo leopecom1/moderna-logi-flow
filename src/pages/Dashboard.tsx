@@ -5,6 +5,7 @@ import Stats1 from '@/components/ui/stats-1';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { KPIGrid, RealtimeActivityFeed } from '@/components/dashboard/DashboardMetrics';
+import { MessageLoading } from '@/components/ui/message-loading';
 import { 
   Package, 
   Truck, 
@@ -257,7 +258,7 @@ export default function Dashboard() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64 animate-element animate-delay-200">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <MessageLoading />
         </div>
       ) : (
         <>
@@ -431,7 +432,7 @@ export default function Dashboard() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64 animate-element animate-delay-200">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <MessageLoading />
         </div>
       ) : (
         <>
@@ -568,7 +569,7 @@ export default function Dashboard() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64 animate-element animate-delay-200">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <MessageLoading />
         </div>
       ) : (
         <>

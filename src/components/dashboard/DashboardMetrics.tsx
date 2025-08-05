@@ -11,6 +11,8 @@ import {
   Calendar,
   Target
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import React from 'react';
 
 interface MetricCardProps {
   title: string;
@@ -193,44 +195,152 @@ export const KPIGrid = ({ kpis, title, columns = 4 }: KPIGridProps) => {
 };
 
 export const RealtimeActivityFeed = () => {
-  const activities = [
-    {
-      id: 1,
-      type: 'order',
-      message: 'Nuevo pedido creado',
-      details: 'Pedido #1234 - Cliente: Juan Pérez',
-      timestamp: '2 minutos',
-      icon: '📦',
-      color: 'blue'
-    },
-    {
-      id: 2,
-      type: 'delivery',
-      message: 'Entrega completada',
-      details: 'Ruta Norte - Cadete: María López',
-      timestamp: '5 minutos',
-      icon: '✅',
-      color: 'green'
-    },
-    {
-      id: 3,
-      type: 'incident',
-      message: 'Incidencia reportada',
-      details: 'Dirección incorrecta - Pedido #1230',
-      timestamp: '12 minutos',
-      icon: '⚠️',
-      color: 'orange'
-    },
-    {
-      id: 4,
-      type: 'payment',
-      message: 'Pago confirmado',
-      details: '$150.00 - Transferencia bancaria',
-      timestamp: '15 minutos',
-      icon: '💰',
-      color: 'green'
+  const [activities, setActivities] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    fetchRecentActivities();
+    
+    // Configurar actualización en tiempo real cada 30 segundos
+    const interval = setInterval(fetchRecentActivities, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchRecentActivities = async () => {
+    try {
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+      // Obtener pedidos recientes
+      const { data: recentOrders } = await supabase
+        .from('orders')
+        .select('id, order_number, created_at, customer:customers(name)')
+        .gte('created_at', oneHourAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      // Obtener entregas recientes
+      const { data: recentDeliveries } = await supabase
+        .from('deliveries')
+        .select('id, delivered_at, cadete_id, order:orders(order_number)')
+        .eq('status', 'entregado')
+        .gte('delivered_at', oneHourAgo.toISOString())
+        .order('delivered_at', { ascending: false })
+        .limit(3);
+
+      // Obtener nombres de cadetes
+      const cadeteIds = recentDeliveries?.map(d => d.cadete_id).filter(Boolean) || [];
+      const { data: cadetes } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', cadeteIds);
+
+      // Obtener incidencias recientes
+      const { data: recentIncidents } = await supabase
+        .from('incidents')
+        .select('id, title, created_at')
+        .gte('created_at', oneHourAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(2);
+
+      // Obtener cobros recientes
+      const { data: recentCollections } = await supabase
+        .from('collections')
+        .select('id, amount, payment_method_type, created_at')
+        .eq('collection_status', 'confirmado')
+        .gte('created_at', oneHourAgo.toISOString())
+        .order('created_at', { ascending: false })
+        .limit(2);
+
+      const combinedActivities = [];
+
+      // Agregar pedidos
+      recentOrders?.forEach(order => {
+        combinedActivities.push({
+          id: `order-${order.id}`,
+          type: 'order',
+          message: 'Nuevo pedido creado',
+          details: `Pedido #${order.order_number} - Cliente: ${order.customer?.name || 'N/A'}`,
+          timestamp: getTimeAgo(order.created_at),
+          icon: '📦',
+          color: 'blue'
+        });
+      });
+
+      // Agregar entregas
+      recentDeliveries?.forEach(delivery => {
+        const cadete = cadetes?.find(c => c.user_id === delivery.cadete_id);
+        combinedActivities.push({
+          id: `delivery-${delivery.id}`,
+          type: 'delivery',
+          message: 'Entrega completada',
+          details: `Pedido #${delivery.order?.order_number} - Cadete: ${cadete?.full_name || 'N/A'}`,
+          timestamp: getTimeAgo(delivery.delivered_at),
+          icon: '✅',
+          color: 'green'
+        });
+      });
+
+      // Agregar incidencias
+      recentIncidents?.forEach(incident => {
+        combinedActivities.push({
+          id: `incident-${incident.id}`,
+          type: 'incident',
+          message: 'Incidencia reportada',
+          details: incident.title,
+          timestamp: getTimeAgo(incident.created_at),
+          icon: '⚠️',
+          color: 'orange'
+        });
+      });
+
+      // Agregar cobros
+      recentCollections?.forEach(collection => {
+        combinedActivities.push({
+          id: `collection-${collection.id}`,
+          type: 'payment',
+          message: 'Pago confirmado',
+          details: `$${collection.amount} - ${collection.payment_method_type}`,
+          timestamp: getTimeAgo(collection.created_at),
+          icon: '💰',
+          color: 'green'
+        });
+      });
+
+      // Ordenar por timestamp y limitar a 6 actividades
+      combinedActivities.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+      setActivities(combinedActivities.slice(0, 6));
+    } catch (error) {
+      console.error('Error fetching recent activities:', error);
+      // Fallback a datos demo si hay error
+      setActivities([
+        {
+          id: 1,
+          type: 'order',
+          message: 'Sistema iniciado',
+          details: 'Dashboard en funcionamiento',
+          timestamp: 'Ahora',
+          icon: '🚀',
+          color: 'blue'
+        }
+      ]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const getTimeAgo = (dateString: string) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    
+    if (diffMins < 1) return 'Ahora';
+    if (diffMins < 60) return `${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h`;
+    return `${Math.floor(diffHours / 24)}d`;
+  };
 
   return (
     <Card>
@@ -245,16 +355,26 @@ export const RealtimeActivityFeed = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.map((activity) => (
-            <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="text-lg">{activity.icon}</div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{activity.message}</p>
-                <p className="text-xs text-muted-foreground">{activity.details}</p>
-              </div>
-              <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
-          ))}
+          ) : activities.length > 0 ? (
+            activities.map((activity) => (
+              <div key={activity.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="text-lg">{activity.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{activity.message}</p>
+                  <p className="text-xs text-muted-foreground">{activity.details}</p>
+                </div>
+                <span className="text-xs text-muted-foreground">{activity.timestamp}</span>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              No hay actividad reciente
+            </div>
+          )}
         </div>
         <Button variant="outline" className="w-full mt-4">
           Ver todas las actividades

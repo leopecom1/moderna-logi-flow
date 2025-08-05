@@ -81,6 +81,7 @@ function App() {
             <Route path="/route-optimization" element={<RouteOptimizationPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/business" element={<BusinessManagementPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
