@@ -288,6 +288,36 @@ export type Database = {
           },
         ]
       }
+      locations: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -442,6 +472,48 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          brand: string | null
+          category: string | null
+          code: string
+          cost: number
+          created_at: string
+          id: string
+          is_active: boolean
+          margin_percentage: number | null
+          name: string
+          price: number
+          updated_at: string
+        }
+        Insert: {
+          brand?: string | null
+          category?: string | null
+          code: string
+          cost: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          margin_percentage?: number | null
+          name: string
+          price: number
+          updated_at?: string
+        }
+        Update: {
+          brand?: string | null
+          category?: string | null
+          code?: string
+          cost?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          margin_percentage?: number | null
+          name?: string
+          price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -513,6 +585,85 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sales: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          location_id: string | null
+          margin_percentage: number | null
+          notes: string | null
+          product_id: string
+          quantity: number
+          sale_date: string
+          seller_id: string
+          total_amount: number | null
+          total_cost: number | null
+          total_profit: number | null
+          unit_cost: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          location_id?: string | null
+          margin_percentage?: number | null
+          notes?: string | null
+          product_id: string
+          quantity?: number
+          sale_date: string
+          seller_id: string
+          total_amount?: number | null
+          total_cost?: number | null
+          total_profit?: number | null
+          unit_cost: number
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          location_id?: string | null
+          margin_percentage?: number | null
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          sale_date?: string
+          seller_id?: string
+          total_amount?: number | null
+          total_cost?: number | null
+          total_profit?: number | null
+          unit_cost?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vehicles: {
         Row: {
