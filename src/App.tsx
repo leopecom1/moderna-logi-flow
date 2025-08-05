@@ -18,6 +18,7 @@ import SalesPage from "./pages/SalesPage";
 import CollectionsPage from "./pages/CollectionsPage";
 import AccountsReceivablePage from "./pages/AccountsReceivablePage";
 import BulkImportPage from "./pages/BulkImportPage";
+import NotificationsPage from "./pages/NotificationsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ReportsPage from "./pages/ReportsPage";
 import { CustomersPage } from "./pages/CustomersPage";
@@ -68,6 +69,7 @@ function App() {
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />

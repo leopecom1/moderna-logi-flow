@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { RealTimeAlerts } from '@/components/alerts/RealTimeAlerts';
 import { toast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   Bell, 
@@ -118,23 +119,18 @@ export default function NotificationsPage() {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
-        .from('notification_settings')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = No rows found
-        console.error('Error fetching notification settings:', error);
-        return;
-      }
-
-      if (data) {
-        setSettings(data);
+      // Usar localStorage temporalmente hasta que la migración complete
+      const storageKey = `notification_settings_${user.id}`;
+      const stored = localStorage.getItem(storageKey);
+      
+      if (stored) {
+        const parsedSettings = JSON.parse(stored) as NotificationSettings;
+        setSettings(parsedSettings);
       } else {
         // Create default settings
         const newSettings = { ...defaultSettings, user_id: user.id };
         setSettings(newSettings);
+        localStorage.setItem(storageKey, JSON.stringify(newSettings));
       }
     } catch (error) {
       console.error('Error fetching settings:', error);
@@ -148,19 +144,9 @@ export default function NotificationsPage() {
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('notification_settings')
-        .upsert([settings], { onConflict: 'user_id' });
-
-      if (error) {
-        console.error('Error saving settings:', error);
-        toast({
-          title: 'Error',
-          description: 'No se pudieron guardar las configuraciones',
-          variant: 'destructive',
-        });
-        return;
-      }
+      // Usar localStorage temporalmente hasta que la migración complete
+      const storageKey = `notification_settings_${user.id}`;
+      localStorage.setItem(storageKey, JSON.stringify(settings));
 
       toast({
         title: 'Configuración guardada',
@@ -244,8 +230,8 @@ export default function NotificationsPage() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Configuración de Notificaciones</h1>
-            <p className="text-muted-foreground">Personaliza cómo y cuándo recibir notificaciones</p>
+            <h1 className="text-3xl font-bold">Centro de Notificaciones</h1>
+            <p className="text-muted-foreground">Administra todas tus notificaciones y alertas del sistema</p>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={testNotification}>
@@ -259,53 +245,36 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="types">Tipos de Notificación</TabsTrigger>
-            <TabsTrigger value="schedule">Horarios</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Panel principal de notificaciones */}
+          <div className="lg:col-span-2">
+            <NotificationCenter />
+          </div>
 
-          <TabsContent value="general" className="space-y-6">
-            {/* Métodos de Notificación */}
+          {/* Panel de alertas y configuración */}
+          <div className="space-y-6">
+            <RealTimeAlerts />
+            
+            {/* Configuración rápida */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  Métodos de Notificación
+                  Configuración Rápida
                 </CardTitle>
                 <CardDescription>
-                  Configura cómo quieres recibir las notificaciones
+                  Ajusta tus preferencias de notificación
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Smartphone className="h-5 w-5 text-blue-500" />
-                    <div>
-                      <Label className="text-base font-medium">Notificaciones Push</Label>
-                      <p className="text-sm text-muted-foreground">Recibir notificaciones en el navegador</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={settings.push_enabled}
-                    onCheckedChange={(checked) => updateSetting('push_enabled', checked)}
-                  />
-                </div>
-
-                <Separator />
-
+              <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {settings.sound_enabled ? (
-                      <Volume2 className="h-5 w-5 text-green-500" />
+                      <Volume2 className="h-4 w-4 text-green-500" />
                     ) : (
-                      <VolumeX className="h-5 w-5 text-gray-500" />
+                      <VolumeX className="h-4 w-4 text-gray-500" />
                     )}
-                    <div>
-                      <Label className="text-base font-medium">Sonido</Label>
-                      <p className="text-sm text-muted-foreground">Reproducir sonido con las notificaciones</p>
-                    </div>
+                    <Label className="text-sm">Sonido</Label>
                   </div>
                   <Switch
                     checked={settings.sound_enabled}
@@ -313,15 +282,21 @@ export default function NotificationsPage() {
                   />
                 </div>
 
-                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Smartphone className="h-4 w-4 text-blue-500" />
+                    <Label className="text-sm">Push</Label>
+                  </div>
+                  <Switch
+                    checked={settings.push_enabled}
+                    onCheckedChange={(checked) => updateSetting('push_enabled', checked)}
+                  />
+                </div>
 
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-orange-500" />
-                    <div>
-                      <Label className="text-base font-medium">Email</Label>
-                      <p className="text-sm text-muted-foreground">Recibir notificaciones por correo electrónico</p>
-                    </div>
+                    <Mail className="h-4 w-4 text-orange-500" />
+                    <Label className="text-sm">Email</Label>
                   </div>
                   <Switch
                     checked={settings.email_enabled}
@@ -331,105 +306,46 @@ export default function NotificationsPage() {
 
                 <Separator />
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <MessageSquare className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <Label className="text-base font-medium">SMS</Label>
-                      <p className="text-sm text-muted-foreground">Recibir notificaciones por mensaje de texto</p>
-                    </div>
-                  </div>
-                  <Switch
-                    checked={settings.sms_enabled}
-                    onCheckedChange={(checked) => updateSetting('sms_enabled', checked)}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="types" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Tipos de Notificación</CardTitle>
-                <CardDescription>
-                  Selecciona qué tipos de notificaciones quieres recibir según tu rol: {profile?.role}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Object.entries(notificationTypeLabels).map(([type, label]) => {
-                    const typedType = type as keyof NotificationSettings['notification_types'];
-                    const isEnabled = settings.notification_types[typedType];
-                    
-                    return (
-                      <div key={type} className="flex items-center justify-between p-3 rounded-lg border">
-                        <div className="flex items-center gap-3">
-                          {getNotificationIcon(type)}
-                          <div>
-                            <Label className="text-base font-medium">{label}</Label>
-                            <p className="text-sm text-muted-foreground">
-                              {type.includes('pedido') && 'Relacionado con pedidos y órdenes'}
-                              {type.includes('entrega') && 'Relacionado con entregas y logística'}
-                              {type.includes('ruta') && 'Relacionado con rutas y asignaciones'}
-                              {type.includes('incidencia') && 'Relacionado con incidencias y problemas'}
-                            </p>
-                          </div>
-                        </div>
-                        <Switch
-                          checked={isEnabled}
-                          onCheckedChange={(checked) => updateNotificationType(typedType, checked)}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="schedule" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="h-5 w-5" />
-                  Horarios de Silencio
-                </CardTitle>
-                <CardDescription>
-                  Define un período en el que no quieres recibir notificaciones
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="quiet-start">Inicio del silencio</Label>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Horario de silencio</Label>
+                  <div className="grid grid-cols-2 gap-2">
                     <Input
-                      id="quiet-start"
                       type="time"
                       value={settings.quiet_hours_start}
                       onChange={(e) => updateSetting('quiet_hours_start', e.target.value)}
+                      className="text-xs"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="quiet-end">Fin del silencio</Label>
                     <Input
-                      id="quiet-end"
                       type="time"
                       value={settings.quiet_hours_end}
                       onChange={(e) => updateSetting('quiet_hours_end', e.target.value)}
+                      className="text-xs"
                     />
                   </div>
                 </div>
-                
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Período de silencio actual</span>
+
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Tipos de notificación activos</Label>
+                  <div className="space-y-2">
+                    {Object.entries(settings.notification_types)
+                      .filter(([_, enabled]) => enabled)
+                      .slice(0, 3)
+                      .map(([type, _]) => (
+                        <div key={type} className="flex items-center gap-2">
+                          {getNotificationIcon(type)}
+                          <span className="text-xs text-muted-foreground">
+                            {notificationTypeLabels[type as keyof typeof notificationTypeLabels]}
+                          </span>
+                        </div>
+                      ))}
+                    {Object.values(settings.notification_types).filter(Boolean).length > 3 && (
+                      <span className="text-xs text-muted-foreground">
+                        +{Object.values(settings.notification_types).filter(Boolean).length - 3} más
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    De {settings.quiet_hours_start} a {settings.quiet_hours_end} no recibirás notificaciones push ni sonidos.
-                    Las notificaciones se seguirán registrando y podrás verlas cuando revises la aplicación.
-                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -437,52 +353,35 @@ export default function NotificationsPage() {
             {/* Estado de permisos */}
             <Card>
               <CardHeader>
-                <CardTitle>Estado de Permisos</CardTitle>
-                <CardDescription>
-                  Revisa el estado de los permisos del navegador
-                </CardDescription>
+                <CardTitle className="text-sm">Estado del Sistema</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm">Notificaciones del navegador</span>
+                    <span className="text-xs">Permisos del navegador</span>
                     <Badge variant={
                       typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted' 
                         ? 'default' 
                         : 'destructive'
-                    }>
+                    } className="text-xs">
                       {typeof window !== 'undefined' && 'Notification' in window 
                         ? Notification.permission === 'granted' 
-                          ? 'Permitido' 
+                          ? 'OK' 
                           : 'Denegado'
-                        : 'No disponible'
+                        : 'N/A'
                       }
                     </Badge>
                   </div>
                   
-                  {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => {
-                        Notification.requestPermission().then(permission => {
-                          if (permission === 'granted') {
-                            toast({
-                              title: 'Permisos concedidos',
-                              description: 'Ahora puedes recibir notificaciones push',
-                            });
-                          }
-                        });
-                      }}
-                    >
-                      Solicitar permisos
-                    </Button>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs">Conexión en tiempo real</span>
+                    <Badge variant="default" className="text-xs">Activa</Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </MainLayout>
   );

@@ -64,7 +64,7 @@ export const RealTimeAlerts = () => {
       const { data: failedDeliveries } = await supabase
         .from('deliveries')
         .select('id')
-        .eq('status', 'fallido')
+        .eq('status', 'no_entregado')
         .gte('attempted_at', startOfDay.toISOString());
 
       // Incidencias abiertas

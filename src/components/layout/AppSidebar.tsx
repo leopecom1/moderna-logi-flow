@@ -30,7 +30,8 @@ import {
   Package2,
   Receipt,
   PiggyBank,
-  Upload
+  Upload,
+  Bell
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -61,6 +62,7 @@ export const AppSidebar = () => {
     { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
     { title: 'Productos', url: '/products', icon: Package2 },
     { title: 'Ventas', url: '/sales', icon: ShoppingCart },
+    { title: 'Notificaciones', url: '/notifications', icon: Bell },
     { title: 'Configuración', url: '/settings', icon: Settings },
   ];
 
