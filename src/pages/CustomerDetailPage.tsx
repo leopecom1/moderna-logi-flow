@@ -14,6 +14,8 @@ import { EditMovementModal } from '@/components/forms/EditMovementModal';
 import { CreateCustomerOrderModal } from '@/components/forms/CreateCustomerOrderModal';
 import { CreateCustomerPaymentModal } from '@/components/forms/CreateCustomerPaymentModal';
 import { CreateCustomerMovementModal } from '@/components/forms/CreateCustomerMovementModal';
+import { CreateSaleModal } from '@/components/forms/CreateSaleModal';
+import { CreateCollectionModal } from '@/components/forms/CreateCollectionModal';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Customer {
