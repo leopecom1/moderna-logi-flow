@@ -10,6 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { NotificationCenter } from '@/components/notifications/NotificationCenter';
+import { PushNotificationManager } from '@/components/notifications/PushNotificationManager';
+import { LocationAlertsPanel } from '@/components/alerts/LocationAlertsPanel';
 import { RealTimeAlerts } from '@/components/alerts/RealTimeAlerts';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -245,18 +247,37 @@ export default function NotificationsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Panel principal de notificaciones */}
-          <div className="lg:col-span-2">
+        <Tabs defaultValue="notifications" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+            <TabsTrigger value="settings">Configuración</TabsTrigger>
+            <TabsTrigger value="location">Alertas Geográficas</TabsTrigger>
+            <TabsTrigger value="realtime">En Tiempo Real</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="notifications" className="space-y-6">
             <NotificationCenter />
-          </div>
+          </TabsContent>
+          
+          <TabsContent value="settings" className="space-y-6">
+            <PushNotificationManager />
+          </TabsContent>
+          
+          <TabsContent value="location" className="space-y-6">
+            <LocationAlertsPanel />
+          </TabsContent>
+          
+          <TabsContent value="realtime" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Panel de alertas en tiempo real */}
+              <div className="lg:col-span-2">
+                <RealTimeAlerts />
+              </div>
 
-          {/* Panel de alertas y configuración */}
-          <div className="space-y-6">
-            <RealTimeAlerts />
-            
-            {/* Configuración rápida */}
-            <Card>
+              {/* Panel de configuración rápida */}
+              <div className="space-y-6">
+                {/* Configuración rápida */}
+                <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
@@ -380,8 +401,10 @@ export default function NotificationsPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
-        </div>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

@@ -426,6 +426,56 @@ export type Database = {
           },
         ]
       }
+      location_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          delivery_id: string | null
+          id: string
+          is_active: boolean
+          latitude: number | null
+          location_name: string | null
+          longitude: number | null
+          radius: number
+          triggered_at: string | null
+          user_id: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          delivery_id?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          radius?: number
+          triggered_at?: string | null
+          user_id: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          delivery_id?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          location_name?: string | null
+          longitude?: number | null
+          radius?: number
+          triggered_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_alerts_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
@@ -453,6 +503,110 @@ export type Database = {
           is_active?: boolean
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_log: {
+        Row: {
+          channel: string
+          created_at: string
+          delivered_at: string | null
+          error_message: string | null
+          external_id: string | null
+          id: string
+          notification_id: string | null
+          sent_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          notification_id?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          delivered_at?: string | null
+          error_message?: string | null
+          external_id?: string | null
+          id?: string
+          notification_id?: string | null
+          sent_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_log_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          delivery_radius: number
+          email_enabled: boolean
+          id: string
+          location_alerts: boolean
+          notification_types: Json
+          phone_number: string | null
+          push_enabled: boolean
+          quiet_hours_end: string
+          quiet_hours_start: string
+          sms_enabled: boolean
+          sound_enabled: boolean
+          updated_at: string
+          user_id: string
+          whatsapp_enabled: boolean
+          whatsapp_number: string | null
+        }
+        Insert: {
+          created_at?: string
+          delivery_radius?: number
+          email_enabled?: boolean
+          id?: string
+          location_alerts?: boolean
+          notification_types?: Json
+          phone_number?: string | null
+          push_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          sms_enabled?: boolean
+          sound_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
+        }
+        Update: {
+          created_at?: string
+          delivery_radius?: number
+          email_enabled?: boolean
+          id?: string
+          location_alerts?: boolean
+          notification_types?: Json
+          phone_number?: string | null
+          push_enabled?: boolean
+          quiet_hours_end?: string
+          quiet_hours_start?: string
+          sms_enabled?: boolean
+          sound_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
         }
         Relationships: []
       }
@@ -681,6 +835,36 @@ export type Database = {
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          subscription: Json
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          subscription: Json
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          subscription?: Json
+          updated_at?: string
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []
