@@ -34,7 +34,8 @@ import {
   Bell,
   User,
   Navigation,
-  Brain
+  Brain,
+  Building2
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -68,6 +69,7 @@ export const AppSidebar = () => {
     { title: 'Notificaciones', url: '/notifications', icon: Bell },
     { title: 'Optimización Rutas', url: '/route-optimization', icon: Navigation },
     { title: 'Analytics & ML', url: '/analytics', icon: Brain },
+    { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
     { title: 'Mi Perfil', url: '/profile', icon: User },
     { title: 'Configuración', url: '/settings', icon: Settings },
   ];
