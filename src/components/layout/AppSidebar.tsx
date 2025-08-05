@@ -31,7 +31,8 @@ import {
   Receipt,
   PiggyBank,
   Upload,
-  Bell
+  Bell,
+  User
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -55,7 +56,7 @@ export const AppSidebar = () => {
     { title: 'Rutas', url: '/routes', icon: Route },
     { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
     { title: 'Vehículos', url: '/vehiculos', icon: Truck },
-    { title: 'Usuarios', url: '/users', icon: Crown },
+    { title: 'Usuarios', url: '/user-management', icon: Crown },
     { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
     { title: 'Pagos', url: '/payments', icon: CreditCard },
     { title: 'Cobros', url: '/collections', icon: Receipt },
@@ -63,6 +64,7 @@ export const AppSidebar = () => {
     { title: 'Productos', url: '/products', icon: Package2 },
     { title: 'Ventas', url: '/sales', icon: ShoppingCart },
     { title: 'Notificaciones', url: '/notifications', icon: Bell },
+    { title: 'Mi Perfil', url: '/profile', icon: User },
     { title: 'Configuración', url: '/settings', icon: Settings },
   ];
 
@@ -75,6 +77,7 @@ export const AppSidebar = () => {
     { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
     { title: 'Pagos', url: '/payments', icon: DollarSign },
     { title: 'Cobros', url: '/collections', icon: Receipt },
+    { title: 'Mi Perfil', url: '/profile', icon: User },
   ];
 
   const cadeteItems = [
@@ -82,6 +85,7 @@ export const AppSidebar = () => {
     { title: 'Mi Ruta', url: '/route', icon: MapPin },
     { title: 'Entregas', url: '/deliveries', icon: Truck },
     { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
+    { title: 'Mi Perfil', url: '/profile', icon: User },
     { title: 'Historial', url: '/history', icon: FileText },
   ];
 

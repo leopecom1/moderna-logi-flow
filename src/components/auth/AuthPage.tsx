@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth, UserRole } from '@/hooks/useAuth';
 import { SignInPage } from '@/components/ui/sign-in';
+import { ResetPasswordPage } from '@/components/auth/ResetPasswordPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ export const AuthPage = () => {
   const { signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [showSignup, setShowSignup] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [signupForm, setSignupForm] = useState({
     email: '',
     password: '',
@@ -200,6 +202,10 @@ export const AuthPage = () => {
     );
   }
 
+  if (showResetPassword) {
+    return <ResetPasswordPage onBack={() => setShowResetPassword(false)} />;
+  }
+
   return (
     <SignInPage
       title={
@@ -215,12 +221,7 @@ export const AuthPage = () => {
       heroVideoSrc="https://ndusxjrjrjpauuqeruzg.supabase.co/storage/v1/object/public/media//0715.mp4"
       testimonials={testimonials}
       onSignIn={handleSignIn}
-      onResetPassword={() => {
-        toast({
-          title: "Recuperar contraseña",
-          description: "Funcionalidad por implementar",
-        });
-      }}
+      onResetPassword={() => setShowResetPassword(true)}
       onCreateAccount={() => setShowSignup(true)}
     />
   );

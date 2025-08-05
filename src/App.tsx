@@ -19,6 +19,8 @@ import CollectionsPage from "./pages/CollectionsPage";
 import AccountsReceivablePage from "./pages/AccountsReceivablePage";
 import BulkImportPage from "./pages/BulkImportPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import ProfilePage from "./pages/ProfilePage";
+import UserManagementPage from "./pages/UserManagementPage";
 import SettingsPage from "./pages/SettingsPage";
 import ReportsPage from "./pages/ReportsPage";
 import { CustomersPage } from "./pages/CustomersPage";
@@ -70,6 +72,8 @@ function App() {
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/user-management" element={<UserManagementPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
