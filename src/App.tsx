@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -33,18 +33,18 @@ import VehiculosPage from "./pages/VehiculosPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
 
-function App() {
-  // Create QueryClient inside component to avoid potential initialization issues
-  const queryClient = React.useMemo(() => new QueryClient({
-    defaultOptions: {
-      queries: {
-        retry: 1,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-      },
+// Create QueryClient outside component to avoid recreation
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
     },
-  }), []);
+  },
+});
 
+function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
