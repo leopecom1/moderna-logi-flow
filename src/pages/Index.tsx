@@ -3,6 +3,7 @@ import { ProtectedRoute } from '@/components/layout/ProtectedRoute';
 import { MainLayout } from '@/components/layout/MainLayout';
 import Dashboard from './Dashboard';
 import { Navigate } from 'react-router-dom';
+import { MessageLoading } from '@/components/ui/message-loading';
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -10,7 +11,7 @@ const Index = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <MessageLoading />
       </div>
     );
   }

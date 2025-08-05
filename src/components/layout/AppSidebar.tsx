@@ -35,7 +35,9 @@ import {
   User,
   Navigation,
   Brain,
-  Building2
+  Building2,
+  TrendingUp,
+  Car
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -49,50 +51,110 @@ export const AppSidebar = () => {
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50';
 
-  // Menu items for each role
+  // Menu items organized by categories
   const gerenciaItems = [
-    { title: 'Dashboard', url: '/', icon: Home },
-    { title: 'Reportes', url: '/reports', icon: BarChart3 },
-    { title: 'Pedidos', url: '/orders', icon: Package },
-    { title: 'Clientes', url: '/customers', icon: Users },
-    { title: 'Entregas', url: '/deliveries', icon: Truck },
-    { title: 'Rutas', url: '/routes', icon: Route },
-    { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
-    { title: 'Vehículos', url: '/vehiculos', icon: Truck },
-    { title: 'Usuarios', url: '/user-management', icon: Crown },
-    { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
-    { title: 'Pagos', url: '/payments', icon: CreditCard },
-    { title: 'Cobros', url: '/collections', icon: Receipt },
-    { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
-    { title: 'Productos', url: '/products', icon: Package2 },
-    { title: 'Ventas', url: '/sales', icon: ShoppingCart },
-    { title: 'Notificaciones', url: '/notifications', icon: Bell },
-    { title: 'Optimización Rutas', url: '/route-optimization', icon: Navigation },
-    { title: 'Analytics & ML', url: '/analytics', icon: Brain },
-    { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
-    { title: 'Mi Perfil', url: '/profile', icon: User },
-    { title: 'Configuración', url: '/settings', icon: Settings },
+    {
+      category: 'Principal',
+      items: [
+        { title: 'Dashboard', url: '/', icon: Home },
+      ]
+    },
+    {
+      category: 'Gestión de Personal',
+      items: [
+        { title: 'Usuarios', url: '/user-management', icon: Crown },
+        { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
+      ]
+    },
+    {
+      category: 'Operaciones',
+      items: [
+        { title: 'Clientes', url: '/customers', icon: Users },
+        { title: 'Productos', url: '/products', icon: Package2 },
+        { title: 'Pedidos', url: '/orders', icon: Package },
+        { title: 'Entregas', url: '/deliveries', icon: Truck },
+        { title: 'Rutas', url: '/routes', icon: Route },
+        { title: 'Vehículos', url: '/vehiculos', icon: Car },
+      ]
+    },
+    {
+      category: 'Finanzas',
+      items: [
+        { title: 'Pagos', url: '/payments', icon: CreditCard },
+        { title: 'Ventas', url: '/sales', icon: ShoppingCart },
+        { title: 'Cobros', url: '/collections', icon: Receipt },
+        { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
+      ]
+    },
+    {
+      category: 'Análisis e IA',
+      items: [
+        { title: 'Reportes', url: '/reports', icon: BarChart3 },
+        { title: 'Optimización Rutas', url: '/route-optimization', icon: Navigation },
+        { title: 'Analytics & ML', url: '/analytics', icon: Brain },
+        { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
+      ]
+    },
+    {
+      category: 'Sistema',
+      items: [
+        { title: 'Configuración', url: '/settings', icon: Settings },
+        { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
+        { title: 'Notificaciones', url: '/notifications', icon: Bell },
+        { title: 'Mi Perfil', url: '/profile', icon: User },
+      ]
+    }
   ];
 
   const vendedorItems = [
-    { title: 'Dashboard', url: '/', icon: Home },
-    { title: 'Mis Pedidos', url: '/orders', icon: Package },
-    { title: 'Nuevo Pedido', url: '/orders/new', icon: UserPlus },
-    { title: 'Entregas', url: '/deliveries', icon: Truck },
-    { title: 'Clientes', url: '/customers', icon: Users },
-    { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
-    { title: 'Pagos', url: '/payments', icon: DollarSign },
-    { title: 'Cobros', url: '/collections', icon: Receipt },
-    { title: 'Mi Perfil', url: '/profile', icon: User },
+    {
+      category: 'Principal',
+      items: [
+        { title: 'Dashboard', url: '/', icon: Home },
+      ]
+    },
+    {
+      category: 'Ventas',
+      items: [
+        { title: 'Clientes', url: '/customers', icon: Users },
+        { title: 'Mis Pedidos', url: '/orders', icon: Package },
+        { title: 'Nuevo Pedido', url: '/orders/new', icon: UserPlus },
+        { title: 'Entregas', url: '/deliveries', icon: Truck },
+        { title: 'Pagos', url: '/payments', icon: DollarSign },
+        { title: 'Cobros', url: '/collections', icon: Receipt },
+      ]
+    },
+    {
+      category: 'Sistema',
+      items: [
+        { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
+        { title: 'Mi Perfil', url: '/profile', icon: User },
+      ]
+    }
   ];
 
   const cadeteItems = [
-    { title: 'Dashboard', url: '/', icon: Home },
-    { title: 'Mi Ruta', url: '/route', icon: MapPin },
-    { title: 'Entregas', url: '/deliveries', icon: Truck },
-    { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
-    { title: 'Mi Perfil', url: '/profile', icon: User },
-    { title: 'Historial', url: '/history', icon: FileText },
+    {
+      category: 'Principal',
+      items: [
+        { title: 'Dashboard', url: '/', icon: Home },
+      ]
+    },
+    {
+      category: 'Operaciones',
+      items: [
+        { title: 'Mi Ruta', url: '/route', icon: MapPin },
+        { title: 'Entregas', url: '/deliveries', icon: Truck },
+        { title: 'Historial', url: '/history', icon: FileText },
+      ]
+    },
+    {
+      category: 'Sistema',
+      items: [
+        { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
+        { title: 'Mi Perfil', url: '/profile', icon: User },
+      ]
+    }
   ];
 
   const getMenuItems = () => {
@@ -108,54 +170,67 @@ export const AppSidebar = () => {
     }
   };
 
-  const menuItems = getMenuItems();
+  const menuCategories = getMenuItems();
 
   return (
     <Sidebar className={state === 'collapsed' ? 'w-14' : 'w-60'} collapsible="icon">
       <SidebarContent>
         {/* Logo Section */}
-        <div className="p-4 border-b border-sidebar-border animate-element animate-delay-100">
+        <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center justify-center">
             <img 
               src="/lovable-uploads/629c5c32-2f75-4980-89b7-b7666a341b25.png" 
               alt="RutaMOD Logo" 
-              className={`object-contain smooth-transition ${
+              className={`object-contain transition-all duration-200 ${
                 state === 'collapsed' ? 'h-8 w-8' : 'h-12 w-auto'
               }`}
             />
           </div>
         </div>
 
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item, index) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={`${getNavCls} smooth-transition animate-element`}
-                      style={{ animationDelay: `${0.2 + index * 0.05}s` }}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {state !== 'collapsed' && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-              {profile?.role === 'gerencia' && (
+        {menuCategories.map((category) => (
+          <SidebarGroup key={category.category}>
+            <SidebarGroupLabel>{category.category}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {category.items.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        className={({ isActive }) => getNavCls({ isActive })}
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {state !== 'collapsed' && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+        
+        {profile?.role === 'gerencia' && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Herramientas</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild>
-                    <NavLink to="/bulk-import" className={`${getNavCls} smooth-transition animate-element`}>
+                    <NavLink 
+                      to="/bulk-import" 
+                      className={({ isActive }) => getNavCls({ isActive })}
+                    >
                       <Upload className="h-4 w-4" />
                       {state !== 'collapsed' && <span>Importación Masiva</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );
