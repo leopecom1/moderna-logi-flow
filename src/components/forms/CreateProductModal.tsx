@@ -83,7 +83,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
   });
 
   // Fetch brands
-  const { data: brands } = useQuery({
+  const { data: brands, isLoading: brandsLoading, error: brandsError } = useQuery({
     queryKey: ["brands"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -92,10 +92,17 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         .eq("is_active", true)
         .order("name");
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching brands:", error);
+        throw error;
+      }
+      console.log("Fetched brands:", data);
       return data;
     },
+    enabled: open, // Only fetch when modal is open
   });
+
+  console.log("Brands data:", brands, "Loading:", brandsLoading, "Error:", brandsError); // Debug log
 
   
 
@@ -343,11 +350,21 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Sin marca</SelectItem>
-                          {brands?.map((brand) => (
+                          {brandsLoading && (
+                            <SelectItem value="loading" disabled>
+                              Cargando marcas...
+                            </SelectItem>
+                          )}
+                          {!brandsLoading && brands?.map((brand) => (
                             <SelectItem key={brand.id} value={brand.name}>
                               {brand.name}
                             </SelectItem>
                           ))}
+                          {!brandsLoading && (!brands || brands.length === 0) && (
+                            <SelectItem value="no-brands" disabled>
+                              No hay marcas disponibles
+                            </SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
                     </FormControl>
