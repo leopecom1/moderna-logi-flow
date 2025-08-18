@@ -138,7 +138,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         price: values.price,
         cost: values.cost,
         category: finalCategory === "none" ? null : finalCategory || null,
-        brand: values.brand || null,
+        brand: values.brand === "none" ? null : values.brand || null,
         is_active: values.is_active,
       };
 
@@ -342,7 +342,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                           <SelectValue placeholder="Seleccionar marca" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Sin marca</SelectItem>
+                          <SelectItem value="none">Sin marca</SelectItem>
                           {brands?.map((brand) => (
                             <SelectItem key={brand.id} value={brand.name}>
                               {brand.name}
