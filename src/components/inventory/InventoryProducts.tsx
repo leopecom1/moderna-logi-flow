@@ -120,9 +120,21 @@ export function InventoryProducts() {
 
   const onSubmit = async (data: InventoryItemForm) => {
     try {
+      // Ensure all required fields are present
+      if (!data.product_id || !data.warehouse_id) {
+        throw new Error("Producto y depósito son requeridos");
+      }
+
       const { error } = await supabase
         .from("inventory_items")
-        .insert([data]);
+        .insert([{
+          product_id: data.product_id,
+          warehouse_id: data.warehouse_id,
+          current_stock: data.current_stock,
+          minimum_stock: data.minimum_stock,
+          maximum_stock: data.maximum_stock,
+          unit_cost: data.unit_cost,
+        }]);
 
       if (error) throw error;
 

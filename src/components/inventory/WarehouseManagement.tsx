@@ -26,13 +26,13 @@ type WarehouseForm = z.infer<typeof warehouseSchema>;
 interface WarehouseData {
   id: string;
   name: string;
-  address?: string;
-  city: string;
-  manager_id?: string;
+  address?: string | null;
+  city: string | null;
+  manager_id?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  profiles?: { full_name: string };
+  profiles?: { full_name: string } | null;
   _count?: {
     inventory_items: number;
   };
@@ -87,20 +87,21 @@ export function WarehouseManagement() {
     try {
       setLoading(true);
       
-      // Fetch warehouses with manager info and inventory count
-      const { data: warehousesData, error: warehousesError } = await supabase
-        .from("warehouses")
-        .select(`
-          *,
-          profiles(full_name)
-        `)
-        .order("created_at", { ascending: false });
+      // Fetch warehouses and profiles separately
+      const [warehousesResponse, profilesResponse] = await Promise.all([
+        supabase.from("warehouses").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("user_id, full_name").eq("is_active", true).order("full_name")
+      ]);
 
-      if (warehousesError) throw warehousesError;
+      if (warehousesResponse.error) throw warehousesResponse.error;
+      if (profilesResponse.error) throw profilesResponse.error;
 
-      // Get inventory count for each warehouse
+      // Create profile map for lookup
+      const profilesMap = new Map(profilesResponse.data?.map(p => [p.user_id, p]) || []);
+
+      // Get inventory count for each warehouse and enrich with profile data
       const warehousesWithCount = await Promise.all(
-        (warehousesData || []).map(async (warehouse) => {
+        (warehousesResponse.data || []).map(async (warehouse) => {
           const { count } = await supabase
             .from("inventory_items")
             .select("*", { count: "exact", head: true })
@@ -108,22 +109,14 @@ export function WarehouseManagement() {
           
           return {
             ...warehouse,
+            profiles: warehouse.manager_id ? profilesMap.get(warehouse.manager_id) : null,
             _count: { inventory_items: count || 0 }
           };
         })
       );
 
-      // Fetch profiles for manager selection
-      const { data: profilesData, error: profilesError } = await supabase
-        .from("profiles")
-        .select("user_id, full_name")
-        .eq("is_active", true)
-        .order("full_name");
-
-      if (profilesError) throw profilesError;
-
       setWarehouses(warehousesWithCount);
-      setProfiles(profilesData || []);
+      setProfiles(profilesResponse.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -141,7 +134,12 @@ export function WarehouseManagement() {
       if (editingWarehouse) {
         const { error } = await supabase
           .from("warehouses")
-          .update(data)
+          .update({
+            name: data.name,
+            address: data.address || null,
+            city: data.city,
+            manager_id: data.manager_id || null,
+          })
           .eq("id", editingWarehouse.id);
 
         if (error) throw error;
@@ -153,7 +151,12 @@ export function WarehouseManagement() {
       } else {
         const { error } = await supabase
           .from("warehouses")
-          .insert([data]);
+          .insert([{
+            name: data.name,
+            address: data.address || null,
+            city: data.city,
+            manager_id: data.manager_id || null,
+          }]);
 
         if (error) throw error;
 
