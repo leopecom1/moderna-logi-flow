@@ -204,7 +204,7 @@ export function InventoryProducts() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los depósitos</SelectItem>
-              {warehouses.map((warehouse) => (
+              {warehouses.filter(warehouse => warehouse.id && warehouse.id.trim() !== '').map((warehouse) => (
                 <SelectItem key={warehouse.id} value={warehouse.id}>
                   {warehouse.name}
                 </SelectItem>
@@ -313,7 +313,7 @@ export function InventoryProducts() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {products.map((product) => (
+                        {products.filter(product => product.id && product.id.trim() !== '').map((product) => (
                           <SelectItem key={product.id} value={product.id}>
                             {product.name} ({product.code})
                           </SelectItem>
@@ -338,7 +338,7 @@ export function InventoryProducts() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {warehouses.map((warehouse) => (
+                        {warehouses.filter(warehouse => warehouse.id && warehouse.id.trim() !== '').map((warehouse) => (
                           <SelectItem key={warehouse.id} value={warehouse.id}>
                             {warehouse.name}
                           </SelectItem>
