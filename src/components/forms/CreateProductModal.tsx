@@ -109,7 +109,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         name: values.name,
         price: values.price,
         cost: values.cost,
-        category: finalCategory || null,
+        category: finalCategory === "none" ? null : finalCategory || null,
         brand: values.brand || null,
         is_active: values.is_active,
       };
@@ -280,7 +280,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Sin categoría</SelectItem>
+                            <SelectItem value="none">Sin categoría</SelectItem>
                             {categories?.filter(cat => cat.name && cat.name.trim() !== '').map((category) => (
                               <SelectItem key={category.id} value={category.name}>
                                 {category.name}
