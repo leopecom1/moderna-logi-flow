@@ -33,9 +33,17 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface CreateCategoryModalProps {
   onCategoryCreated?: () => void;
+  parentId?: string;
+  triggerText?: string;
+  triggerSize?: "sm" | "default";
 }
 
-export function CreateCategoryModal({ onCategoryCreated }: CreateCategoryModalProps) {
+export function CreateCategoryModal({ 
+  onCategoryCreated, 
+  parentId, 
+  triggerText = "Crear Categoría",
+  triggerSize = "default"
+}: CreateCategoryModalProps) {
   const [open, setOpen] = React.useState(false);
   const { toast } = useToast();
 
@@ -55,14 +63,17 @@ export function CreateCategoryModal({ onCategoryCreated }: CreateCategoryModalPr
           {
             name: data.name,
             description: data.description || null,
+            parent_id: parentId || null,
           },
         ]);
 
       if (error) throw error;
 
       toast({
-        title: "Categoría creada",
-        description: "La categoría ha sido creada exitosamente.",
+        title: parentId ? "Subcategoría creada" : "Categoría creada",
+        description: parentId 
+          ? "La subcategoría ha sido creada exitosamente."
+          : "La categoría ha sido creada exitosamente.",
       });
 
       form.reset();
@@ -81,14 +92,16 @@ export function CreateCategoryModal({ onCategoryCreated }: CreateCategoryModalPr
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Categoría
+        <Button size={triggerSize} variant={parentId ? "outline" : "default"}>
+          <Plus className="mr-2 h-4 w-4" />
+          {triggerText}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Crear Nueva Categoría</DialogTitle>
+          <DialogTitle>
+            {parentId ? "Crear Nueva Subcategoría" : "Crear Nueva Categoría"}
+          </DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -131,7 +144,9 @@ export function CreateCategoryModal({ onCategoryCreated }: CreateCategoryModalPr
               >
                 Cancelar
               </Button>
-              <Button type="submit">Crear Categoría</Button>
+              <Button type="submit">
+                {parentId ? "Crear Subcategoría" : "Crear Categoría"}
+              </Button>
             </div>
           </form>
         </Form>

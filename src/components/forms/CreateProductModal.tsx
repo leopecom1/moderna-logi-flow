@@ -62,12 +62,23 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
-        .select("*")
+        .select("id, name, parent_id")
         .eq("is_active", true)
+        .order("parent_id", { ascending: true, nullsFirst: true })
         .order("name");
       
       if (error) throw error;
-      return data;
+      
+      // Group categories with their subcategories for better display
+      const mainCategories = data?.filter(cat => !cat.parent_id) || [];
+      const subcategories = data?.filter(cat => cat.parent_id) || [];
+      
+      const grouped = mainCategories.map(main => ({
+        ...main,
+        subcategories: subcategories.filter(sub => sub.parent_id === main.id)
+      }));
+      
+      return { grouped, all: data };
     },
   });
 
@@ -279,14 +290,21 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sin categoría</SelectItem>
-                            {categories?.filter(cat => cat.name && cat.name.trim() !== '').map((category) => (
-                              <SelectItem key={category.id} value={category.name}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
+                           <SelectContent>
+                             <SelectItem value="none">Sin categoría</SelectItem>
+                             {categories?.grouped.map((category) => (
+                               <React.Fragment key={category.id}>
+                                 <SelectItem value={category.name}>
+                                   {category.name}
+                                 </SelectItem>
+                                 {category.subcategories.map((sub) => (
+                                   <SelectItem key={sub.id} value={sub.name} className="pl-6">
+                                     └ {sub.name}
+                                   </SelectItem>
+                                 ))}
+                               </React.Fragment>
+                             ))}
+                           </SelectContent>
                         </Select>
                       </FormControl>
                       <FormMessage />
