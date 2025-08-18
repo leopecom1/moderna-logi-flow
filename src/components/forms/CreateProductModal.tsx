@@ -290,21 +290,21 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
-                           <SelectContent>
-                             <SelectItem value="none">Sin categoría</SelectItem>
-                             {categories?.grouped.map((category) => (
-                               <React.Fragment key={category.id}>
-                                 <SelectItem value={category.name}>
-                                   {category.name}
-                                 </SelectItem>
-                                 {category.subcategories.map((sub) => (
-                                   <SelectItem key={sub.id} value={sub.name} className="pl-6">
-                                     └ {sub.name}
-                                   </SelectItem>
-                                 ))}
-                               </React.Fragment>
-                             ))}
-                           </SelectContent>
+                          <SelectContent>
+                            <SelectItem value="none">Sin categoría</SelectItem>
+                            {categories?.grouped?.map((category) => (
+                              <React.Fragment key={category.id}>
+                                <SelectItem value={category.name}>
+                                  {category.name}
+                                </SelectItem>
+                                {category.subcategories?.map((sub) => (
+                                  <SelectItem key={sub.id} value={sub.name} className="pl-6">
+                                    └ {sub.name}
+                                  </SelectItem>
+                                ))}
+                              </React.Fragment>
+                            ))}
+                          </SelectContent>
                         </Select>
                       </FormControl>
                       <FormMessage />
