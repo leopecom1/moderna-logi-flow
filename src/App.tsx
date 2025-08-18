@@ -23,6 +23,7 @@ import ProfilePage from "./pages/ProfilePage";
 import { RouteOptimizationPage } from './pages/RouteOptimizationPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import BusinessManagementPage from './pages/BusinessManagementPage';
+import InventoryPage from "./pages/InventoryPage";
 import ReportsPage from "./pages/ReportsPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -81,6 +82,7 @@ function App() {
             <Route path="/route-optimization" element={<RouteOptimizationPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/business" element={<BusinessManagementPage />} />
+            <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFound />} />

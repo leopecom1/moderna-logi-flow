@@ -436,7 +436,7 @@ export function InventoryReports() {
                     <TableCell>{alert.product_code}</TableCell>
                     <TableCell>{alert.warehouse_name}</TableCell>
                     <TableCell>
-                      <span className={alert.current_stock === 0 ? "text-red-600 font-bold" : ""}">
+                      <span className={alert.current_stock === 0 ? "text-red-600 font-bold" : ""}>
                         {alert.current_stock}
                       </span>
                     </TableCell>
