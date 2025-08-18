@@ -82,9 +82,22 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     },
   });
 
-  console.log("Categories data:", categories); // Debug log
+  // Fetch brands
+  const { data: brands } = useQuery({
+    queryKey: ["brands"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("brands")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
 
-  const form = useForm<FormValues>({
+  
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -294,21 +307,21 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Sin categoría</SelectItem>
-                            {categories?.grouped?.map((category) => (
-                              <React.Fragment key={category.id}>
-                                <SelectItem value={category.name}>
-                                  {category.name}
+                        <SelectContent>
+                          <SelectItem value="none">Sin categoría</SelectItem>
+                          {!createNewCategory && categories?.grouped?.map((category) => (
+                            <React.Fragment key={category.id}>
+                              <SelectItem value={category.name}>
+                                {category.name}
+                              </SelectItem>
+                              {category.subcategories?.map((sub) => (
+                                <SelectItem key={sub.id} value={sub.name} className="pl-6">
+                                  └ {sub.name}
                                 </SelectItem>
-                                {category.subcategories?.map((sub) => (
-                                  <SelectItem key={sub.id} value={sub.name} className="pl-6">
-                                    └ {sub.name}
-                                  </SelectItem>
-                                ))}
-                              </React.Fragment>
-                            ))}
-                          </SelectContent>
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </SelectContent>
                         </Select>
                       </FormControl>
                       <FormMessage />
@@ -324,7 +337,19 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                   <FormItem>
                     <FormLabel>Marca</FormLabel>
                     <FormControl>
-                      <Input placeholder="Marca" {...field} />
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar marca" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">Sin marca</SelectItem>
+                          {brands?.map((brand) => (
+                            <SelectItem key={brand.id} value={brand.name}>
+                              {brand.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateProductModal } from "@/components/forms/CreateProductModal";
-import { CategoryManagementModal } from "@/components/forms/CategoryManagementModal";
+import { ConfigurationModal } from "@/components/forms/ConfigurationModal";
 import { Search, Package, TrendingUp, Grid, Table } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -67,7 +67,7 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Productos</h1>
         <div className="flex gap-2">
-          <CategoryManagementModal onCategoryUpdated={refetch} />
+          <ConfigurationModal onConfigurationUpdated={refetch} />
           <CreateProductModal onProductCreated={refetch} />
         </div>
       </div>

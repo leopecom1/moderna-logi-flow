@@ -1,0 +1,62 @@
+import React from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Settings, Folder, Tag } from "lucide-react";
+import { CategoryManagementPanel } from "./CategoryManagementPanel";
+import { BrandManagementPanel } from "./BrandManagementPanel";
+
+interface ConfigurationModalProps {
+  onConfigurationUpdated?: () => void;
+}
+
+export function ConfigurationModal({ onConfigurationUpdated }: ConfigurationModalProps) {
+  const [open, setOpen] = React.useState(false);
+
+  const handleConfigUpdate = () => {
+    onConfigurationUpdated?.();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">
+          <Settings className="mr-2 h-4 w-4" />
+          Configuración
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Configuración del Sistema</DialogTitle>
+        </DialogHeader>
+        
+        <Tabs defaultValue="categories" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="categories" className="flex items-center gap-2">
+              <Folder className="h-4 w-4" />
+              Categorías
+            </TabsTrigger>
+            <TabsTrigger value="brands" className="flex items-center gap-2">
+              <Tag className="h-4 w-4" />
+              Marcas
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="categories" className="mt-4">
+            <CategoryManagementPanel onCategoryUpdated={handleConfigUpdate} />
+          </TabsContent>
+          
+          <TabsContent value="brands" className="mt-4">
+            <BrandManagementPanel onBrandUpdated={handleConfigUpdate} />
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
+  );
+}
