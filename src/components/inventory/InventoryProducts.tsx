@@ -34,8 +34,9 @@ interface InventoryItem {
   maximum_stock: number;
   unit_cost: number;
   last_updated: string;
-  products: { name: string; code: string; category?: string; brand?: string };
-  warehouses: { name: string };
+  product_name?: string;
+  product_code?: string;
+  warehouse_name?: string;
 }
 
 interface Product {
@@ -79,39 +80,32 @@ export function InventoryProducts() {
     try {
       setLoading(true);
       
-      // Fetch inventory items with related data
-      const { data: inventoryData, error: inventoryError } = await supabase
-        .from("inventory_items")
-        .select(`
-          *,
-          products(name, code, category, brand),
-          warehouses(name)
-        `)
-        .order("created_at", { ascending: false });
+      // Fetch inventory items, products, and warehouses separately
+      const [inventoryResponse, productsResponse, warehousesResponse] = await Promise.all([
+        supabase.from("inventory_items").select("*").order("created_at", { ascending: false }),
+        supabase.from("products").select("id, name, code, category, brand").eq("is_active", true).order("name"),
+        supabase.from("warehouses").select("id, name").eq("is_active", true).order("name")
+      ]);
 
-      if (inventoryError) throw inventoryError;
+      if (inventoryResponse.error) throw inventoryResponse.error;
+      if (productsResponse.error) throw productsResponse.error;
+      if (warehousesResponse.error) throw warehousesResponse.error;
 
-      // Fetch products for the form
-      const { data: productsData, error: productsError } = await supabase
-        .from("products")
-        .select("id, name, code, category, brand")
-        .eq("is_active", true)
-        .order("name");
+      // Create maps for faster lookup
+      const productsMap = new Map(productsResponse.data?.map(p => [p.id, p]) || []);
+      const warehousesMap = new Map(warehousesResponse.data?.map(w => [w.id, w]) || []);
 
-      if (productsError) throw productsError;
+      // Combine data
+      const enrichedItems = inventoryResponse.data?.map(item => ({
+        ...item,
+        product_name: productsMap.get(item.product_id)?.name || 'Producto no encontrado',
+        product_code: productsMap.get(item.product_id)?.code || 'N/A',
+        warehouse_name: warehousesMap.get(item.warehouse_id)?.name || 'Depósito no encontrado',
+      })) || [];
 
-      // Fetch warehouses for the form
-      const { data: warehousesData, error: warehousesError } = await supabase
-        .from("warehouses")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-
-      if (warehousesError) throw warehousesError;
-
-      setItems(inventoryData || []);
-      setProducts(productsData || []);
-      setWarehouses(warehousesData || []);
+      setItems(enrichedItems);
+      setProducts(productsResponse.data || []);
+      setWarehouses(warehousesResponse.data || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -161,9 +155,9 @@ export function InventoryProducts() {
 
   const filteredItems = items.filter((item) => {
     const matchesSearch = 
-      item.products.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.products.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.warehouses.name.toLowerCase().includes(searchTerm.toLowerCase());
+      item.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.product_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.warehouse_name?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesWarehouse = selectedWarehouse === "all" || item.warehouse_id === selectedWarehouse;
     
@@ -222,13 +216,13 @@ export function InventoryProducts() {
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
                     <Package className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">{item.products.name}</CardTitle>
+                    <CardTitle className="text-lg">{item.product_name}</CardTitle>
                   </div>
                   <Badge variant={stockStatus.color as any}>
                     {stockStatus.text}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">{item.products.code}</p>
+                <p className="text-sm text-muted-foreground">{item.product_code}</p>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -252,7 +246,7 @@ export function InventoryProducts() {
                 
                 <div className="pt-2 border-t">
                   <p className="text-sm text-muted-foreground">Depósito</p>
-                  <p className="font-medium">{item.warehouses.name}</p>
+                  <p className="font-medium">{item.warehouse_name}</p>
                 </div>
 
                 {item.current_stock <= item.minimum_stock && (

@@ -2,10 +2,8 @@ import { useState } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryProducts } from "@/components/inventory/InventoryProducts";
-import { InventoryMovements } from "@/components/inventory/InventoryMovements";
-import { InventoryReports } from "@/components/inventory/InventoryReports";
 import { WarehouseManagement } from "@/components/inventory/WarehouseManagement";
-import { Warehouse, Package, BarChart3, TrendingUp } from "lucide-react";
+import { Warehouse, Package, Settings } from "lucide-react";
 
 export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState("products");
@@ -18,24 +16,16 @@ export default function InventoryPage() {
             <div>
               <h1 className="text-3xl font-bold text-foreground">Gestión de Inventario</h1>
               <p className="text-muted-foreground">
-                Administra productos, stock, depósitos y movimientos de inventario
+                Administra productos, stock y depósitos de inventario
               </p>
             </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="products" className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                Productos
-              </TabsTrigger>
-              <TabsTrigger value="movements" className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Movimientos
-              </TabsTrigger>
-              <TabsTrigger value="reports" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Reportes
+                Productos e Inventario
               </TabsTrigger>
               <TabsTrigger value="warehouses" className="flex items-center gap-2">
                 <Warehouse className="h-4 w-4" />
@@ -45,14 +35,6 @@ export default function InventoryPage() {
 
             <TabsContent value="products" className="space-y-6">
               <InventoryProducts />
-            </TabsContent>
-
-            <TabsContent value="movements" className="space-y-6">
-              <InventoryMovements />
-            </TabsContent>
-
-            <TabsContent value="reports" className="space-y-6">
-              <InventoryReports />
             </TabsContent>
 
             <TabsContent value="warehouses" className="space-y-6">
