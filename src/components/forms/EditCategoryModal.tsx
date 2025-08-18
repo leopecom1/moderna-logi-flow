@@ -99,6 +99,36 @@ export function EditCategoryModal({ category, onCategoryUpdated }: EditCategoryM
     }
   };
 
+  const onDelete = async () => {
+    if (!confirm("¿Estás seguro de que quieres eliminar esta categoría? Esta acción no se puede deshacer.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("categories")
+        .delete()
+        .eq("id", category.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Categoría eliminada",
+        description: "La categoría ha sido eliminada exitosamente.",
+      });
+
+      setOpen(false);
+      onCategoryUpdated?.();
+    } catch (error) {
+      console.error("Error deleting category:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la categoría. Verifica que no esté siendo utilizada por productos.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -164,15 +194,24 @@ export function EditCategoryModal({ category, onCategoryUpdated }: EditCategoryM
               )}
             />
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-between">
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
+                variant="destructive"
+                onClick={onDelete}
               >
-                Cancelar
+                Eliminar
               </Button>
-              <Button type="submit">Actualizar</Button>
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">Actualizar</Button>
+              </div>
             </div>
           </form>
         </Form>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateProductModal } from "@/components/forms/CreateProductModal";
 import { ConfigurationModal } from "@/components/forms/ConfigurationModal";
+import { EditProductModal } from "@/components/forms/EditProductModal";
 import { Search, Package, TrendingUp, Grid, Table } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -194,6 +195,13 @@ export default function ProductsPage() {
                     {product.margin_percentage?.toFixed(2) || 0}%
                   </p>
                 </div>
+                
+                <div className="flex justify-end">
+                  <EditProductModal 
+                    product={product} 
+                    onProductUpdated={refetch}
+                  />
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -212,6 +220,7 @@ export default function ProductsPage() {
                   <TableHead className="text-right">Costo</TableHead>
                   <TableHead className="text-right">Margen</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -252,6 +261,12 @@ export default function ProductsPage() {
                       <Badge variant={product.is_active ? "default" : "secondary"}>
                         {product.is_active ? "Activo" : "Inactivo"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <EditProductModal 
+                        product={product} 
+                        onProductUpdated={refetch}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

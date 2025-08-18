@@ -98,6 +98,36 @@ export function EditBrandModal({ brand, onBrandUpdated }: EditBrandModalProps) {
     }
   };
 
+  const onDelete = async () => {
+    if (!confirm("¿Estás seguro de que quieres eliminar esta marca? Esta acción no se puede deshacer.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("brands")
+        .delete()
+        .eq("id", brand.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Marca eliminada",
+        description: "La marca ha sido eliminada exitosamente.",
+      });
+
+      setOpen(false);
+      onBrandUpdated?.();
+    } catch (error) {
+      console.error("Error deleting brand:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la marca. Verifica que no esté siendo utilizada por productos.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -163,15 +193,24 @@ export function EditBrandModal({ brand, onBrandUpdated }: EditBrandModalProps) {
               )}
             />
 
-            <div className="flex justify-end space-x-2">
+            <div className="flex justify-between">
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
+                variant="destructive"
+                onClick={onDelete}
               >
-                Cancelar
+                Eliminar
               </Button>
-              <Button type="submit">Actualizar</Button>
+              <div className="flex space-x-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">Actualizar</Button>
+              </div>
             </div>
           </form>
         </Form>
