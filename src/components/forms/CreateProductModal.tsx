@@ -82,6 +82,8 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     },
   });
 
+  console.log("Categories data:", categories); // Debug log
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
