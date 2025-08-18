@@ -6,16 +6,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateProductModal } from "@/components/forms/CreateProductModal";
-import { CreateCategoryModal } from "@/components/forms/CreateCategoryModal";
-import { Search, Package, TrendingUp } from "lucide-react";
+import { CategoryManagementModal } from "@/components/forms/CategoryManagementModal";
+import { Search, Package, TrendingUp, Grid, Table } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MessageLoading } from "@/components/ui/message-loading";
+import {
+  Table as TableComponent,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 type Product = Tables<"products">;
 
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [viewMode, setViewMode] = React.useState<"cards" | "table">("cards");
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -58,7 +67,7 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Productos</h1>
         <div className="flex gap-2">
-          <CreateCategoryModal onCategoryCreated={refetch} />
+          <CategoryManagementModal onCategoryUpdated={refetch} />
           <CreateProductModal onProductCreated={refetch} />
         </div>
       </div>
@@ -105,69 +114,152 @@ export default function ProductsPage() {
         </Card>
       </div>
 
-      {/* Búsqueda */}
-      <div className="flex items-center space-x-2">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nombre, código, categoría o marca..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
+      {/* Búsqueda y controles de vista */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nombre, código, categoría o marca..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant={viewMode === "cards" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("cards")}
+          >
+            <Grid className="h-4 w-4 mr-2" />
+            Tarjetas
+          </Button>
+          <Button
+            variant={viewMode === "table" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setViewMode("table")}
+          >
+            <Table className="h-4 w-4 mr-2" />
+            Tabla
+          </Button>
+        </div>
       </div>
 
-      {/* Lista de productos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">Código: {product.code}</p>
+      {/* Lista/Tabla de productos */}
+      {viewMode === "cards" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredProducts.map((product) => (
+            <Card key={product.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-lg">{product.name}</CardTitle>
+                    <p className="text-sm text-muted-foreground">Código: {product.code}</p>
+                  </div>
+                  <Badge variant={product.is_active ? "default" : "secondary"}>
+                    {product.is_active ? "Activo" : "Inactivo"}
+                  </Badge>
                 </div>
-                <Badge variant={product.is_active ? "default" : "secondary"}>
-                  {product.is_active ? "Activo" : "Inactivo"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {(product.category || product.brand) && (
-                <div className="flex flex-wrap gap-2">
-                  {product.category && (
-                    <Badge variant="outline" className="text-xs">
-                      {product.category}
-                    </Badge>
-                  )}
-                  {product.brand && (
-                    <Badge variant="outline" className="text-xs">
-                      {product.brand}
-                    </Badge>
-                  )}
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {(product.category || product.brand) && (
+                  <div className="flex flex-wrap gap-2">
+                    {product.category && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.category}
+                      </Badge>
+                    )}
+                    {product.brand && (
+                      <Badge variant="outline" className="text-xs">
+                        {product.brand}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Precio</p>
+                    <p className="font-semibold">${product.price}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Costo</p>
+                    <p className="font-semibold">${product.cost}</p>
+                  </div>
                 </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Precio</p>
-                  <p className="font-semibold">${product.price}</p>
+                
+                <div className="bg-muted p-3 rounded-lg">
+                  <p className="text-sm text-muted-foreground">Margen</p>
+                  <p className="text-lg font-bold text-green-600">
+                    {product.margin_percentage?.toFixed(2) || 0}%
+                  </p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Costo</p>
-                  <p className="font-semibold">${product.cost}</p>
-                </div>
-              </div>
-              
-              <div className="bg-muted p-3 rounded-lg">
-                <p className="text-sm text-muted-foreground">Margen</p>
-                <p className="text-lg font-bold text-green-600">
-                  {product.margin_percentage?.toFixed(2) || 0}%
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <TableComponent>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Categoría</TableHead>
+                  <TableHead>Marca</TableHead>
+                  <TableHead className="text-right">Precio</TableHead>
+                  <TableHead className="text-right">Costo</TableHead>
+                  <TableHead className="text-right">Margen</TableHead>
+                  <TableHead>Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell className="font-medium">{product.code}</TableCell>
+                    <TableCell>{product.name}</TableCell>
+                    <TableCell>
+                      {product.category ? (
+                        <Badge variant="outline" className="text-xs">
+                          {product.category}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {product.brand ? (
+                        <Badge variant="outline" className="text-xs">
+                          {product.brand}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      ${product.price}
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">
+                      ${product.cost}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span className="text-green-600 font-semibold">
+                        {product.margin_percentage?.toFixed(2) || 0}%
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.is_active ? "default" : "secondary"}>
+                        {product.is_active ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </TableComponent>
+          </CardContent>
+        </Card>
+      )}
 
       {filteredProducts.length === 0 && (
         <div className="text-center py-12">
