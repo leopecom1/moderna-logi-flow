@@ -2,6 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,9 +21,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
+import { CreateCategoryModal } from "./CreateCategoryModal";
 
 const formSchema = z.object({
   code: z.string().min(1, "Código es requerido"),
@@ -32,6 +42,8 @@ const formSchema = z.object({
   category: z.string().optional(),
   brand: z.string().optional(),
   is_active: z.boolean().default(true),
+  createNewCategory: z.boolean().default(false),
+  newCategoryName: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -44,6 +56,21 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
   const [open, setOpen] = React.useState(false);
   const { toast } = useToast();
 
+  // Fetch categories
+  const { data: categories, refetch: refetchCategories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -54,17 +81,35 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       category: "",
       brand: "",
       is_active: true,
+      createNewCategory: false,
+      newCategoryName: "",
     },
   });
 
+  const createNewCategory = form.watch("createNewCategory");
+
   const onSubmit = async (values: FormValues) => {
     try {
+      let finalCategory = values.category;
+
+      // Si se eligió crear una nueva categoría, crearla primero
+      if (values.createNewCategory && values.newCategoryName) {
+        const { data: newCategory, error: categoryError } = await supabase
+          .from("categories")
+          .insert([{ name: values.newCategoryName }])
+          .select()
+          .single();
+
+        if (categoryError) throw categoryError;
+        finalCategory = newCategory.name;
+      }
+
       const productData = {
         code: values.code,
         name: values.name,
         price: values.price,
         cost: values.cost,
-        category: values.category || null,
+        category: finalCategory || null,
         brand: values.brand || null,
         is_active: values.is_active,
       };
@@ -83,6 +128,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       form.reset();
       setOpen(false);
       onProductCreated?.();
+      refetchCategories?.();
     } catch (error) {
       console.error("Error creating product:", error);
       toast({
@@ -188,20 +234,66 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <FormField
                 control={form.control}
-                name="category"
+                name="createNewCategory"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoría</FormLabel>
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                     <FormControl>
-                      <Input placeholder="Categoría" {...field} />
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
                     </FormControl>
-                    <FormMessage />
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>Crear nueva categoría</FormLabel>
+                    </div>
                   </FormItem>
                 )}
               />
+
+              {createNewCategory ? (
+                <FormField
+                  control={form.control}
+                  name="newCategoryName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nueva Categoría</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nombre de la nueva categoría" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoría</FormLabel>
+                      <FormControl>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar categoría" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Sin categoría</SelectItem>
+                            {categories?.filter(cat => cat.name && cat.name.trim() !== '').map((category) => (
+                              <SelectItem key={category.id} value={category.name}>
+                                {category.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
