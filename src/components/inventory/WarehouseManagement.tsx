@@ -138,7 +138,7 @@ export function WarehouseManagement() {
             name: data.name,
             address: data.address || null,
             city: data.city,
-            manager_id: data.manager_id || null,
+            manager_id: data.manager_id && data.manager_id !== "none" ? data.manager_id : null,
           })
           .eq("id", editingWarehouse.id);
 
@@ -155,7 +155,7 @@ export function WarehouseManagement() {
             name: data.name,
             address: data.address || null,
             city: data.city,
-            manager_id: data.manager_id || null,
+            manager_id: data.manager_id && data.manager_id !== "none" ? data.manager_id : null,
           }]);
 
         if (error) throw error;
@@ -401,8 +401,8 @@ export function WarehouseManagement() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Sin encargado</SelectItem>
-                        {profiles.map((profile) => (
+                        <SelectItem value="none">Sin encargado</SelectItem>
+                        {profiles.filter(profile => profile.user_id && profile.user_id.trim() !== '').map((profile) => (
                           <SelectItem key={profile.user_id} value={profile.user_id}>
                             {profile.full_name}
                           </SelectItem>
