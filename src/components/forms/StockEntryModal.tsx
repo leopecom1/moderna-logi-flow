@@ -200,7 +200,7 @@ export function StockEntryModal({
           movement_type: 'entrada',
           quantity: item.quantity,
           unit_cost: item.unit_cost,
-          total_value: item.quantity * item.unit_cost,
+          // total_value is a generated column, don't insert it
           user_id: user.id,
           movement_date: new Date().toISOString().split('T')[0],
           reference_document: `Compra ${purchase.purchase_number} - Factura ${values.supplier_invoice_number}`,
