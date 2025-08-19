@@ -158,6 +158,8 @@ export function StockEntryModal({
 
     setIsSubmitting(true);
     try {
+      console.log('Submitting stock entry with values:', values);
+      
       // First, create inventory movements for each item
       for (const item of values.items) {
         // Check if inventory item exists for this product and warehouse
@@ -193,21 +195,28 @@ export function StockEntryModal({
         if (getInventoryError) throw getInventoryError;
 
         // Create inventory movement
+        const movementData = {
+          inventory_item_id: inventoryItem.id,
+          movement_type: 'entrada',
+          quantity: item.quantity,
+          unit_cost: item.unit_cost,
+          total_value: item.quantity * item.unit_cost,
+          user_id: user.id,
+          movement_date: new Date().toISOString().split('T')[0],
+          reference_document: `Compra ${purchase.purchase_number} - Factura ${values.supplier_invoice_number}`,
+          notes: `Ingreso de stock por compra. Factura proveedor: ${values.supplier_invoice_number}`,
+        };
+        
+        console.log('Creating movement with data:', movementData);
+        
         const { error: movementError } = await supabase
           .from('inventory_movements')
-          .insert({
-            inventory_item_id: inventoryItem.id,
-            movement_type: 'entrada',
-            quantity: item.quantity,
-            unit_cost: item.unit_cost,
-            total_value: item.quantity * item.unit_cost, // Ensure we calculate this
-            user_id: user.id,
-            movement_date: new Date().toISOString().split('T')[0], // Add movement_date explicitly
-            reference_document: `Compra ${purchase.purchase_number} - Factura ${values.supplier_invoice_number}`,
-            notes: `Ingreso de stock por compra. Factura proveedor: ${values.supplier_invoice_number}`,
-          });
+          .insert(movementData);
 
-        if (movementError) throw movementError;
+        if (movementError) {
+          console.error('Movement error:', movementError);
+          throw movementError;
+        }
       }
 
       // Update purchase status to "recibido"
@@ -373,7 +382,7 @@ export function StockEntryModal({
                           type="number"
                           step="1"
                           min="0"
-                          value={field.quantity}
+                          value={field.quantity || 0}
                           onChange={(e) => {
                             const value = parseInt(e.target.value) || 0;
                             updateItemCalculations(index, 'quantity', value);
@@ -386,7 +395,7 @@ export function StockEntryModal({
                           type="number"
                           step="0.01"
                           min="0"
-                          value={field.unit_cost}
+                          value={field.unit_cost || 0}
                           onChange={(e) => {
                             const value = parseFloat(e.target.value) || 0;
                             updateItemCalculations(index, 'unit_cost', value);
@@ -396,7 +405,7 @@ export function StockEntryModal({
                       </TableCell>
                       <TableCell>
                         <span className="font-medium">
-                          ${field.total_value.toLocaleString('es-UY', { minimumFractionDigits: 2 })}
+                          ${(field.total_value || 0).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
                         </span>
                       </TableCell>
                     </TableRow>
@@ -417,7 +426,7 @@ export function StockEntryModal({
                 <div className="flex justify-between items-center">
                   <span className="font-medium">Total General:</span>
                   <span className="text-lg font-bold">
-                    ${fields.reduce((sum, item) => sum + item.total_value, 0).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
+                    ${fields.reduce((sum, item) => sum + (item.total_value || 0), 0).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
