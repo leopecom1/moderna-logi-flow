@@ -15,6 +15,7 @@ import IncidentsPage from "./pages/IncidentsPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import ProductsPage from "./pages/ProductsPage";
 import SalesPage from "./pages/SalesPage";
+import PurchasesPage from "./pages/PurchasesPage";
 import CollectionsPage from "./pages/CollectionsPage";
 import AccountsReceivablePage from "./pages/AccountsReceivablePage";
 import BulkImportPage from "./pages/BulkImportPage";
@@ -72,6 +73,7 @@ function App() {
             <Route path="/payments" element={<PaymentsPage />} />
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/accounts-receivable" element={<AccountsReceivablePage />} />
+            <Route path="/purchases" element={<PurchasesPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />

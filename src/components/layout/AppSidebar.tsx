@@ -81,8 +81,9 @@ export const AppSidebar = () => {
     {
       category: 'Finanzas',
       items: [
+        { title: 'Compras', url: '/purchases', icon: ShoppingCart },
         { title: 'Pagos', url: '/payments', icon: CreditCard },
-        { title: 'Ventas', url: '/sales', icon: ShoppingCart },
+        { title: 'Ventas', url: '/sales', icon: TrendingUp },
         { title: 'Cobros', url: '/collections', icon: Receipt },
         { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
       ]

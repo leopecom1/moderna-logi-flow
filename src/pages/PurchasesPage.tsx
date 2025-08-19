@@ -55,7 +55,7 @@ export default function PurchasesPage() {
 
   const filteredPurchases = purchases?.filter(purchase =>
     purchase.purchase_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    purchase.suppliers?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (purchase.suppliers?.name && purchase.suppliers.name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const formatCurrency = (amount: number, currency: string) => {
@@ -209,7 +209,9 @@ export default function PurchasesPage() {
                         <TableCell className="font-medium">
                           {purchase.purchase_number}
                         </TableCell>
-                        <TableCell>{purchase.suppliers?.name}</TableCell>
+                        <TableCell>
+                          {purchase.suppliers?.name || "Sin proveedor"}
+                        </TableCell>
                         <TableCell>
                           {format(new Date(purchase.purchase_date), "dd/MM/yyyy")}
                         </TableCell>
