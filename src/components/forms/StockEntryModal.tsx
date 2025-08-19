@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -158,19 +159,27 @@ export function StockEntryModal({
 
     setIsSubmitting(true);
     try {
-      console.log('Submitting stock entry with values:', values);
+      console.log('Starting stock entry process with values:', values);
       
       // First, create inventory movements for each item
       for (const item of values.items) {
+        console.log(`Processing item: ${item.product_name} (${item.product_id})`);
+        
         // Check if inventory item exists for this product and warehouse
-        const { data: existingInventoryItem } = await supabase
+        const { data: existingInventoryItem, error: checkError } = await supabase
           .from('inventory_items')
           .select('id')
           .eq('product_id', item.product_id)
           .eq('warehouse_id', values.warehouse_id)
-          .single();
+          .maybeSingle();
+
+        if (checkError) {
+          console.error('Error checking inventory item:', checkError);
+          throw checkError;
+        }
 
         if (!existingInventoryItem) {
+          console.log(`Creating new inventory item for product ${item.product_id} in warehouse ${values.warehouse_id}`);
           // Create inventory item if it doesn't exist
           const { error: inventoryError } = await supabase
             .from('inventory_items')
@@ -181,7 +190,11 @@ export function StockEntryModal({
               unit_cost: item.unit_cost,
             });
 
-          if (inventoryError) throw inventoryError;
+          if (inventoryError) {
+            console.error('Error creating inventory item:', inventoryError);
+            throw inventoryError;
+          }
+          console.log('Successfully created inventory item');
         }
 
         // Get the inventory item ID (either existing or newly created)
@@ -192,7 +205,12 @@ export function StockEntryModal({
           .eq('warehouse_id', values.warehouse_id)
           .single();
 
-        if (getInventoryError) throw getInventoryError;
+        if (getInventoryError) {
+          console.error('Error getting inventory item:', getInventoryError);
+          throw getInventoryError;
+        }
+
+        console.log(`Found inventory item with ID: ${inventoryItem.id}`);
 
         // Create inventory movement
         const movementData = {
@@ -200,7 +218,6 @@ export function StockEntryModal({
           movement_type: 'entrada',
           quantity: item.quantity,
           unit_cost: item.unit_cost,
-          // total_value is a generated column, don't insert it
           user_id: user.id,
           movement_date: new Date().toISOString().split('T')[0],
           reference_document: `Compra ${purchase.purchase_number} - Factura ${values.supplier_invoice_number}`,
@@ -214,11 +231,14 @@ export function StockEntryModal({
           .insert(movementData);
 
         if (movementError) {
-          console.error('Movement error:', movementError);
+          console.error('Movement creation error:', movementError);
           throw movementError;
         }
+
+        console.log('Successfully created inventory movement');
       }
 
+      console.log('Updating purchase status to "recibido"');
       // Update purchase status to "recibido"
       const { error: updatePurchaseError } = await supabase
         .from('purchases')
@@ -229,8 +249,12 @@ export function StockEntryModal({
         })
         .eq('id', purchase.id);
 
-      if (updatePurchaseError) throw updatePurchaseError;
+      if (updatePurchaseError) {
+        console.error('Error updating purchase:', updatePurchaseError);
+        throw updatePurchaseError;
+      }
 
+      console.log('Stock entry process completed successfully!');
       toast({
         title: 'Éxito',
         description: 'Stock ingresado correctamente al inventario',
@@ -238,6 +262,7 @@ export function StockEntryModal({
       
       onSuccess();
     } catch (error: any) {
+      console.error('Stock entry process failed:', error);
       toast({
         title: 'Error',
         description: error.message || 'Error al ingresar el stock',
