@@ -1318,6 +1318,69 @@ export type Database = {
           },
         ]
       }
+      supplier_payments: {
+        Row: {
+          amount: number
+          check_due_date: string | null
+          check_image_url: string | null
+          check_number: string | null
+          created_at: string
+          created_by: string
+          due_date: string
+          id: string
+          is_check: boolean
+          notes: string | null
+          paid_at: string | null
+          payment_date: string
+          payment_method: string
+          payment_status: string
+          purchase_id: string
+          receipt_url: string | null
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          check_due_date?: string | null
+          check_image_url?: string | null
+          check_number?: string | null
+          created_at?: string
+          created_by: string
+          due_date: string
+          id?: string
+          is_check?: boolean
+          notes?: string | null
+          paid_at?: string | null
+          payment_date: string
+          payment_method?: string
+          payment_status?: string
+          purchase_id: string
+          receipt_url?: string | null
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          check_due_date?: string | null
+          check_image_url?: string | null
+          check_number?: string | null
+          created_at?: string
+          created_by?: string
+          due_date?: string
+          id?: string
+          is_check?: boolean
+          notes?: string | null
+          paid_at?: string | null
+          payment_date?: string
+          payment_method?: string
+          payment_status?: string
+          purchase_id?: string
+          receipt_url?: string | null
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       suppliers: {
         Row: {
           address: string | null

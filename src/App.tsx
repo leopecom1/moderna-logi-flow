@@ -34,6 +34,7 @@ import OrderDetailPage from "./pages/OrderDetailPage";
 import CadetesPage from "./pages/CadetesPage";
 import CadeteDetailPage from "./pages/CadeteDetailPage";
 import VehiculosPage from "./pages/VehiculosPage";
+import SupplierPaymentsPage from "./pages/SupplierPaymentsPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import NotFound from "./pages/NotFound";
 
@@ -74,6 +75,7 @@ function App() {
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/accounts-receivable" element={<AccountsReceivablePage />} />
             <Route path="/purchases" element={<PurchasesPage />} />
+            <Route path="/supplier-payments" element={<SupplierPaymentsPage />} />
             <Route path="/products" element={<ProductsPage />} />
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/bulk-import" element={<BulkImportPage />} />

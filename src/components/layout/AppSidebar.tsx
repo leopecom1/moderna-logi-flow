@@ -82,6 +82,7 @@ export const AppSidebar = () => {
       category: 'Finanzas',
       items: [
         { title: 'Compras', url: '/purchases', icon: ShoppingCart },
+        { title: 'Pago Proveedores', url: '/supplier-payments', icon: CreditCard },
         { title: 'Pagos', url: '/payments', icon: CreditCard },
         { title: 'Ventas', url: '/sales', icon: TrendingUp },
         { title: 'Cobros', url: '/collections', icon: Receipt },
