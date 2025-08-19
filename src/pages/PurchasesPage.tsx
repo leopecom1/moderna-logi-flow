@@ -17,6 +17,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { CreatePurchaseModal } from "@/components/forms/CreatePurchaseModal";
+import { PurchasesConfigurationModal } from "@/components/forms/PurchasesConfigurationModal";
 
 interface Purchase {
   id: string;
@@ -98,7 +99,10 @@ export default function PurchasesPage() {
               Gestiona las órdenes de compra a proveedores
             </p>
           </div>
-          <CreatePurchaseModal onPurchaseCreated={refetch} />
+          <div className="flex items-center gap-2">
+            <PurchasesConfigurationModal onConfigurationUpdated={refetch} />
+            <CreatePurchaseModal onPurchaseCreated={refetch} />
+          </div>
         </div>
 
         {/* Stats Cards */}
