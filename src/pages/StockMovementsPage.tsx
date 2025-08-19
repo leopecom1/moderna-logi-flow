@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, ArrowRightLeft, Package, TrendingUp, Download, Calendar } from "lucide-react";
+import { Search, ArrowRightLeft, Package, TrendingUp, Download, Calendar, Plus } from "lucide-react";
+import { StockEntryModal } from "@/components/forms/StockEntryModal";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { MessageLoading } from "@/components/ui/message-loading";
@@ -56,6 +57,7 @@ export default function StockMovementsPage() {
   const [warehouseFilter, setWarehouseFilter] = useState("all");
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("all");
+  const [showStockEntry, setShowStockEntry] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -86,9 +88,12 @@ export default function StockMovementsPage() {
         .from("inventory_movements")
         .select(`
           *,
-          inventory_items:inventory_item_id (
-            warehouses!inventory_items_warehouse_id_fkey (name),
-            products!inventory_items_product_id_fkey (name, code)
+          inventory_items!inner (
+            id,
+            product_id,
+            warehouse_id,
+            warehouses!inner (name),
+            products!inner (name, code)
           ),
           from_warehouse:warehouses!inventory_movements_from_warehouse_id_fkey (name),
           to_warehouse:warehouses!inventory_movements_to_warehouse_id_fkey (name)
@@ -192,6 +197,10 @@ export default function StockMovementsPage() {
                 Historial completo de movimientos de inventario entre depósitos
               </p>
             </div>
+            <Button onClick={() => setShowStockEntry(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Movimiento
+            </Button>
           </div>
 
           {/* Summary Cards */}
@@ -299,6 +308,16 @@ export default function StockMovementsPage() {
           </Tabs>
         </div>
       </div>
+
+      <StockEntryModal
+        purchase={null}
+        isOpen={showStockEntry}
+        onClose={() => setShowStockEntry(false)}
+        onSuccess={() => {
+          setShowStockEntry(false);
+          fetchData();
+        }}
+      />
     </MainLayout>
   );
 }

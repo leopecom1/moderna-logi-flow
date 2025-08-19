@@ -31,7 +31,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CalendarIcon, Package } from 'lucide-react';
+import { CalendarIcon, Package, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
@@ -76,7 +76,7 @@ interface PurchaseItem {
 }
 
 interface StockEntryModalProps {
-  purchase: Purchase | null;
+  purchase?: Purchase | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -155,7 +155,7 @@ export function StockEntryModal({
   }, [purchaseItems, replace]);
 
   const onSubmit = async (values: FormValues) => {
-    if (!user?.id || !purchase?.id) return;
+    if (!user?.id) return;
 
     setIsSubmitting(true);
     try {
@@ -220,8 +220,8 @@ export function StockEntryModal({
           unit_cost: item.unit_cost,
           user_id: user.id,
           movement_date: new Date().toISOString().split('T')[0],
-          reference_document: `Compra ${purchase.purchase_number} - Factura ${values.supplier_invoice_number}`,
-          notes: `Ingreso de stock por compra. Factura proveedor: ${values.supplier_invoice_number}`,
+          reference_document: purchase ? `Compra ${purchase.purchase_number} - Factura ${values.supplier_invoice_number}` : `Movimiento manual - Factura ${values.supplier_invoice_number}`,
+          notes: purchase ? `Ingreso de stock por compra. Factura proveedor: ${values.supplier_invoice_number}` : `Movimiento manual de stock. Factura: ${values.supplier_invoice_number}`,
         };
         
         console.log('Creating movement with data:', movementData);
@@ -238,20 +238,22 @@ export function StockEntryModal({
         console.log('Successfully created inventory movement');
       }
 
-      console.log('Updating purchase status to "recibido"');
-      // Update purchase status to "recibido"
-      const { error: updatePurchaseError } = await supabase
-        .from('purchases')
-        .update({ 
-          status: 'recibido',
-          // Store supplier invoice details in notes for now
-          notes: `Factura proveedor: ${values.supplier_invoice_number} (${format(values.supplier_invoice_date, 'dd/MM/yyyy', { locale: es })})`
-        })
-        .eq('id', purchase.id);
+      // Update purchase status to "recibido" if this is a purchase entry
+      if (purchase?.id) {
+        console.log('Updating purchase status to "recibido"');
+        const { error: updatePurchaseError } = await supabase
+          .from('purchases')
+          .update({ 
+            status: 'recibido',
+            // Store supplier invoice details in notes for now
+            notes: `Factura proveedor: ${values.supplier_invoice_number} (${format(values.supplier_invoice_date, 'dd/MM/yyyy', { locale: es })})`
+          })
+          .eq('id', purchase.id);
 
-      if (updatePurchaseError) {
-        console.error('Error updating purchase:', updatePurchaseError);
-        throw updatePurchaseError;
+        if (updatePurchaseError) {
+          console.error('Error updating purchase:', updatePurchaseError);
+          throw updatePurchaseError;
+        }
       }
 
       console.log('Stock entry process completed successfully!');
@@ -286,7 +288,39 @@ export function StockEntryModal({
     form.setValue('items', updatedItems);
   };
 
-  if (!purchase) return null;
+  // Query all products for manual entries
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ['products-for-stock'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, code, cost')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOpen && !purchase,
+  });
+
+  const addManualProduct = () => {
+    const newItem = {
+      product_id: '',
+      product_name: '',
+      product_code: '',
+      quantity: 0,
+      unit_cost: 0,
+      total_value: 0,
+    };
+    replace([...form.getValues('items'), newItem]);
+  };
+
+  const removeItem = (index: number) => {
+    const currentItems = form.getValues('items');
+    const newItems = currentItems.filter((_, i) => i !== index);
+    replace(newItems);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -294,7 +328,7 @@ export function StockEntryModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Ingresar Stock - Compra {purchase.purchase_number}
+            {purchase ? `Ingresar Stock - Compra ${purchase.purchase_number}` : 'Nuevo Movimiento de Stock'}
           </DialogTitle>
         </DialogHeader>
 
@@ -383,25 +417,73 @@ export function StockEntryModal({
 
             {/* Products Table */}
             <div className="space-y-4">
-              <h4 className="text-lg font-medium">Productos de la Compra</h4>
+              <div className="flex justify-between items-center">
+                <h4 className="text-lg font-medium">{purchase ? 'Productos de la Compra' : 'Productos'}</h4>
+                {!purchase && (
+                  <Button type="button" variant="outline" onClick={addManualProduct}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Agregar Producto
+                  </Button>
+                )}
+              </div>
               
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Producto</TableHead>
-                    <TableHead>Cantidad</TableHead>
-                    <TableHead>Costo Unitario</TableHead>
-                    <TableHead>Valor Total</TableHead>
-                  </TableRow>
-                </TableHeader>
+                 <TableHeader>
+                   <TableRow>
+                     <TableHead>Código</TableHead>
+                     <TableHead>Producto</TableHead>
+                     <TableHead>Cantidad</TableHead>
+                     <TableHead>Costo Unitario</TableHead>
+                     <TableHead>Valor Total</TableHead>
+                     {!purchase && <TableHead>Acciones</TableHead>}
+                   </TableRow>
+                 </TableHeader>
                 <TableBody>
-                  {fields.map((field, index) => (
-                    <TableRow key={field.id}>
-                      <TableCell className="font-medium">
-                        {field.product_code}
-                      </TableCell>
-                      <TableCell>{field.product_name}</TableCell>
+                   {fields.map((field, index) => (
+                     <TableRow key={field.id}>
+                       <TableCell className="font-medium">
+                         {!purchase ? (
+                           <Select
+                             value={field.product_id}
+                             onValueChange={(value) => {
+                               const selectedProduct = allProducts.find(p => p.id === value);
+                               if (selectedProduct) {
+                                 const currentItems = form.getValues('items');
+                                 const updatedItems = [...currentItems];
+                                 updatedItems[index] = {
+                                   ...updatedItems[index],
+                                   product_id: selectedProduct.id,
+                                   product_name: selectedProduct.name,
+                                   product_code: selectedProduct.code,
+                                   unit_cost: selectedProduct.cost || 0,
+                                   total_value: (updatedItems[index].quantity || 0) * (selectedProduct.cost || 0),
+                                 };
+                                 form.setValue('items', updatedItems);
+                               }
+                             }}
+                           >
+                             <SelectTrigger className="w-full">
+                               <SelectValue placeholder="Seleccionar producto" />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {allProducts.map((product) => (
+                                 <SelectItem key={product.id} value={product.id}>
+                                   {product.code}
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                         ) : (
+                           field.product_code
+                         )}
+                       </TableCell>
+                       <TableCell>
+                         {!purchase ? (
+                           <span>{field.product_name || 'Seleccionar producto'}</span>
+                         ) : (
+                           field.product_name
+                         )}
+                       </TableCell>
                       <TableCell>
                         <Input
                           type="number"
@@ -428,12 +510,24 @@ export function StockEntryModal({
                           className="w-32"
                         />
                       </TableCell>
-                      <TableCell>
-                        <span className="font-medium">
-                          ${(field.total_value || 0).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
-                        </span>
-                      </TableCell>
-                    </TableRow>
+                       <TableCell>
+                         <span className="font-medium">
+                           ${(field.total_value || 0).toLocaleString('es-UY', { minimumFractionDigits: 2 })}
+                         </span>
+                       </TableCell>
+                       {!purchase && (
+                         <TableCell>
+                           <Button
+                             type="button"
+                             variant="ghost"
+                             size="sm"
+                             onClick={() => removeItem(index)}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         </TableCell>
+                       )}
+                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
