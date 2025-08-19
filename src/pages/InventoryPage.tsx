@@ -3,7 +3,8 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InventoryProducts } from "@/components/inventory/InventoryProducts";
 import { WarehouseManagement } from "@/components/inventory/WarehouseManagement";
-import { Warehouse, Package, Settings } from "lucide-react";
+import { InventoryConfigModal } from "@/components/forms/InventoryConfigModal";
+import { Warehouse, Package } from "lucide-react";
 
 export default function InventoryPage() {
   const [activeTab, setActiveTab] = useState("products");
@@ -19,6 +20,7 @@ export default function InventoryPage() {
                 Administra productos, stock y depósitos de inventario
               </p>
             </div>
+            <InventoryConfigModal />
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
