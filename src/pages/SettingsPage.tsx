@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
 import { Settings, Save, Bell, Shield, Database } from 'lucide-react';
+import { UserManagement } from '@/components/admin/UserManagement';
 
 const SettingsPage = () => {
   const [settings, setSettings] = useState({
@@ -245,6 +246,9 @@ const SettingsPage = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Gestión de Usuarios */}
+        <UserManagement />
 
         {/* Seguridad */}
         <Card>
