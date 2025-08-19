@@ -37,7 +37,8 @@ import {
   Brain,
   Building2,
   TrendingUp,
-  Car
+  Car,
+  ArrowRightLeft
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -72,6 +73,7 @@ export const AppSidebar = () => {
         { title: 'Clientes', url: '/customers', icon: Users },
         { title: 'Productos', url: '/products', icon: Package2 },
         { title: 'Inventario', url: '/inventory', icon: Package },
+        { title: 'Movimientos Stock', url: '/stock-movements', icon: ArrowRightLeft },
         { title: 'Pedidos', url: '/orders', icon: Package },
         { title: 'Entregas', url: '/deliveries', icon: Truck },
         { title: 'Rutas', url: '/routes', icon: Route },

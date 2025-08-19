@@ -7,12 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Plus, Search, Package, AlertTriangle } from "lucide-react";
+import { Plus, Search, Package, AlertTriangle, Grid3X3, List, Eye } from "lucide-react";
 import { MessageLoading } from "@/components/ui/message-loading";
 import { useToast } from "@/hooks/use-toast";
+import { ProductDetailModal } from "./ProductDetailModal";
 
 const inventoryItemSchema = z.object({
   product_id: z.string().min(1, "Selecciona un producto"),
@@ -60,6 +63,8 @@ export function InventoryProducts() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [selectedProduct, setSelectedProduct] = useState<{productId: string, warehouseId: string} | null>(null);
   const { toast } = useToast();
 
   const form = useForm<InventoryItemForm>({
@@ -213,67 +218,159 @@ export function InventoryProducts() {
           </Select>
         </div>
         
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Agregar Producto
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={viewMode === "cards" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("cards")}
+              className="rounded-r-none"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("table")}
+              className="rounded-l-none"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+          
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Producto
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredItems.map((item) => {
-          const stockStatus = getStockStatus(item);
-          return (
-            <Card key={item.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">{item.product_name}</CardTitle>
+      {viewMode === "cards" ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {filteredItems.map((item) => {
+            const stockStatus = getStockStatus(item);
+            return (
+              <Card key={item.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-primary" />
+                      <CardTitle className="text-lg">{item.product_name}</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={stockStatus.color as any}>
+                        {stockStatus.text}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedProduct({productId: item.product_id, warehouseId: item.warehouse_id})}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <Badge variant={stockStatus.color as any}>
-                    {stockStatus.text}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">{item.product_code}</p>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Stock Actual</p>
-                    <p className="font-semibold">{item.current_stock}</p>
+                  <p className="text-sm text-muted-foreground">{item.product_code}</p>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Stock Actual</p>
+                      <p className="font-semibold">{item.current_stock}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Costo Unitario</p>
+                      <p className="font-semibold">${item.unit_cost}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Stock Mín.</p>
+                      <p className="font-semibold">{item.minimum_stock}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Stock Máx.</p>
+                      <p className="font-semibold">{item.maximum_stock}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Costo Unitario</p>
-                    <p className="font-semibold">${item.unit_cost}</p>
+                  
+                  <div className="pt-2 border-t">
+                    <p className="text-sm text-muted-foreground">Depósito</p>
+                    <p className="font-medium">{item.warehouse_name}</p>
                   </div>
-                  <div>
-                    <p className="text-muted-foreground">Stock Mín.</p>
-                    <p className="font-semibold">{item.minimum_stock}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Stock Máx.</p>
-                    <p className="font-semibold">{item.maximum_stock}</p>
-                  </div>
-                </div>
-                
-                <div className="pt-2 border-t">
-                  <p className="text-sm text-muted-foreground">Depósito</p>
-                  <p className="font-medium">{item.warehouse_name}</p>
-                </div>
 
-                {item.current_stock <= item.minimum_stock && (
-                  <div className="flex items-center gap-2 p-2 bg-destructive/10 rounded-md">
-                    <AlertTriangle className="h-4 w-4 text-destructive" />
-                    <span className="text-sm text-destructive font-medium">
-                      Requiere reposición
-                    </span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  {item.current_stock <= item.minimum_stock && (
+                    <div className="flex items-center gap-2 p-2 bg-destructive/10 rounded-md">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <span className="text-sm text-destructive font-medium">
+                        Requiere reposición
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Producto</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead>Costo Unit.</TableHead>
+                  <TableHead>Valor Total</TableHead>
+                  <TableHead>Depósito</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((item) => {
+                  const stockStatus = getStockStatus(item);
+                  return (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{item.product_name}</p>
+                          <p className="text-sm text-muted-foreground">{item.product_code}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-center">
+                          <p className="font-semibold">{item.current_stock}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.minimum_stock} - {item.maximum_stock}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">${item.unit_cost}</TableCell>
+                      <TableCell className="font-medium">
+                        ${(item.current_stock * item.unit_cost).toFixed(2)}
+                      </TableCell>
+                      <TableCell>{item.warehouse_name}</TableCell>
+                      <TableCell>
+                        <Badge variant={stockStatus.color as any}>
+                          {stockStatus.text}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedProduct({productId: item.product_id, warehouseId: item.warehouse_id})}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       {filteredItems.length === 0 && (
         <div className="text-center py-12">
@@ -439,6 +536,13 @@ export function InventoryProducts() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <ProductDetailModal
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        productId={selectedProduct?.productId || ""}
+        warehouseId={selectedProduct?.warehouseId || ""}
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import { RouteOptimizationPage } from './pages/RouteOptimizationPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import BusinessManagementPage from './pages/BusinessManagementPage';
 import InventoryPage from "./pages/InventoryPage";
+import StockMovementsPage from "./pages/StockMovementsPage";
 import ReportsPage from "./pages/ReportsPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -87,6 +88,7 @@ function App() {
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/business" element={<BusinessManagementPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/stock-movements" element={<StockMovementsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="*" element={<NotFound />} />
