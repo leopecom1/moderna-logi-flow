@@ -36,6 +36,13 @@ interface SupplierPayment {
   purchases: {
     purchase_number: string;
   };
+  supplier_payment_checks?: Array<{
+    id: string;
+    check_number: string;
+    check_due_date: string;
+    amount: number;
+    check_image_url?: string;
+  }>;
 }
 
 export default function SupplierPaymentsPage() {
@@ -51,7 +58,14 @@ export default function SupplierPaymentsPage() {
         .select(`
           *,
           suppliers (name),
-          purchases (purchase_number)
+          purchases (purchase_number),
+          supplier_payment_checks (
+            id,
+            check_number,
+            check_due_date,
+            amount,
+            check_image_url
+          )
         `)
         .order('due_date', { ascending: true });
 
@@ -63,12 +77,27 @@ export default function SupplierPaymentsPage() {
   const filteredPayments = payments.filter(payment =>
     payment.suppliers.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     payment.purchases.purchase_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    payment.check_number?.toLowerCase().includes(searchTerm.toLowerCase())
+    payment.check_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    payment.supplier_payment_checks?.some(check => 
+      check.check_number?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
   );
 
   const pendingPayments = filteredPayments.filter(p => p.payment_status === 'pendiente');
   const paidPayments = filteredPayments.filter(p => p.payment_status === 'pagado');
-  const checkPayments = filteredPayments.filter(p => p.is_check && p.payment_status === 'pendiente');
+  
+  // Get all checks from payments that have checks
+  const allChecks = filteredPayments
+    .filter(p => p.is_check && p.supplier_payment_checks && p.supplier_payment_checks.length > 0)
+    .flatMap(payment => 
+      payment.supplier_payment_checks.map(check => ({
+        ...check,
+        payment_id: payment.id,
+        payment_status: payment.payment_status,
+        suppliers: payment.suppliers,
+        amount: check.amount || payment.amount // Use check amount if available, otherwise payment amount
+      }))
+    );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-UY', {
@@ -152,7 +181,7 @@ export default function SupplierPaymentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">
-              {checkPayments.length}
+              {allChecks.length}
             </div>
             <p className="text-xs text-muted-foreground">
               cheques por cobrar
@@ -181,7 +210,7 @@ export default function SupplierPaymentsPage() {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="pending">Pendientes ({pendingPayments.length})</TabsTrigger>
           <TabsTrigger value="paid">Pagados ({paidPayments.length})</TabsTrigger>
-          <TabsTrigger value="checks">Cheques ({checkPayments.length})</TabsTrigger>
+          <TabsTrigger value="checks">Cheques ({allChecks.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending">
@@ -314,20 +343,20 @@ export default function SupplierPaymentsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {checkPayments.map((payment) => {
-                    const daysUntilDue = payment.check_due_date 
-                      ? Math.floor((new Date(payment.check_due_date + 'T23:59:59').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                  {allChecks.map((check) => {
+                    const daysUntilDue = check.check_due_date 
+                      ? Math.floor((new Date(check.check_due_date + 'T23:59:59').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                       : 0;
                     
                     return (
-                      <TableRow key={payment.id}>
+                      <TableRow key={check.id}>
                         <TableCell className="font-medium">
-                          {payment.suppliers.name}
+                          {check.suppliers.name}
                         </TableCell>
-                        <TableCell>{payment.check_number}</TableCell>
-                        <TableCell>{formatCurrency(payment.amount)}</TableCell>
+                        <TableCell>{check.check_number}</TableCell>
+                        <TableCell>{formatCurrency(check.amount)}</TableCell>
                         <TableCell>
-                          {payment.check_due_date && format(new Date(payment.check_due_date), 'dd/MM/yyyy', { locale: es })}
+                          {check.check_due_date && format(new Date(check.check_due_date), 'dd/MM/yyyy', { locale: es })}
                         </TableCell>
                         <TableCell>
                           <Badge variant={daysUntilDue <= 3 ? 'destructive' : daysUntilDue <= 7 ? 'default' : 'secondary'}>
@@ -335,8 +364,8 @@ export default function SupplierPaymentsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(payment.payment_status)}>
-                            {payment.payment_status}
+                          <Badge className={getStatusColor(check.payment_status)}>
+                            {check.payment_status}
                           </Badge>
                         </TableCell>
                       </TableRow>
