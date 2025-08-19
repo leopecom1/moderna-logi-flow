@@ -17,6 +17,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -34,6 +41,8 @@ const formSchema = z.object({
   country: z.string().optional(),
   tax_id: z.string().optional(),
   payment_terms: z.string().optional(),
+  default_payment_days: z.number().min(1, "Días de pago debe ser mayor a 0").default(30),
+  default_payment_method: z.string().default("efectivo"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -63,6 +72,8 @@ export function CreateSupplierModal({
       country: "Uruguay",
       tax_id: "",
       payment_terms: "",
+      default_payment_days: 30,
+      default_payment_method: "efectivo",
     },
   });
 
@@ -78,6 +89,8 @@ export function CreateSupplierModal({
         country: values.country || null,
         tax_id: values.tax_id || null,
         payment_terms: values.payment_terms || null,
+        default_payment_days: values.default_payment_days,
+        default_payment_method: values.default_payment_method,
       };
 
       const { error } = await supabase
@@ -214,21 +227,21 @@ export function CreateSupplierModal({
               />
             </div>
 
+            <FormField
+              control={form.control}
+              name="tax_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>RUT/CUIT</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Identificación fiscal" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="tax_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>RUT/CUIT</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Identificación fiscal" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
               <FormField
                 control={form.control}
                 name="payment_terms"
@@ -242,7 +255,51 @@ export function CreateSupplierModal({
                   </FormItem>
                 )}
               />
+              
+              <FormField
+                control={form.control}
+                name="default_payment_days"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Días de Pago por Defecto</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="1"
+                        placeholder="30" 
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
+
+            <FormField
+              control={form.control}
+              name="default_payment_method"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Método de Pago por Defecto</FormLabel>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar método" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="efectivo">Efectivo</SelectItem>
+                        <SelectItem value="transferencia">Transferencia Bancaria</SelectItem>
+                        <SelectItem value="cheque">Cheque</SelectItem>
+                        <SelectItem value="credito">Crédito</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="flex justify-end space-x-2">
               <Button

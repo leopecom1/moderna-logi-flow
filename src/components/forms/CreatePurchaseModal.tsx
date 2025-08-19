@@ -51,6 +51,10 @@ const formSchema = z.object({
   currency: z.string().default("UYU"),
   exchange_rate: z.number().min(0.01, "Tipo de cambio debe ser mayor a 0").default(1),
   notes: z.string().optional(),
+  custom_payment_terms: z.boolean().default(false),
+  payment_days: z.number().min(1, "Días de pago debe ser mayor a 0").default(30),
+  payment_method: z.string().default("efectivo"),
+  is_check_payment: z.boolean().default(false),
   items: z.array(z.object({
     product_id: z.string().min(1, "Producto es requerido"),
     quantity: z.number().min(1, "Cantidad debe ser mayor a 0"),
@@ -77,6 +81,10 @@ export function CreatePurchaseModal({ onPurchaseCreated }: CreatePurchaseModalPr
       currency: "UYU",
       exchange_rate: 1,
       notes: "",
+      custom_payment_terms: false,
+      payment_days: 30,
+      payment_method: "efectivo",
+      is_check_payment: false,
       items: [{ product_id: "", quantity: 1, unit_price: 0 }],
     },
   });
@@ -88,6 +96,8 @@ export function CreatePurchaseModal({ onPurchaseCreated }: CreatePurchaseModalPr
 
   const watchCurrency = form.watch("currency");
   const watchIsImport = form.watch("is_import");
+  const watchSupplierID = form.watch("supplier_id");
+  const watchCustomPaymentTerms = form.watch("custom_payment_terms");
 
   // Update exchange rate when currency changes
   React.useEffect(() => {
@@ -96,13 +106,13 @@ export function CreatePurchaseModal({ onPurchaseCreated }: CreatePurchaseModalPr
     }
   }, [watchCurrency, form]);
 
-  // Fetch suppliers
+  // Fetch suppliers with payment terms
   const { data: suppliers } = useQuery({
     queryKey: ["suppliers"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("suppliers")
-        .select("id, name")
+        .select("id, name, default_payment_days, default_payment_method")
         .eq("is_active", true)
         .order("name");
       
@@ -110,6 +120,17 @@ export function CreatePurchaseModal({ onPurchaseCreated }: CreatePurchaseModalPr
       return data;
     },
   });
+
+  // Update payment terms when supplier changes
+  React.useEffect(() => {
+    if (watchSupplierID && suppliers && !watchCustomPaymentTerms) {
+      const selectedSupplier = suppliers.find(s => s.id === watchSupplierID);
+      if (selectedSupplier) {
+        form.setValue("payment_days", selectedSupplier.default_payment_days || 30);
+        form.setValue("payment_method", selectedSupplier.default_payment_method || "efectivo");
+      }
+    }
+  }, [watchSupplierID, suppliers, watchCustomPaymentTerms, form]);
 
   // Fetch products
   const { data: products } = useQuery({
@@ -161,6 +182,10 @@ export function CreatePurchaseModal({ onPurchaseCreated }: CreatePurchaseModalPr
           total_amount: total,
           notes: values.notes || null,
           created_by: user.id,
+          custom_payment_terms: values.custom_payment_terms,
+          payment_days: values.payment_days,
+          payment_method: values.payment_method,
+          is_check_payment: values.is_check_payment,
         })
         .select()
         .single();
@@ -198,6 +223,17 @@ export function CreatePurchaseModal({ onPurchaseCreated }: CreatePurchaseModalPr
     { value: "BRL", label: "Reales Brasileños (BRL)" },
     { value: "ARS", label: "Pesos Argentinos (ARS)" },
   ];
+
+  const paymentMethodOptions = [
+    { value: "efectivo", label: "Efectivo" },
+    { value: "transferencia", label: "Transferencia Bancaria" },
+    { value: "cheque", label: "Cheque" },
+    { value: "credito", label: "Crédito" },
+  ];
+
+  const getSelectedSupplier = () => {
+    return suppliers?.find(s => s.id === watchSupplierID);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -451,6 +487,124 @@ export function CreatePurchaseModal({ onPurchaseCreated }: CreatePurchaseModalPr
                 </div>
               ))}
             </div>
+
+            {/* Payment Terms Section */}
+            {watchSupplierID && (
+              <div className="border-t pt-4 space-y-4">
+                <h3 className="text-lg font-medium">Forma de Pago</h3>
+                
+                {!watchCustomPaymentTerms && (
+                  <div className="bg-muted p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Términos de pago del proveedor:
+                    </p>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Días para pago:</span> {form.watch("payment_days")} días
+                      </div>
+                      <div>
+                        <span className="font-medium">Método:</span> {form.watch("payment_method")}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="custom_payment_terms"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Asignar otra forma de pago
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Configurar términos de pago personalizados para esta orden
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                {watchCustomPaymentTerms && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="payment_days"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Días para Pago *</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              placeholder="30"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 30)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="payment_method"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Método de Pago *</FormLabel>
+                          <FormControl>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethodOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="is_check_payment"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Pago con cheque
+                        </FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Marcar si el pago se realizará con cheque
+                        </p>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             {/* Notes */}
             <FormField

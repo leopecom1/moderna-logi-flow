@@ -1101,10 +1101,14 @@ export type Database = {
           created_at: string
           created_by: string
           currency: string
+          custom_payment_terms: boolean | null
           exchange_rate: number | null
           id: string
+          is_check_payment: boolean | null
           is_import: boolean
           notes: string | null
+          payment_days: number | null
+          payment_method: string | null
           purchase_date: string
           purchase_number: string
           status: string
@@ -1118,10 +1122,14 @@ export type Database = {
           created_at?: string
           created_by: string
           currency?: string
+          custom_payment_terms?: boolean | null
           exchange_rate?: number | null
           id?: string
+          is_check_payment?: boolean | null
           is_import?: boolean
           notes?: string | null
+          payment_days?: number | null
+          payment_method?: string | null
           purchase_date: string
           purchase_number: string
           status?: string
@@ -1135,10 +1143,14 @@ export type Database = {
           created_at?: string
           created_by?: string
           currency?: string
+          custom_payment_terms?: boolean | null
           exchange_rate?: number | null
           id?: string
+          is_check_payment?: boolean | null
           is_import?: boolean
           notes?: string | null
+          payment_days?: number | null
+          payment_method?: string | null
           purchase_date?: string
           purchase_number?: string
           status?: string
@@ -1313,6 +1325,8 @@ export type Database = {
           contact_person: string | null
           country: string | null
           created_at: string
+          default_payment_days: number | null
+          default_payment_method: string | null
           email: string | null
           id: string
           is_active: boolean
@@ -1328,6 +1342,8 @@ export type Database = {
           contact_person?: string | null
           country?: string | null
           created_at?: string
+          default_payment_days?: number | null
+          default_payment_method?: string | null
           email?: string | null
           id?: string
           is_active?: boolean
@@ -1343,6 +1359,8 @@ export type Database = {
           contact_person?: string | null
           country?: string | null
           created_at?: string
+          default_payment_days?: number | null
+          default_payment_method?: string | null
           email?: string | null
           id?: string
           is_active?: boolean
