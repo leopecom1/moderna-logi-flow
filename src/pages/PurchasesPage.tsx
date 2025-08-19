@@ -261,7 +261,7 @@ export default function PurchasesPage() {
                             >
                               Ver
                             </Button>
-                            {purchase.status === 'confirmado' && (
+                            {(purchase.status === 'confirmado' || purchase.status === 'pendiente') && (
                               <Button 
                                 variant="default" 
                                 size="sm"
