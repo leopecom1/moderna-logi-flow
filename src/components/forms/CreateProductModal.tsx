@@ -35,11 +35,10 @@ import { Plus } from "lucide-react";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 
 const formSchema = z.object({
-  code: z.string().min(1, "Código es requerido"),
   name: z.string().min(1, "Nombre es requerido"),
   price: z.number().min(0, "El precio debe ser mayor a 0"),
   cost: z.number().min(0, "El costo debe ser mayor a 0"),
-  category: z.string().optional(),
+  category: z.string().min(1, "Categoría es requerida"),
   brand: z.string().optional(),
   is_active: z.boolean().default(true),
   createNewCategory: z.boolean().default(false),
@@ -109,7 +108,6 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      code: "",
       name: "",
       price: 0,
       cost: 0,
@@ -122,6 +120,41 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
   });
 
   const createNewCategory = form.watch("createNewCategory");
+
+  // Función para generar código automático
+  const generateProductCode = async (categoryName: string): Promise<string> => {
+    if (!categoryName || categoryName === "none") {
+      return "GE001"; // Código genérico si no hay categoría
+    }
+
+    // Obtener las primeras 2 letras de la categoría
+    const categoryPrefix = categoryName.substring(0, 2).toUpperCase();
+
+    // Buscar el último código usado para esta categoría
+    const { data: existingProducts, error } = await supabase
+      .from("products")
+      .select("code")
+      .like("code", `${categoryPrefix}%`)
+      .order("code", { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error("Error fetching existing codes:", error);
+      return `${categoryPrefix}001`;
+    }
+
+    if (!existingProducts || existingProducts.length === 0) {
+      return `${categoryPrefix}001`;
+    }
+
+    // Extraer el número del último código
+    const lastCode = existingProducts[0].code;
+    const numberPart = lastCode.substring(2);
+    const nextNumber = parseInt(numberPart) + 1;
+
+    // Formatear con ceros a la izquierda (3 dígitos)
+    return `${categoryPrefix}${nextNumber.toString().padStart(3, '0')}`;
+  };
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -139,8 +172,11 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         finalCategory = newCategory.name;
       }
 
+      // Generar código automáticamente
+      const generatedCode = await generateProductCode(finalCategory);
+
       const productData = {
-        code: values.code,
+        code: generatedCode,
         name: values.name,
         price: values.price,
         cost: values.cost,
@@ -193,20 +229,6 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="code"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Código</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ej: PROD001" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
             <FormField
               control={form.control}
               name="name"
@@ -308,14 +330,13 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                   name="category"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Categoría</FormLabel>
+                      <FormLabel>Categoría *</FormLabel>
                       <FormControl>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <SelectTrigger>
                             <SelectValue placeholder="Seleccionar categoría" />
                           </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none">Sin categoría</SelectItem>
                           {!createNewCategory && categories?.grouped?.map((category) => (
                             <React.Fragment key={category.id}>
                               <SelectItem value={category.name}>
