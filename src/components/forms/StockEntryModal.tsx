@@ -200,8 +200,9 @@ export function StockEntryModal({
             movement_type: 'entrada',
             quantity: item.quantity,
             unit_cost: item.unit_cost,
-            total_value: item.total_value,
+            total_value: item.quantity * item.unit_cost, // Ensure we calculate this
             user_id: user.id,
+            movement_date: new Date().toISOString().split('T')[0], // Add movement_date explicitly
             reference_document: `Compra ${purchase.purchase_number} - Factura ${values.supplier_invoice_number}`,
             notes: `Ingreso de stock por compra. Factura proveedor: ${values.supplier_invoice_number}`,
           });
