@@ -556,6 +556,7 @@ export type Database = {
           to_warehouse_id: string | null
           total_value: number | null
           unit_cost: number
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -571,6 +572,7 @@ export type Database = {
           to_warehouse_id?: string | null
           total_value?: number | null
           unit_cost?: number
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -586,6 +588,7 @@ export type Database = {
           to_warehouse_id?: string | null
           total_value?: number | null
           unit_cost?: number
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
