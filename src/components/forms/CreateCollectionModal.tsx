@@ -40,7 +40,7 @@ const formSchema = z.object({
   amount: z.number().min(0.01, "El monto debe ser mayor a 0"),
   payment_method_type: z.enum([
     "efectivo", "transferencia", "mercado_pago", "tarjeta_credito", 
-    "tarjeta_debito", "cheque", "otros"
+    "tarjeta_debito", "credito_moderna", "cheque", "otros"
   ]),
   payment_reference: z.string().optional(),
   bank_name: z.string().optional(),
@@ -173,6 +173,7 @@ export function CreateCollectionModal({
     mercado_pago: "Mercado Pago",
     tarjeta_credito: "Tarjeta de Crédito",
     tarjeta_debito: "Tarjeta de Débito",
+    credito_moderna: "Crédito Moderna",
     cheque: "Cheque",
     otros: "Otros",
   };

@@ -19,6 +19,17 @@ const DEPARTAMENTOS_URUGUAY = [
   'Rivera', 'Rocha', 'Salto', 'San José', 'Soriano', 'Tacuarembó', 'Treinta y Tres'
 ];
 
+const TARJETAS_CREDITO_URUGUAY = [
+  'Visa',
+  'Mastercard',
+  'American Express',
+  'Diners Club',
+  'Oca',
+  'Creditel',
+  'Lider',
+  'Cabal'
+];
+
 interface CreateOrderModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -81,6 +92,11 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     new_customer_email: '',
     new_customer_phone: '',
     new_customer_departamento: '',
+    // Campos adicionales para métodos de pago
+    tarjeta_credito_tipo: '',
+    numero_comprobante: '',
+    cantidad_cuotas: '',
+    dia_pago_cuota: '',
   });
 
   useEffect(() => {
@@ -336,6 +352,11 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       new_customer_email: '',
       new_customer_phone: '',
       new_customer_departamento: '',
+      // Resetear campos de pago
+      tarjeta_credito_tipo: '',
+      numero_comprobante: '',
+      cantidad_cuotas: '',
+      dia_pago_cuota: '',
     });
     setOrderProducts([]);
     setSelectedPlaceDetails(null);
@@ -595,20 +616,104 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="payment_method">Método de Pago *</Label>
-            <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar método" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="efectivo">Efectivo</SelectItem>
-                <SelectItem value="tarjeta">Tarjeta</SelectItem>
-                <SelectItem value="transferencia">Transferencia</SelectItem>
-                <SelectItem value="mercadopago">MercadoPago</SelectItem>
-                <SelectItem value="cuenta_corriente">Cuenta Corriente</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="payment_method">Método de Pago *</Label>
+              <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar método" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="tarjeta">Tarjeta de Crédito</SelectItem>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="mercadopago">MercadoPago</SelectItem>
+                  <SelectItem value="credito_moderna">Crédito Moderna</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Campos adicionales para Tarjeta de Crédito */}
+            {formData.payment_method === 'tarjeta' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor="tarjeta_credito_tipo">Tipo de Tarjeta *</Label>
+                  <Select value={formData.tarjeta_credito_tipo} onValueChange={(value) => setFormData(prev => ({ ...prev, tarjeta_credito_tipo: value }))} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tarjeta" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TARJETAS_CREDITO_URUGUAY.map((tarjeta) => (
+                        <SelectItem key={tarjeta} value={tarjeta}>
+                          {tarjeta}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="cantidad_cuotas">Cantidad de Cuotas *</Label>
+                  <Select value={formData.cantidad_cuotas} onValueChange={(value) => setFormData(prev => ({ ...prev, cantidad_cuotas: value }))} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Cuotas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 12, 18, 24].map((cuotas) => (
+                        <SelectItem key={cuotas} value={cuotas.toString()}>
+                          {cuotas} {cuotas === 1 ? 'cuota' : 'cuotas'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="numero_comprobante">Número de Comprobante *</Label>
+                  <Input
+                    id="numero_comprobante"
+                    placeholder="Ej: 123456789"
+                    value={formData.numero_comprobante}
+                    onChange={(e) => setFormData(prev => ({ ...prev, numero_comprobante: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Campos adicionales para Crédito Moderna */}
+            {formData.payment_method === 'credito_moderna' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor="cantidad_cuotas_moderna">Cantidad de Cuotas *</Label>
+                  <Select value={formData.cantidad_cuotas} onValueChange={(value) => setFormData(prev => ({ ...prev, cantidad_cuotas: value }))} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Cuotas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6, 12, 18, 24, 30, 36].map((cuotas) => (
+                        <SelectItem key={cuotas} value={cuotas.toString()}>
+                          {cuotas} {cuotas === 1 ? 'cuota' : 'cuotas'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dia_pago_cuota">Día de Pago de Cuota *</Label>
+                  <Select value={formData.dia_pago_cuota} onValueChange={(value) => setFormData(prev => ({ ...prev, dia_pago_cuota: value }))} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Día del mes" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => (
+                        <SelectItem key={dia} value={dia.toString()}>
+                          {dia}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
