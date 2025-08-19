@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { GooglePlacesAutocomplete } from '@/components/ui/google-places-autocomplete';
 import { GoogleMap } from '@/components/ui/google-map';
-import { Plus, Package, MapPin, Search } from 'lucide-react';
+import { Plus, Package, MapPin, Search, Minus } from 'lucide-react';
 
 const DEPARTAMENTOS_URUGUAY = [
   'Artigas', 'Canelones', 'Cerro Largo', 'Colonia', 'Durazno', 'Flores',
@@ -33,17 +33,41 @@ interface Customer {
   departamento?: string;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  code: string;
+  price: number;
+}
+
+interface Warehouse {
+  id: string;
+  name: string;
+}
+
+interface OrderProduct {
+  product_id: string;
+  product_name: string;
+  warehouse_id: string;
+  warehouse_name: string;
+  quantity: number;
+  unit_price: number;
+  available_stock: number;
+  needs_movement: boolean;
+}
+
 export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateOrderModalProps) => {
   const { profile } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPlaceDetails, setSelectedPlaceDetails] = useState<any>(null);
   const [isManualInput, setIsManualInput] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [orderProducts, setOrderProducts] = useState<OrderProduct[]>([]);
   const [formData, setFormData] = useState({
     customer_id: '',
-    products: '',
-    total_amount: '',
     payment_method: '',
     delivery_date: '',
     delivery_address: '',
@@ -62,6 +86,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   useEffect(() => {
     if (open) {
       fetchCustomers();
+      fetchProducts();
+      fetchWarehouses();
       generateOrderNumber();
     }
   }, [open]);
@@ -77,6 +103,36 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       setCustomers(data || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, code, price')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  const fetchWarehouses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('warehouses')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setWarehouses(data || []);
+    } catch (error) {
+      console.error('Error fetching warehouses:', error);
     }
   };
 
@@ -97,6 +153,77 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         delivery_departamento: customer.departamento || '',
       }));
     }
+  };
+
+  const addProduct = () => {
+    setOrderProducts(prev => [...prev, {
+      product_id: '',
+      product_name: '',
+      warehouse_id: '',
+      warehouse_name: '',
+      quantity: 1,
+      unit_price: 0,
+      available_stock: 0,
+      needs_movement: false,
+    }]);
+  };
+
+  const removeProduct = (index: number) => {
+    setOrderProducts(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateProduct = async (index: number, field: keyof OrderProduct, value: any) => {
+    const updatedProducts = [...orderProducts];
+    updatedProducts[index] = { ...updatedProducts[index], [field]: value };
+
+    // Si se cambió el producto, actualizar precio y verificar stock
+    if (field === 'product_id') {
+      const product = products.find(p => p.id === value);
+      if (product) {
+        updatedProducts[index].product_name = product.name;
+        updatedProducts[index].unit_price = product.price;
+      }
+    }
+
+    // Si se cambió el producto o depósito, verificar stock
+    if (field === 'product_id' || field === 'warehouse_id') {
+      const productData = updatedProducts[index];
+      if (productData.product_id && productData.warehouse_id) {
+        await checkStock(index, productData.product_id, productData.warehouse_id, updatedProducts);
+      }
+    }
+
+    setOrderProducts(updatedProducts);
+  };
+
+  const checkStock = async (index: number, productId: string, warehouseId: string, products: OrderProduct[]) => {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('current_stock')
+        .eq('product_id', productId)
+        .eq('warehouse_id', warehouseId)
+        .single();
+
+      if (error || !data) {
+        // No hay stock registrado
+        products[index].available_stock = 0;
+        products[index].needs_movement = true;
+      } else {
+        products[index].available_stock = data.current_stock;
+        products[index].needs_movement = data.current_stock < products[index].quantity;
+      }
+    } catch (error) {
+      console.error('Error checking stock:', error);
+      products[index].available_stock = 0;
+      products[index].needs_movement = true;
+    }
+  };
+
+  const getTotalAmount = () => {
+    return orderProducts.reduce((total, product) => {
+      return total + (product.quantity * product.unit_price);
+    }, 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,8 +257,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       const orderData = {
         customer_id: customerId,
         seller_id: profile.user_id,
-        products: formData.products, // Ahora es texto simple
-        total_amount: parseFloat(formData.total_amount),
+        products: JSON.stringify(orderProducts),
+        total_amount: getTotalAmount(),
         payment_method: formData.payment_method as 'efectivo' | 'tarjeta' | 'transferencia' | 'cuenta_corriente',
         delivery_date: formData.delivery_date,
         delivery_address: formData.delivery_address,
@@ -149,9 +276,34 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
       if (error) throw error;
 
+      // Crear órdenes de movimiento para productos sin stock
+      const movementPromises = orderProducts
+        .filter(product => product.needs_movement)
+        .map(product => {
+          return supabase
+            .from('inventory_movements')
+            .insert([{
+              inventory_item_id: null, // Se manejará después
+              movement_type: 'orden_movimiento',
+              quantity: product.quantity,
+              unit_cost: 0,
+              notes: `Orden de movimiento para pedido - ${product.product_name} desde ${product.warehouse_name}`,
+              user_id: profile.user_id,
+              reference_document: orderData.order_number,
+            }]);
+        });
+
+      if (movementPromises.length > 0) {
+        await Promise.all(movementPromises);
+      }
+
+      const needsMovement = orderProducts.some(p => p.needs_movement);
       toast({
         title: 'Pedido creado',
-        description: 'El pedido ha sido creado exitosamente',
+        description: needsMovement 
+          ? 'El pedido ha sido creado. Se generaron órdenes de movimiento para productos sin stock.'
+          : 'El pedido ha sido creado exitosamente',
+        variant: needsMovement ? 'default' : 'default',
       });
 
       onOrderCreated();
@@ -172,8 +324,6 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const resetForm = () => {
     setFormData({
       customer_id: '',
-      products: '',
-      total_amount: '',
       payment_method: '',
       delivery_date: '',
       delivery_address: '',
@@ -187,6 +337,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       new_customer_phone: '',
       new_customer_departamento: '',
     });
+    setOrderProducts([]);
     setSelectedPlaceDetails(null);
     setIsManualInput(false);
     setShowMap(false);
@@ -296,46 +447,168 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="payment_method">Método de Pago *</Label>
-              <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar método" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="mercadopago">MercadoPago</SelectItem>
-                  <SelectItem value="cuenta_corriente">Cuenta Corriente</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Productos */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Productos *</Label>
+              <Button type="button" onClick={addProduct} variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Agregar Producto
+              </Button>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="total_amount">Monto Total *</Label>
-              <Input
-                id="total_amount"
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.total_amount}
-                onChange={(e) => setFormData(prev => ({ ...prev, total_amount: e.target.value }))}
-                required
-              />
-            </div>
+            {orderProducts.map((product, index) => (
+              <div key={index} className="p-4 border rounded-lg space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Producto {index + 1}</span>
+                  {orderProducts.length > 1 && (
+                    <Button
+                      type="button"
+                      onClick={() => removeProduct(index)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Producto *</Label>
+                    <Select 
+                      value={product.product_id} 
+                      onValueChange={(value) => updateProduct(index, 'product_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar producto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} - ${p.price}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Depósito *</Label>
+                    <Select 
+                      value={product.warehouse_id} 
+                      onValueChange={(value) => {
+                        const warehouse = warehouses.find(w => w.id === value);
+                        updateProduct(index, 'warehouse_id', value);
+                        if (warehouse) {
+                          updateProduct(index, 'warehouse_name', warehouse.name);
+                        }
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar depósito" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {warehouses.map((w) => (
+                          <SelectItem key={w.id} value={w.id}>
+                            {w.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Cantidad *</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={product.quantity}
+                      onChange={(e) => updateProduct(index, 'quantity', parseInt(e.target.value) || 1)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Precio Unitario</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={product.unit_price}
+                      onChange={(e) => updateProduct(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Stock Disponible</Label>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        type="number"
+                        value={product.available_stock}
+                        disabled
+                      />
+                      {product.needs_movement && (
+                        <span className="text-sm text-red-600 font-medium">
+                          Sin stock
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {product.needs_movement && product.product_id && product.warehouse_id && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      ⚠️ No hay stock suficiente en {product.warehouse_name}. 
+                      Se generará una orden de movimiento automáticamente.
+                    </p>
+                  </div>
+                )}
+
+                <div className="text-right">
+                  <span className="text-lg font-semibold">
+                    Total: ${(product.quantity * product.unit_price).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {orderProducts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No hay productos agregados</p>
+                <Button type="button" onClick={addProduct} variant="outline" className="mt-2">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Agregar primer producto
+                </Button>
+              </div>
+            )}
+
+            {orderProducts.length > 0 && (
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex justify-between items-center text-lg font-semibold">
+                  <span>Total del Pedido:</span>
+                  <span>${getTotalAmount().toFixed(2)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="products">Productos *</Label>
-            <Textarea
-              id="products"
-              placeholder="Descripción de los productos..."
-              value={formData.products}
-              onChange={(e) => setFormData(prev => ({ ...prev, products: e.target.value }))}
-              required
-            />
+            <Label htmlFor="payment_method">Método de Pago *</Label>
+            <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar método" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="efectivo">Efectivo</SelectItem>
+                <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                <SelectItem value="transferencia">Transferencia</SelectItem>
+                <SelectItem value="mercadopago">MercadoPago</SelectItem>
+                <SelectItem value="cuenta_corriente">Cuenta Corriente</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -478,7 +751,10 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             }}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button 
+              type="submit" 
+              disabled={loading || orderProducts.length === 0 || !formData.customer_id}
+            >
               {loading ? 'Creando...' : 'Crear Pedido'}
             </Button>
           </div>
