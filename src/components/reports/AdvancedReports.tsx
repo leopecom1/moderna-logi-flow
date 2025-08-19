@@ -26,21 +26,21 @@ import {
 } from 'lucide-react';
 
 interface AdvancedReportData {
-  salesByPeriod: any[];
+  ordersByPeriod: any[];
   revenueData: any[];
   customerMetrics: any[];
   deliveryPerformance: any[];
-  productSales: any[];
+  productOrders: any[];
   cadetePerformance: any[];
 }
 
 export const AdvancedReports = () => {
   const [reportData, setReportData] = useState<AdvancedReportData>({
-    salesByPeriod: [],
+    ordersByPeriod: [],
     revenueData: [],
     customerMetrics: [],
     deliveryPerformance: [],
-    productSales: [],
+    productOrders: [],
     cadetePerformance: []
   });
   const [loading, setLoading] = useState(true);
@@ -58,7 +58,7 @@ export const AdvancedReports = () => {
       daysAgo.setDate(daysAgo.getDate() - parseInt(timeFrame));
 
       // Datos de ventas por período
-      const salesByPeriod = await fetchSalesByPeriod(daysAgo);
+      const ordersByPeriod = await fetchOrdersByPeriod(daysAgo);
       
       // Datos de ingresos
       const revenueData = await fetchRevenueData(daysAgo);
@@ -70,17 +70,17 @@ export const AdvancedReports = () => {
       const deliveryPerformance = await fetchDeliveryPerformance(daysAgo);
       
       // Ventas por producto
-      const productSales = await fetchProductSales(daysAgo);
+      const productOrders = await fetchProductOrders(daysAgo);
       
       // Rendimiento de cadetes
       const cadetePerformance = await fetchCadetePerformance(daysAgo);
 
       setReportData({
-        salesByPeriod,
+        ordersByPeriod,
         revenueData,
         customerMetrics,
         deliveryPerformance,
-        productSales,
+        productOrders,
         cadetePerformance
       });
 
@@ -96,17 +96,17 @@ export const AdvancedReports = () => {
     }
   };
 
-  const fetchSalesByPeriod = async (startDate: Date) => {
-    const { data: sales } = await supabase
-      .from('sales')
-      .select('total_amount, sale_date, quantity')
-      .gte('sale_date', startDate.toISOString().split('T')[0]);
+  const fetchOrdersByPeriod = async (startDate: Date) => {
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('total_amount, created_at, products')
+      .gte('created_at', startDate.toISOString());
 
-    if (!sales) return [];
+    if (!orders) return [];
 
     // Agrupar por semana
-    const weeklyData = sales.reduce((acc: any, sale) => {
-      const date = new Date(sale.sale_date);
+    const weeklyData = orders.reduce((acc: any, order) => {
+      const date = new Date(order.created_at);
       const weekStart = new Date(date);
       weekStart.setDate(date.getDate() - date.getDay());
       const weekKey = weekStart.toISOString().split('T')[0];
@@ -114,8 +114,20 @@ export const AdvancedReports = () => {
       if (!acc[weekKey]) {
         acc[weekKey] = { amount: 0, quantity: 0 };
       }
-      acc[weekKey].amount += Number(sale.total_amount);
-      acc[weekKey].quantity += sale.quantity;
+      acc[weekKey].amount += Number(order.total_amount);
+      // Para productos parseamos el JSON si existe
+      try {
+        const products = typeof order.products === 'string' 
+          ? JSON.parse(order.products) 
+          : order.products;
+        if (Array.isArray(products)) {
+          acc[weekKey].quantity += products.reduce((sum: number, p: any) => sum + (p.quantity || 1), 0);
+        } else {
+          acc[weekKey].quantity += 1;
+        }
+      } catch {
+        acc[weekKey].quantity += 1;
+      }
       
       return acc;
     }, {});
@@ -226,33 +238,44 @@ export const AdvancedReports = () => {
     }));
   };
 
-  const fetchProductSales = async (startDate: Date) => {
-    const { data: sales } = await supabase
-      .from('sales')
-      .select(`
-        quantity,
-        total_amount,
-        products:product_id (
-          name,
-          category
-        )
-      `)
-      .gte('sale_date', startDate.toISOString().split('T')[0]);
+  const fetchProductOrders = async (startDate: Date) => {
+    const { data: orders } = await supabase
+      .from('orders')
+      .select('products, total_amount')
+      .gte('created_at', startDate.toISOString());
 
-    if (!sales) return [];
+    if (!orders) return [];
 
-    const productData = sales.reduce((acc: any, sale) => {
-      const productName = (sale.products as any)?.name || 'Producto desconocido';
-      if (!acc[productName]) {
-        acc[productName] = { quantity: 0, revenue: 0 };
+    const productData: { [key: string]: { quantity: number; revenue: number } } = {};
+    
+    orders.forEach(order => {
+      try {
+        const products = typeof order.products === 'string' 
+          ? JSON.parse(order.products) 
+          : order.products;
+        
+        if (Array.isArray(products)) {
+          products.forEach((product: any) => {
+            const productName = product.product_name || product.name || 'Producto desconocido';
+            if (!productData[productName]) {
+              productData[productName] = { quantity: 0, revenue: 0 };
+            }
+            productData[productName].quantity += product.quantity || 1;
+            productData[productName].revenue += (product.quantity || 1) * (product.unit_price || 0);
+          });
+        }
+      } catch {
+        // Si no se puede parsear, tratamos como un producto genérico
+        if (!productData['Producto genérico']) {
+          productData['Producto genérico'] = { quantity: 0, revenue: 0 };
+        }
+        productData['Producto genérico'].quantity += 1;
+        productData['Producto genérico'].revenue += Number(order.total_amount);
       }
-      acc[productName].quantity += sale.quantity;
-      acc[productName].revenue += Number(sale.total_amount);
-      return acc;
-    }, {});
+    });
 
     return Object.entries(productData)
-      .map(([name, data]: [string, any]) => ({
+      .map(([name, data]) => ({
         name,
         value: data.quantity,
         revenue: data.revenue
@@ -338,7 +361,7 @@ export const AdvancedReports = () => {
       <Tabs value={reportType} onValueChange={setReportType}>
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Resumen</TabsTrigger>
-          <TabsTrigger value="sales">Ventas</TabsTrigger>
+          <TabsTrigger value="orders">Pedidos</TabsTrigger>
           <TabsTrigger value="delivery">Entregas</TabsTrigger>
           <TabsTrigger value="performance">Rendimiento</TabsTrigger>
           <TabsTrigger value="realtime">Tiempo Real</TabsTrigger>
@@ -348,7 +371,7 @@ export const AdvancedReports = () => {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SalesChart
-              data={reportData.productSales}
+              data={reportData.productOrders}
               title="Productos Más Vendidos"
               description="Top 10 productos por cantidad vendida"
               onExport={() => exportReport('productos')}
@@ -366,18 +389,18 @@ export const AdvancedReports = () => {
           />
         </TabsContent>
 
-        <TabsContent value="sales" className="space-y-6">
+        <TabsContent value="orders" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <SalesChart
-              data={reportData.salesByPeriod}
-              title="Ventas por Período"
-              description="Tendencia de ventas semanales"
+              data={reportData.ordersByPeriod}
+              title="Pedidos por Período"
+              description="Tendencia de pedidos semanales"
               period={timeFrame}
               onPeriodChange={setTimeFrame}
-              onExport={() => exportReport('ventas')}
+              onExport={() => exportReport('pedidos')}
             />
             <SalesChart
-              data={reportData.productSales}
+              data={reportData.productOrders}
               title="Top Productos"
               description="Productos con mejor rendimiento"
             />

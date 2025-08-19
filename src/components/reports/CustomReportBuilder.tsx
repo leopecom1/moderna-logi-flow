@@ -69,13 +69,6 @@ const tableDefinitions = {
     numericColumns: [],
     dateColumns: ['delivered_at', 'attempted_at', 'created_at']
   },
-  sales: {
-    label: 'Ventas',
-    icon: DollarSign,
-    columns: ['sale_date', 'quantity', 'unit_price', 'total_amount'],
-    numericColumns: ['quantity', 'unit_price', 'total_amount'],
-    dateColumns: ['sale_date']
-  },
   customers: {
     label: 'Clientes',
     icon: Users,
@@ -167,7 +160,7 @@ export const CustomReportBuilder = () => {
   };
 
   const buildQuery = async () => {
-    const validTables = ['orders', 'deliveries', 'sales', 'customers'] as const;
+    const validTables = ['orders', 'deliveries', 'customers'] as const;
     type ValidTable = typeof validTables[number];
     
     if (!validTables.includes(reportConfig.dataSource as ValidTable)) {

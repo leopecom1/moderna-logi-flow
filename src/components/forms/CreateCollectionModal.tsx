@@ -67,7 +67,6 @@ export function CreateCollectionModal({
 }: CreateCollectionModalProps) {
   const [open, setOpen] = React.useState(false);
   const [customers, setCustomers] = React.useState<any[]>([]);
-  const [sales, setSales] = React.useState<any[]>([]);
   const [orders, setOrders] = React.useState<any[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -94,14 +93,12 @@ export function CreateCollectionModal({
   React.useEffect(() => {
     const loadData = async () => {
       try {
-        const [customersResult, salesResult, ordersResult] = await Promise.all([
+        const [customersResult, ordersResult] = await Promise.all([
           supabase.from("customers").select("id, name"),
-          supabase.from("sales").select("id, sale_date, total_amount, customer:customers(name)"),
           supabase.from("orders").select("id, order_number, total_amount, customer:customers(name)"),
         ]);
 
         if (customersResult.data) setCustomers(customersResult.data);
-        if (salesResult.data) setSales(salesResult.data);
         if (ordersResult.data) setOrders(ordersResult.data);
       } catch (error) {
         console.error("Error loading data:", error);
@@ -243,32 +240,6 @@ export function CreateCollectionModal({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="sale_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Venta (Opcional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleccionar venta" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">Sin venta específica</SelectItem>
-                        {sales.map((sale) => (
-                          <SelectItem key={sale.id} value={sale.id}>
-                            {new Date(sale.sale_date).toLocaleDateString()} - ${sale.total_amount}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <FormField
                 control={form.control}
                 name="order_id"

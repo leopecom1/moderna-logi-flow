@@ -25,14 +25,14 @@ export const ExportManager = () => {
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
     format: 'xlsx',
     timeRange: '30',
-    dataTypes: ['orders', 'deliveries', 'sales'],
+    dataTypes: ['orders', 'deliveries'],
     includeCharts: true
   });
 
   const dataTypeOptions = [
     { id: 'orders', label: 'Pedidos', icon: '📦' },
     { id: 'deliveries', label: 'Entregas', icon: '🚚' },
-    { id: 'sales', label: 'Ventas', icon: '💰' },
+    
     { id: 'customers', label: 'Clientes', icon: '👥' },
     { id: 'products', label: 'Productos', icon: '📋' },
     { id: 'incidents', label: 'Incidencias', icon: '⚠️' },
@@ -51,7 +51,7 @@ export const ExportManager = () => {
   ];
 
   const fetchTableData = async (tableName: string, timeRange: string) => {
-    const validTables = ['orders', 'deliveries', 'sales', 'customers', 'products', 'incidents', 'routes', 'payments', 'collections'] as const;
+    const validTables = ['orders', 'deliveries', 'customers', 'products', 'incidents', 'routes', 'payments', 'collections'] as const;
     type ValidTable = typeof validTables[number];
     
     if (!validTables.includes(tableName as ValidTable)) {

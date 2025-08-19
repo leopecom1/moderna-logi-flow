@@ -28,7 +28,6 @@ export default function CollectionsPage() {
         .select(`
           *,
           customer:customers(name),
-          sale:sales(sale_date, total_amount),
           order:orders(order_number, total_amount),
           collector:profiles(full_name)
         `)
@@ -174,7 +173,7 @@ export default function CollectionsPage() {
                 <TableHead>Método de Pago</TableHead>
                 <TableHead>Referencia</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Venta/Orden</TableHead>
+                <TableHead>Orden</TableHead>
                 <TableHead>Recibo</TableHead>
                 <TableHead>Cobrador</TableHead>
               </TableRow>
@@ -200,21 +199,16 @@ export default function CollectionsPage() {
                   <TableCell>
                     {getStatusBadge(collection.collection_status)}
                   </TableCell>
-                  <TableCell>
-                    {collection.sale ? (
-                      <div className="text-sm">
-                        <div>Venta: {new Date(collection.sale.sale_date).toLocaleDateString()}</div>
-                        <div className="text-muted-foreground">${collection.sale.total_amount}</div>
-                      </div>
-                    ) : collection.order ? (
-                      <div className="text-sm">
-                        <div>Orden: #{collection.order.order_number}</div>
-                        <div className="text-muted-foreground">${collection.order.total_amount}</div>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
-                  </TableCell>
+                   <TableCell>
+                     {collection.order ? (
+                       <div className="text-sm">
+                         <div>Orden: #{collection.order.order_number}</div>
+                         <div className="text-muted-foreground">${collection.order.total_amount}</div>
+                       </div>
+                     ) : (
+                       <span className="text-muted-foreground">-</span>
+                     )}
+                   </TableCell>
                   <TableCell>
                     {collection.receipt_number || "-"}
                   </TableCell>

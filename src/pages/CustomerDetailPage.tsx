@@ -14,7 +14,6 @@ import { EditMovementModal } from '@/components/forms/EditMovementModal';
 import { CreateCustomerOrderModal } from '@/components/forms/CreateCustomerOrderModal';
 import { CreateCustomerPaymentModal } from '@/components/forms/CreateCustomerPaymentModal';
 import { CreateCustomerMovementModal } from '@/components/forms/CreateCustomerMovementModal';
-import { CreateSaleModal } from '@/components/forms/CreateSaleModal';
 import { CreateCollectionModal } from '@/components/forms/CreateCollectionModal';
 import { MainLayout } from '@/components/layout/MainLayout';
 
@@ -88,7 +87,7 @@ export default function CustomerDetailPage() {
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
   const [showCreateMovementModal, setShowCreateMovementModal] = useState(false);
-  const [showCreateSaleModal, setShowCreateSaleModal] = useState(false);
+  
   const [showCreateCollectionModal, setShowCreateCollectionModal] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
 
@@ -441,10 +440,6 @@ export default function CustomerDetailPage() {
                   <Plus className="h-4 w-4 mr-2" />
                   Crear Orden
                 </Button>
-                <Button onClick={() => setShowCreateSaleModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nueva Venta
-                </Button>
                 <Button onClick={() => setShowCreatePaymentModal(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Crear Pago
@@ -598,9 +593,6 @@ export default function CustomerDetailPage() {
         onPaymentCreated={fetchCustomerData}
       />
 
-      {showCreateSaleModal && (
-        <CreateSaleModal customerId={id} onSaleCreated={fetchCustomerData} />
-      )}
 
       {showCreateCollectionModal && (
         <CreateCollectionModal customerId={id} onCollectionCreated={fetchCustomerData} />

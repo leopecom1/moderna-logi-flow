@@ -46,7 +46,7 @@ export default function AccountsReceivablePage() {
 
   // Estadísticas
   const totalCustomers = accountsReceivable?.length || 0;
-  const totalSales = accountsReceivable?.reduce((sum, account) => sum + Number(account.total_sales), 0) || 0;
+  const totalOrders = accountsReceivable?.reduce((sum, account) => sum + Number(account.total_sales), 0) || 0;
   const totalCollections = accountsReceivable?.reduce((sum, account) => sum + Number(account.total_collections), 0) || 0;
   const totalBalanceDue = accountsReceivable?.reduce((sum, account) => sum + Number(account.balance_due), 0) || 0;
   
@@ -111,7 +111,7 @@ export default function AccountsReceivablePage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${totalSales.toFixed(2)}</div>
+            <div className="text-2xl font-bold">${totalOrders.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
               En ventas acumuladas
             </p>

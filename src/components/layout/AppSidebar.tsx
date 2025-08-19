@@ -86,7 +86,7 @@ export const AppSidebar = () => {
         { title: 'Compras', url: '/purchases', icon: ShoppingCart },
         { title: 'Pago Proveedores', url: '/supplier-payments', icon: CreditCard },
         { title: 'Pagos', url: '/payments', icon: CreditCard },
-        { title: 'Ventas', url: '/sales', icon: TrendingUp },
+        
         { title: 'Cobros', url: '/collections', icon: Receipt },
         { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
       ]
