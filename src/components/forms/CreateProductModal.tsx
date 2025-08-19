@@ -36,7 +36,8 @@ import { CreateCategoryModal } from "./CreateCategoryModal";
 
 const formSchema = z.object({
   name: z.string().min(1, "Nombre es requerido"),
-  price: z.number().min(0, "El precio debe ser mayor a 0"),
+  price_list_1: z.number().min(0, "El precio de lista 1 debe ser mayor a 0"),
+  price_list_2: z.number().min(0, "El precio de lista 2 debe ser mayor a 0"),
   cost: z.number().min(0, "El costo debe ser mayor a 0"),
   category: z.string().min(1, "Categoría es requerida"),
   brand: z.string().optional(),
@@ -51,8 +52,17 @@ interface CreateProductModalProps {
   onProductCreated?: () => void;
 }
 
+interface PriceListConfig {
+  price_list_1_name: string;
+  price_list_2_name: string;
+}
+
 export function CreateProductModal({ onProductCreated }: CreateProductModalProps) {
   const [open, setOpen] = React.useState(false);
+  const [priceListConfig, setPriceListConfig] = React.useState<PriceListConfig>({
+    price_list_1_name: 'Lista 1',
+    price_list_2_name: 'Lista 2'
+  });
   const { toast } = useToast();
 
   // Fetch categories
@@ -101,6 +111,31 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     enabled: open, // Only fetch when modal is open
   });
 
+  
+  // Fetch price list configuration
+  const { data: priceConfig } = useQuery({
+    queryKey: ["price_lists_config"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("price_lists_config")
+        .select("price_list_1_name, price_list_2_name")
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  React.useEffect(() => {
+    if (priceConfig) {
+      setPriceListConfig({
+        price_list_1_name: priceConfig.price_list_1_name,
+        price_list_2_name: priceConfig.price_list_2_name,
+      });
+    }
+  }, [priceConfig]);
+
   console.log("Brands data:", brands, "Loading:", brandsLoading, "Error:", brandsError); // Debug log
 
   
@@ -109,7 +144,8 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      price: 0,
+      price_list_1: 0,
+      price_list_2: 0,
       cost: 0,
       category: "",
       brand: "",
@@ -178,7 +214,9 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       const productData = {
         code: generatedCode,
         name: values.name,
-        price: values.price,
+        price: values.price_list_1, // Mantener compatibilidad con el campo price existente
+        price_list_1: values.price_list_1,
+        price_list_2: values.price_list_2,
         cost: values.cost,
         category: finalCategory === "none" ? null : finalCategory || null,
         brand: values.brand === "none" ? null : values.brand || null,
@@ -211,9 +249,11 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
   };
 
   // Calcular margen en tiempo real
-  const price = form.watch("price");
+  const price_list_1 = form.watch("price_list_1");
+  const price_list_2 = form.watch("price_list_2");
   const cost = form.watch("cost");
-  const margin = cost > 0 ? ((price - cost) / cost * 100) : 0;
+  const margin1 = cost > 0 ? ((price_list_1 - cost) / cost * 100) : 0;
+  const margin2 = cost > 0 ? ((price_list_2 - cost) / cost * 100) : 0;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -246,10 +286,10 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="price"
+                name="price_list_1"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Precio de Venta</FormLabel>
+                    <FormLabel>{priceListConfig.price_list_1_name}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -260,16 +300,21 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                       />
                     </FormControl>
                     <FormMessage />
+                    {cost > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Margen: {margin1.toFixed(2)}%
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
 
               <FormField
                 control={form.control}
-                name="cost"
+                name="price_list_2"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Costo</FormLabel>
+                    <FormLabel>{priceListConfig.price_list_2_name}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -280,16 +325,35 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                       />
                     </FormControl>
                     <FormMessage />
+                    {cost > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Margen: {margin2.toFixed(2)}%
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
             </div>
 
-            {cost > 0 && (
-              <div className="text-sm text-muted-foreground">
-                Margen: {margin.toFixed(2)}%
-              </div>
-            )}
+            <FormField
+              control={form.control}
+              name="cost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Costo</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="space-y-4">
               <FormField

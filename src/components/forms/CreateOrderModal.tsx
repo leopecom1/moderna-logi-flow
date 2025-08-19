@@ -49,6 +49,8 @@ interface Product {
   name: string;
   code: string;
   price: number;
+  price_list_1: number;
+  price_list_2: number;
 }
 
 interface Warehouse {
@@ -80,6 +82,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const [formData, setFormData] = useState({
     customer_id: '',
     payment_method: '',
+    price_list: 'price_list_1', // Nueva selección de lista de precio
     delivery_date: '',
     delivery_address: '',
     delivery_neighborhood: '',
@@ -98,12 +101,17 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     cantidad_cuotas: '',
     dia_pago_cuota: '',
   });
+  const [priceListConfig, setPriceListConfig] = useState({
+    price_list_1_name: 'Lista 1',
+    price_list_2_name: 'Lista 2'
+  });
 
   useEffect(() => {
     if (open) {
       fetchCustomers();
       fetchProducts();
       fetchWarehouses();
+      fetchPriceListConfig();
       generateOrderNumber();
     }
   }, [open]);
@@ -126,7 +134,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, code, price')
+        .select('id, name, code, price, price_list_1, price_list_2')
         .eq('is_active', true)
         .order('name');
 
@@ -134,6 +142,26 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       setProducts(data || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+    }
+  };
+
+  const fetchPriceListConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('price_lists_config')
+        .select('price_list_1_name, price_list_2_name')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      if (data) {
+        setPriceListConfig({
+          price_list_1_name: data.price_list_1_name,
+          price_list_2_name: data.price_list_2_name,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching price list config:', error);
     }
   };
 
@@ -197,7 +225,9 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       const product = products.find(p => p.id === value);
       if (product) {
         updatedProducts[index].product_name = product.name;
-        updatedProducts[index].unit_price = product.price;
+        // Usar el precio de la lista seleccionada
+        const selectedPrice = formData.price_list === 'price_list_1' ? product.price_list_1 : product.price_list_2;
+        updatedProducts[index].unit_price = selectedPrice;
       }
     }
 
@@ -341,6 +371,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     setFormData({
       customer_id: '',
       payment_method: '',
+      price_list: 'price_list_1',
       delivery_date: '',
       delivery_address: '',
       delivery_neighborhood: '',
@@ -468,8 +499,24 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             )}
           </div>
 
-          {/* Productos */}
+          {/* Lista de Precio y Productos */}
           <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Lista de Precio</Label>
+            </div>
+            
+            <div className="space-y-2">
+              <Select value={formData.price_list} onValueChange={(value) => setFormData(prev => ({ ...prev, price_list: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar lista de precio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price_list_1">{priceListConfig.price_list_1_name}</SelectItem>
+                  <SelectItem value="price_list_2">{priceListConfig.price_list_2_name}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Productos *</Label>
               <Button type="button" onClick={addProduct} variant="outline" size="sm">
@@ -505,11 +552,14 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                         <SelectValue placeholder="Seleccionar producto" />
                       </SelectTrigger>
                       <SelectContent>
-                        {products.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.name} - ${p.price}
-                          </SelectItem>
-                        ))}
+                        {products.map((p) => {
+                          const selectedPrice = formData.price_list === 'price_list_1' ? p.price_list_1 : p.price_list_2;
+                          return (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name} - ${selectedPrice}
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>

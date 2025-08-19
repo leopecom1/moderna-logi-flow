@@ -8,7 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateProductModal } from "@/components/forms/CreateProductModal";
 import { ConfigurationModal } from "@/components/forms/ConfigurationModal";
 import { EditProductModal } from "@/components/forms/EditProductModal";
-import { Search, Package, TrendingUp, Grid, Table } from "lucide-react";
+import { PriceListsConfigModal } from "@/components/forms/PriceListsConfigModal";
+import { Search, Package, TrendingUp, Grid, Table, Settings } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MessageLoading } from "@/components/ui/message-loading";
@@ -26,6 +27,7 @@ type Product = Tables<"products">;
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [viewMode, setViewMode] = React.useState<"cards" | "table">("cards");
+  const [showPriceListsConfig, setShowPriceListsConfig] = React.useState(false);
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ["products"],
@@ -68,6 +70,13 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Productos</h1>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowPriceListsConfig(true)}
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Listas de Precio
+          </Button>
           <ConfigurationModal onConfigurationUpdated={refetch} />
           <CreateProductModal onProductCreated={refetch} />
         </div>
@@ -290,6 +299,12 @@ export default function ProductsPage() {
           )}
         </div>
       )}
+      
+      <PriceListsConfigModal 
+        open={showPriceListsConfig}
+        onOpenChange={setShowPriceListsConfig}
+        onConfigUpdated={refetch}
+      />
       </div>
     </MainLayout>
   );

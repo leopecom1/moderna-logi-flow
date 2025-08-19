@@ -994,6 +994,39 @@ export type Database = {
           },
         ]
       }
+      price_lists_config: {
+        Row: {
+          auto_calculate_enabled: boolean
+          created_at: string
+          id: string
+          margin_percentage_list_1: number | null
+          margin_percentage_list_2: number | null
+          price_list_1_name: string
+          price_list_2_name: string
+          updated_at: string
+        }
+        Insert: {
+          auto_calculate_enabled?: boolean
+          created_at?: string
+          id?: string
+          margin_percentage_list_1?: number | null
+          margin_percentage_list_2?: number | null
+          price_list_1_name?: string
+          price_list_2_name?: string
+          updated_at?: string
+        }
+        Update: {
+          auto_calculate_enabled?: boolean
+          created_at?: string
+          id?: string
+          margin_percentage_list_1?: number | null
+          margin_percentage_list_2?: number | null
+          price_list_1_name?: string
+          price_list_2_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           brand: string | null
@@ -1006,6 +1039,8 @@ export type Database = {
           margin_percentage: number | null
           name: string
           price: number
+          price_list_1: number
+          price_list_2: number
           updated_at: string
         }
         Insert: {
@@ -1019,6 +1054,8 @@ export type Database = {
           margin_percentage?: number | null
           name: string
           price: number
+          price_list_1?: number
+          price_list_2?: number
           updated_at?: string
         }
         Update: {
@@ -1032,6 +1069,8 @@ export type Database = {
           margin_percentage?: number | null
           name?: string
           price?: number
+          price_list_1?: number
+          price_list_2?: number
           updated_at?: string
         }
         Relationships: []
