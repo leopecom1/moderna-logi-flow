@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Filter, Truck, DollarSign, Package, FileText } from "lucide-react";
+import { Plus, Search, Filter, Truck, DollarSign, Package, FileText, PackageCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ import { format } from "date-fns";
 import { CreatePurchaseModal } from "@/components/forms/CreatePurchaseModal";
 import { PurchasesConfigurationModal } from "@/components/forms/PurchasesConfigurationModal";
 import { ViewPurchaseModal } from "@/components/forms/ViewPurchaseModal";
+import { StockEntryModal } from "@/components/forms/StockEntryModal";
 
 interface Purchase {
   id: string;
@@ -48,6 +49,7 @@ interface Purchase {
 export default function PurchasesPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [selectedPurchase, setSelectedPurchase] = React.useState<Purchase | null>(null);
+  const [stockEntryPurchase, setStockEntryPurchase] = React.useState<Purchase | null>(null);
 
   const { data: purchases, isLoading, refetch } = useQuery({
     queryKey: ["purchases"],
@@ -251,13 +253,26 @@ export default function PurchasesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setSelectedPurchase(purchase)}
-                          >
-                            Ver
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => setSelectedPurchase(purchase)}
+                            >
+                              Ver
+                            </Button>
+                            {purchase.status === 'confirmado' && (
+                              <Button 
+                                variant="default" 
+                                size="sm"
+                                onClick={() => setStockEntryPurchase(purchase)}
+                                className="bg-green-600 hover:bg-green-700"
+                              >
+                                <PackageCheck className="h-4 w-4 mr-1" />
+                                Ingresar Stock
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
@@ -273,6 +288,17 @@ export default function PurchasesPage() {
           purchase={selectedPurchase}
           isOpen={!!selectedPurchase}
           onClose={() => setSelectedPurchase(null)}
+        />
+
+        {/* Stock Entry Modal */}
+        <StockEntryModal
+          purchase={stockEntryPurchase}
+          isOpen={!!stockEntryPurchase}
+          onClose={() => setStockEntryPurchase(null)}
+          onSuccess={() => {
+            setStockEntryPurchase(null);
+            refetch();
+          }}
         />
       </div>
     </MainLayout>
