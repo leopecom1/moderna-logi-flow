@@ -118,6 +118,9 @@ export function CreateSupplierPaymentModal({
 
     setIsSubmitting(true);
     try {
+      // Set payment status based on payment method
+      const paymentStatus = values.payment_method === 'efectivo' ? 'pagado' : 'pendiente';
+      
       const insertData = {
         purchase_id: values.purchase_id,
         supplier_id: values.supplier_id,
@@ -130,7 +133,8 @@ export function CreateSupplierPaymentModal({
         check_due_date: values.check_due_date?.toISOString().split('T')[0],
         notes: values.notes,
         created_by: user.id,
-        payment_status: 'pendiente',
+        payment_status: paymentStatus,
+        paid_at: paymentStatus === 'pagado' ? new Date().toISOString() : null,
       };
 
       const { error } = await supabase
