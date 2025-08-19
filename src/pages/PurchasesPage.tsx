@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { CreatePurchaseModal } from "@/components/forms/CreatePurchaseModal";
 import { PurchasesConfigurationModal } from "@/components/forms/PurchasesConfigurationModal";
+import { ViewPurchaseModal } from "@/components/forms/ViewPurchaseModal";
 
 interface Purchase {
   id: string;
@@ -26,15 +27,27 @@ interface Purchase {
   is_import: boolean;
   currency: string;
   total_amount: number;
+  subtotal: number;
+  tax_amount: number;
   status: string;
   created_at: string;
+  exchange_rate?: number;
+  payment_days?: number;
+  payment_method?: string;
+  is_check_payment?: boolean;
+  notes?: string;
   suppliers: {
     name: string;
+    contact_person?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
   } | null;
 }
 
 export default function PurchasesPage() {
   const [searchTerm, setSearchTerm] = React.useState("");
+  const [selectedPurchase, setSelectedPurchase] = React.useState<Purchase | null>(null);
 
   const { data: purchases, isLoading, refetch } = useQuery({
     queryKey: ["purchases"],
@@ -44,7 +57,11 @@ export default function PurchasesPage() {
         .select(`
           *,
           suppliers (
-            name
+            name,
+            contact_person,
+            email,
+            phone,
+            address
           )
         `)
         .order("created_at", { ascending: false });
@@ -234,7 +251,11 @@ export default function PurchasesPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedPurchase(purchase)}
+                          >
                             Ver
                           </Button>
                         </TableCell>
@@ -246,6 +267,13 @@ export default function PurchasesPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* View Purchase Modal */}
+        <ViewPurchaseModal
+          purchase={selectedPurchase}
+          isOpen={!!selectedPurchase}
+          onClose={() => setSelectedPurchase(null)}
+        />
       </div>
     </MainLayout>
   );
