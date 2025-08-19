@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { Users, Search, UserCog } from 'lucide-react';
+import { RolePermissionsConfig } from './RolePermissionsConfig';
 
 interface UserWithProfile {
   id: string;
@@ -186,91 +187,95 @@ export const UserManagement = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Users className="h-5 w-5" />
-          <span>Gestión de Usuarios</span>
-        </CardTitle>
-        <CardDescription>
-          Administra usuarios y permisos del sistema
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center space-x-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar usuarios..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Users className="h-5 w-5" />
+            <span>Gestión de Usuarios</span>
+          </CardTitle>
+          <CardDescription>
+            Administra usuarios y permisos del sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar usuarios..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button onClick={fetchUsers} size="sm">
+              Actualizar
+            </Button>
           </div>
-          <Button onClick={fetchUsers} size="sm">
-            Actualizar
-          </Button>
-        </div>
 
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {filteredUsers.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <div>
-                      <h4 className="font-medium">{user.full_name}</h4>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredUsers.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <div>
+                        <h4 className="font-medium">{user.full_name}</h4>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                      </div>
+                      <Badge variant={getRoleBadgeVariant(user.role)}>
+                        {getRoleDisplayName(user.role)}
+                      </Badge>
+                      <Badge variant={user.is_active ? "default" : "secondary"}>
+                        {user.is_active ? 'Activo' : 'Inactivo'}
+                      </Badge>
                     </div>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {getRoleDisplayName(user.role)}
-                    </Badge>
-                    <Badge variant={user.is_active ? "default" : "secondary"}>
-                      {user.is_active ? 'Activo' : 'Inactivo'}
-                    </Badge>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Select
+                      value={user.role}
+                      onValueChange={(newRole: UserRole) => updateUserRole(user.id, newRole)}
+                      disabled={updating === user.id}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cadete">Cadete</SelectItem>
+                        <SelectItem value="vendedor">Vendedor</SelectItem>
+                        <SelectItem value="gerencia">Gerencia</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => toggleUserStatus(user.id, user.is_active)}
+                      disabled={updating === user.id}
+                    >
+                      {user.is_active ? 'Desactivar' : 'Activar'}
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Select
-                    value={user.role}
-                    onValueChange={(newRole: UserRole) => updateUserRole(user.id, newRole)}
-                    disabled={updating === user.id}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cadete">Cadete</SelectItem>
-                      <SelectItem value="vendedor">Vendedor</SelectItem>
-                      <SelectItem value="gerencia">Gerencia</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => toggleUserStatus(user.id, user.is_active)}
-                    disabled={updating === user.id}
-                  >
-                    {user.is_active ? 'Desactivar' : 'Activar'}
-                  </Button>
-                </div>
-              </div>
-            ))}
-            {filteredUsers.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">
-                No se encontraron usuarios
-              </p>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              ))}
+              {filteredUsers.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">
+                  No se encontraron usuarios
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <RolePermissionsConfig />
+    </>
   );
 };
