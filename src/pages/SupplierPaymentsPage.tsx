@@ -316,7 +316,7 @@ export default function SupplierPaymentsPage() {
                 <TableBody>
                   {checkPayments.map((payment) => {
                     const daysUntilDue = payment.check_due_date 
-                      ? Math.ceil((new Date(payment.check_due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+                      ? Math.floor((new Date(payment.check_due_date + 'T23:59:59').getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
                       : 0;
                     
                     return (

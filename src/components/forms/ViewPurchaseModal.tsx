@@ -59,12 +59,12 @@ export function ViewPurchaseModal({ purchase, isOpen, onClose }: ViewPurchaseMod
   const [editValues, setEditValues] = useState<{ quantity: number; unit_price: number }>({ quantity: 0, unit_price: 0 });
   const queryClient = useQueryClient();
 
-  if (!purchase) return null;
-
-  // Query purchase items
+  // Query purchase items - call hooks unconditionally
   const { data: purchaseItems = [], refetch } = useQuery({
-    queryKey: ['purchase-items', purchase.id],
+    queryKey: ['purchase-items', purchase?.id],
     queryFn: async () => {
+      if (!purchase?.id) return [];
+      
       const { data, error } = await supabase
         .from('purchase_items')
         .select(`
@@ -76,7 +76,7 @@ export function ViewPurchaseModal({ purchase, isOpen, onClose }: ViewPurchaseMod
       if (error) throw error;
       return data as PurchaseItem[];
     },
-    enabled: isOpen && !!purchase.id,
+    enabled: isOpen && !!purchase?.id,
   });
 
   // Mutation to update purchase item
@@ -149,6 +149,8 @@ export function ViewPurchaseModal({ purchase, isOpen, onClose }: ViewPurchaseMod
     setEditingItem(null);
     setEditValues({ quantity: 0, unit_price: 0 });
   };
+
+  if (!purchase) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
