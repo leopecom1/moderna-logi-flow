@@ -1326,6 +1326,47 @@ export type Database = {
           },
         ]
       }
+      supplier_payment_checks: {
+        Row: {
+          amount: number
+          check_due_date: string | null
+          check_image_url: string | null
+          check_number: string
+          created_at: string | null
+          id: string
+          supplier_payment_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          check_due_date?: string | null
+          check_image_url?: string | null
+          check_number: string
+          created_at?: string | null
+          id?: string
+          supplier_payment_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          check_due_date?: string | null
+          check_image_url?: string | null
+          check_number?: string
+          created_at?: string | null
+          id?: string
+          supplier_payment_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_payment_checks_supplier_payment_id_fkey"
+            columns: ["supplier_payment_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_payments: {
         Row: {
           amount: number

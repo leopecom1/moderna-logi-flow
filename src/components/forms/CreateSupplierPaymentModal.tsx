@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,11 +31,17 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Plus, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const checkSchema = z.object({
+  check_number: z.string().min(1, 'Número de cheque requerido'),
+  check_due_date: z.date(),
+  amount: z.number().min(0.01, 'El monto debe ser mayor a 0'),
+});
 
 const formSchema = z.object({
   purchase_id: z.string().min(1, 'Selecciona una compra'),
@@ -45,8 +51,7 @@ const formSchema = z.object({
   due_date: z.date(),
   payment_method: z.string().min(1, 'Selecciona un método de pago'),
   is_check: z.boolean().default(false),
-  check_number: z.string().optional(),
-  check_due_date: z.date().optional(),
+  checks: z.array(checkSchema).optional(),
   notes: z.string().optional(),
 });
 
@@ -73,7 +78,13 @@ export function CreateSupplierPaymentModal({
       due_date: new Date(),
       payment_method: 'efectivo',
       is_check: false,
+      checks: [],
     },
+  });
+
+  const { fields: checkFields, append: appendCheck, remove: removeCheck } = useFieldArray({
+    control: form.control,
+    name: 'checks',
   });
 
   const { data: purchases = [] } = useQuery({
@@ -113,6 +124,14 @@ export function CreateSupplierPaymentModal({
   const isCheckPayment = form.watch('is_check');
   const selectedPurchase = purchases.find(p => p.id === form.watch('purchase_id'));
 
+  const addCheck = () => {
+    appendCheck({
+      check_number: '',
+      check_due_date: new Date(),
+      amount: 0,
+    });
+  };
+
   const onSubmit = async (values: FormValues) => {
     if (!user?.id) return;
 
@@ -129,19 +148,35 @@ export function CreateSupplierPaymentModal({
         due_date: values.due_date.toISOString().split('T')[0],
         payment_method: values.payment_method,
         is_check: values.is_check,
-        check_number: values.check_number,
-        check_due_date: values.check_due_date?.toISOString().split('T')[0],
         notes: values.notes,
         created_by: user.id,
         payment_status: paymentStatus,
         paid_at: paymentStatus === 'pagado' ? new Date().toISOString() : null,
       };
 
-      const { error } = await supabase
+      const { data: paymentData, error } = await supabase
         .from('supplier_payments')
-        .insert(insertData);
+        .insert(insertData)
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Insert checks if any
+      if (values.is_check && values.checks && values.checks.length > 0) {
+        const checksToInsert = values.checks.map(check => ({
+          supplier_payment_id: paymentData.id,
+          check_number: check.check_number,
+          check_due_date: check.check_due_date.toISOString().split('T')[0],
+          amount: check.amount,
+        }));
+
+        const { error: checksError } = await supabase
+          .from('supplier_payment_checks')
+          .insert(checksToInsert);
+
+        if (checksError) throw checksError;
+      }
 
       toast({
         title: 'Éxito',
@@ -371,56 +406,122 @@ export function CreateSupplierPaymentModal({
             />
 
             {isCheckPayment && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="check_number"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Número de Cheque</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium">Cheques</h4>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addCheck}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Agregar Cheque
+                  </Button>
+                </div>
 
-                <FormField
-                  control={form.control}
-                  name="check_due_date"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Fecha de Cobro del Cheque</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant={"outline"}
-                              className="w-full pl-3 text-left font-normal"
-                            >
-                              {field.value ? (
-                                format(field.value, "PPP", { locale: es })
-                              ) : (
-                                <span>Selecciona una fecha</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {checkFields.map((field, index) => (
+                  <div key={field.id} className="border rounded-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-sm font-medium">Cheque #{index + 1}</h5>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeCheck(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name={`checks.${index}.check_number`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Número de Cheque</FormLabel>
+                            <FormControl>
+                              <Input {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`checks.${index}.amount`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Monto</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name={`checks.${index}.check_due_date`}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Fecha de Cobro</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant={"outline"}
+                                    className="w-full pl-3 text-left font-normal"
+                                  >
+                                    {field.value ? (
+                                      format(field.value, "PPP", { locale: es })
+                                    ) : (
+                                      <span>Selecciona una fecha</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                {checkFields.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No hay cheques agregados</p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addCheck}
+                      className="mt-2"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Agregar Primer Cheque
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
