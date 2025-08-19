@@ -1094,7 +1094,15 @@ export type Database = {
           total_price?: number
           unit_price?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_purchase_items_product_id"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchases: {
         Row: {

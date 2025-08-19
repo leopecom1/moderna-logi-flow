@@ -69,7 +69,7 @@ export function ViewPurchaseModal({ purchase, isOpen, onClose }: ViewPurchaseMod
         .from('purchase_items')
         .select(`
           *,
-          products (name, code)
+          products!inner (name, code)
         `)
         .eq('purchase_id', purchase.id);
 
