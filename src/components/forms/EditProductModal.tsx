@@ -326,7 +326,9 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                     {cost > 0 && (
                       <div className="text-xs text-muted-foreground">
                         Margen: {margin1.toFixed(2)}%
-                        {useAutomaticPricing && " (automático)"}
+                        {useAutomaticPricing && priceConfig && (
+                          <span> ({priceConfig.margin_percentage_list_1 || 0}% configurado)</span>
+                        )}
                       </div>
                     )}
                   </FormItem>
@@ -354,7 +356,9 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                     {cost > 0 && (
                       <div className="text-xs text-muted-foreground">
                         Margen: {margin2.toFixed(2)}%
-                        {useAutomaticPricing && " (automático)"}
+                        {useAutomaticPricing && priceConfig && (
+                          <span> ({priceConfig.margin_percentage_list_2 || 0}% configurado)</span>
+                        )}
                       </div>
                     )}
                   </FormItem>
