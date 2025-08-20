@@ -35,11 +35,13 @@ import { Pencil } from "lucide-react";
 const formSchema = z.object({
   code: z.string().min(1, "Código es requerido"),
   name: z.string().min(1, "Nombre es requerido"),
-  price: z.number().min(0, "Precio debe ser mayor a 0"),
+  price_list_1: z.number().min(0, "El precio de lista 1 debe ser mayor a 0"),
+  price_list_2: z.number().min(0, "El precio de lista 2 debe ser mayor a 0"),
   cost: z.number().min(0, "Costo debe ser mayor a 0"),
   category: z.string(),
   brand: z.string(),
   is_active: z.boolean(),
+  use_automatic_pricing: z.boolean().default(true),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -49,10 +51,13 @@ interface Product {
   code: string;
   name: string;
   price: number;
+  price_list_1: number;
+  price_list_2: number;
   cost: number;
   category?: string;
   brand?: string;
   is_active: boolean;
+  use_automatic_pricing?: boolean;
 }
 
 interface EditProductModalProps {
@@ -62,6 +67,10 @@ interface EditProductModalProps {
 
 export function EditProductModal({ product, onProductUpdated }: EditProductModalProps) {
   const [open, setOpen] = React.useState(false);
+  const [priceListConfig, setPriceListConfig] = React.useState({
+    price_list_1_name: 'Lista 1',
+    price_list_2_name: 'Lista 2'
+  });
   const { toast } = useToast();
 
   // Fetch categories
@@ -106,16 +115,42 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
     enabled: open,
   });
 
+  // Fetch price list configuration
+  const { data: priceConfig } = useQuery({
+    queryKey: ["price_lists_config_edit"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("price_lists_config")
+        .select("price_list_1_name, price_list_2_name")
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
+  React.useEffect(() => {
+    if (priceConfig) {
+      setPriceListConfig({
+        price_list_1_name: priceConfig.price_list_1_name,
+        price_list_2_name: priceConfig.price_list_2_name,
+      });
+    }
+  }, [priceConfig]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       code: product.code,
       name: product.name,
-      price: product.price,
+      price_list_1: product.price_list_1 || product.price,
+      price_list_2: product.price_list_2 || 0,
       cost: product.cost,
       category: product.category || "none",
       brand: product.brand || "none",
       is_active: product.is_active,
+      use_automatic_pricing: product.use_automatic_pricing ?? true,
     },
   });
 
@@ -124,18 +159,22 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
       form.reset({
         code: product.code,
         name: product.name,
-        price: product.price,
+        price_list_1: product.price_list_1 || product.price,
+        price_list_2: product.price_list_2 || 0,
         cost: product.cost,
         category: product.category || "none",
         brand: product.brand || "none",
         is_active: product.is_active,
+        use_automatic_pricing: product.use_automatic_pricing ?? true,
       });
     }
   }, [open, product, form]);
 
-  const price = form.watch("price");
+  const price_list_1 = form.watch("price_list_1");
+  const price_list_2 = form.watch("price_list_2");
   const cost = form.watch("cost");
-  const marginPercentage = price > 0 && cost > 0 ? ((price - cost) / price * 100) : 0;
+  const margin1 = cost > 0 ? ((price_list_1 - cost) / cost * 100) : 0;
+  const margin2 = cost > 0 ? ((price_list_2 - cost) / cost * 100) : 0;
 
   const onSubmit = async (values: FormValues) => {
     try {
@@ -144,12 +183,15 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
         .update({
           code: values.code,
           name: values.name,
-          price: values.price,
+          price: values.price_list_1, // Mantener compatibilidad
+          price_list_1: values.price_list_1,
+          price_list_2: values.price_list_2,
           cost: values.cost,
           category: values.category === "none" ? null : values.category,
           brand: values.brand === "none" ? null : values.brand,
-          margin_percentage: marginPercentage,
+          margin_percentage: margin1,
           is_active: values.is_active,
+          use_automatic_pricing: values.use_automatic_pricing,
         })
         .eq("id", product.id);
 
@@ -248,10 +290,10 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
-                name="price"
+                name="price_list_1"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Precio de Venta</FormLabel>
+                    <FormLabel>{priceListConfig.price_list_1_name}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -262,16 +304,21 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                       />
                     </FormControl>
                     <FormMessage />
+                    {cost > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Margen: {margin1.toFixed(2)}%
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
 
               <FormField
                 control={form.control}
-                name="cost"
+                name="price_list_2"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Costo</FormLabel>
+                    <FormLabel>{priceListConfig.price_list_2_name}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -282,16 +329,35 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                       />
                     </FormControl>
                     <FormMessage />
+                    {cost > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        Margen: {margin2.toFixed(2)}%
+                      </div>
+                    )}
                   </FormItem>
                 )}
               />
             </div>
 
-            {marginPercentage > 0 && (
-              <div className="text-sm text-muted-foreground">
-                Margen de ganancia: {marginPercentage.toFixed(2)}%
-              </div>
-            )}
+            <FormField
+              control={form.control}
+              name="cost"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Costo</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      placeholder="0.00"
+                      {...field}
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -348,6 +414,27 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                     </Select>
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="use_automatic_pricing"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Usar Configuración Automática de Precios</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      Los precios se calcularán automáticamente según la configuración global
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

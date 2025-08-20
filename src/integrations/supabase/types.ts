@@ -1042,6 +1042,7 @@ export type Database = {
           price_list_1: number
           price_list_2: number
           updated_at: string
+          use_automatic_pricing: boolean
         }
         Insert: {
           brand?: string | null
@@ -1057,6 +1058,7 @@ export type Database = {
           price_list_1?: number
           price_list_2?: number
           updated_at?: string
+          use_automatic_pricing?: boolean
         }
         Update: {
           brand?: string | null
@@ -1072,6 +1074,7 @@ export type Database = {
           price_list_1?: number
           price_list_2?: number
           updated_at?: string
+          use_automatic_pricing?: boolean
         }
         Relationships: []
       }

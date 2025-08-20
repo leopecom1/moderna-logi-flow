@@ -42,6 +42,7 @@ const formSchema = z.object({
   category: z.string().min(1, "Categoría es requerida"),
   brand: z.string().optional(),
   is_active: z.boolean().default(true),
+  use_automatic_pricing: z.boolean().default(true),
   createNewCategory: z.boolean().default(false),
   newCategoryName: z.string().optional(),
 });
@@ -150,6 +151,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       category: "",
       brand: "",
       is_active: true,
+      use_automatic_pricing: true,
       createNewCategory: false,
       newCategoryName: "",
     },
@@ -221,6 +223,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         category: finalCategory === "none" ? null : finalCategory || null,
         brand: values.brand === "none" ? null : values.brand || null,
         is_active: values.is_active,
+        use_automatic_pricing: values.use_automatic_pricing,
       };
 
       const { error } = await supabase
@@ -458,6 +461,27 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="use_automatic_pricing"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Usar Configuración Automática de Precios</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      Los precios se calcularán automáticamente según la configuración global
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
