@@ -48,6 +48,7 @@ export function ProductVariantConfig({
   const [variantValues, setVariantValues] = useState<VariantValue[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [combinations, setCombinations] = useState<VariantCombination[]>([]);
+  const [selectedCombination, setSelectedCombination] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -108,9 +109,15 @@ export function ProductVariantConfig({
     // Generate all combinations
     const generateRecursive = (typeIndex: number, currentCombination: { [key: string]: string }): VariantCombination[] => {
       if (typeIndex >= typeValues.length) {
+        const displayName = Object.entries(currentCombination).map(([typeId, valueId]) => {
+          const value = variantValues.find(v => v.id === valueId);
+          return value?.name || '';
+        }).join('-');
+
         return [{
           id: Math.random().toString(36).substr(2, 9),
           values: { ...currentCombination },
+          sku: generateSKU(displayName),
           priceAdjustment: 0
         }];
       }
@@ -131,6 +138,12 @@ export function ProductVariantConfig({
 
     const newCombinations = generateRecursive(0, {});
     setCombinations(newCombinations);
+  };
+
+  const generateSKU = (variantName: string) => {
+    // This will be implemented when we have access to product data
+    // For now, return a placeholder
+    return `XX-PROD-${variantName.toUpperCase()}`;
   };
 
   const handleTypeToggle = (typeId: string) => {
@@ -222,39 +235,76 @@ export function ProductVariantConfig({
             <CardTitle className="text-lg">
               Combinaciones de Variantes ({combinations.length})
             </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Haz clic en una combinación para configurar sus detalles específicos
+            </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
               {combinations.map((combination) => (
-                <div key={combination.id} className="flex items-center gap-4 p-3 border rounded-lg">
-                  <div className="flex-1">
-                    <p className="font-medium">{getDisplayName(combination)}</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">SKU:</Label>
-                    <Input
-                      placeholder="SKU opcional"
-                      value={combination.sku || ""}
-                      onChange={(e) => updateCombination(combination.id, "sku", e.target.value)}
-                      className="w-32"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">Ajuste $:</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      value={combination.priceAdjustment}
-                      onChange={(e) => updateCombination(combination.id, "priceAdjustment", parseFloat(e.target.value) || 0)}
-                      className="w-24"
-                    />
-                  </div>
-                </div>
+                <Badge
+                  key={combination.id}
+                  variant={selectedCombination === combination.id ? "default" : "outline"}
+                  className="cursor-pointer p-2 text-sm"
+                  onClick={() => setSelectedCombination(
+                    selectedCombination === combination.id ? null : combination.id
+                  )}
+                >
+                  {getDisplayName(combination)}
+                </Badge>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Selected Combination Configuration */}
+      {selectedCombination && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Configurar Variante: {getDisplayName(combinations.find(c => c.id === selectedCombination)!)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const combination = combinations.find(c => c.id === selectedCombination);
+              if (!combination) return null;
+              
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">SKU</Label>
+                      <Input
+                        placeholder="SKU generado automáticamente"
+                        value={combination.sku || ""}
+                        onChange={(e) => updateCombination(combination.id, "sku", e.target.value)}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Se genera automáticamente si se deja vacío
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-sm font-medium">Ajuste de Precio ($)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={combination.priceAdjustment}
+                        onChange={(e) => updateCombination(combination.id, "priceAdjustment", parseFloat(e.target.value) || 0)}
+                        className="mt-1"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Ajuste sobre el precio base del producto
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
