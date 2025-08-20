@@ -42,6 +42,7 @@ const formSchema = z.object({
   brand: z.string(),
   is_active: z.boolean(),
   use_automatic_pricing: z.boolean().default(true),
+  has_variants: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -58,6 +59,7 @@ interface Product {
   brand?: string;
   is_active: boolean;
   use_automatic_pricing?: boolean;
+  has_variants?: boolean;
 }
 
 interface EditProductModalProps {
@@ -151,6 +153,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
       brand: product.brand || "none",
       is_active: product.is_active,
       use_automatic_pricing: product.use_automatic_pricing ?? true,
+      has_variants: product.has_variants ?? false,
     },
   });
 
@@ -166,6 +169,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
         brand: product.brand || "none",
         is_active: product.is_active,
         use_automatic_pricing: product.use_automatic_pricing ?? true,
+        has_variants: product.has_variants ?? false,
       });
     }
   }, [open, product, form]);
@@ -209,6 +213,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
           margin_percentage: margin1,
           is_active: values.is_active,
           use_automatic_pricing: values.use_automatic_pricing,
+          has_variants: values.has_variants,
         })
         .eq("id", product.id);
 
@@ -441,6 +446,27 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                     </Select>
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="has_variants"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Producto con Variantes</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      El producto tendrá variantes (color, tamaño, etc.)
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

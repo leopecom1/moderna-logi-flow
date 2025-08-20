@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 import { CreateCategoryModal } from "./CreateCategoryModal";
+import { ProductVariantConfig } from "./ProductVariantConfig";
 
 const formSchema = z.object({
   name: z.string().min(1, "Nombre es requerido"),
@@ -161,7 +162,11 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
 
   const createNewCategory = form.watch("createNewCategory");
   const useAutomaticPricing = form.watch("use_automatic_pricing");
+  const hasVariants = form.watch("has_variants");
   const watchedCost = form.watch("cost");
+  
+  // State for variants
+  const [variants, setVariants] = React.useState<any[]>([]);
 
   // Función para generar código automático
   const generateProductCode = async (categoryName: string): Promise<string> => {
@@ -231,18 +236,38 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         has_variants: values.has_variants,
       };
 
-      const { error } = await supabase
+      const { data: product, error: productError } = await supabase
         .from("products")
-        .insert([productData]);
+        .insert([productData])
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (productError) throw productError;
+
+      // Si tiene variantes, crear las variantes
+      if (values.has_variants && variants.length > 0) {
+        const variantData = variants.map(variant => ({
+          product_id: product.id,
+          variant_values: variant.values,
+          sku: variant.sku || null,
+          price_adjustment: variant.priceAdjustment || 0,
+          is_active: true
+        }));
+
+        const { error: variantError } = await supabase
+          .from("product_variants")
+          .insert(variantData);
+
+        if (variantError) throw variantError;
+      }
 
       toast({
         title: "Producto creado",
-        description: "El producto ha sido creado exitosamente.",
+        description: `El producto${values.has_variants ? ' y sus variantes han' : ' ha'} sido creado exitosamente.`,
       });
 
       form.reset();
+      setVariants([]);
       setOpen(false);
       onProductCreated?.();
       refetchCategories?.();
@@ -554,6 +579,19 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
               )}
             />
 
+            {/* Variant Configuration */}
+            {hasVariants && (
+              <div className="space-y-4">
+                <div className="border-t pt-4">
+                  <h3 className="text-lg font-semibold mb-4">Configuración de Variantes</h3>
+                  <ProductVariantConfig
+                    isCreating={true}
+                    onVariantsChange={setVariants}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-2">
               <Button
                 type="button"
@@ -562,7 +600,12 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
               >
                 Cancelar
               </Button>
-              <Button type="submit">Crear Producto</Button>
+              <Button 
+                type="submit"
+                disabled={hasVariants && variants.length === 0}
+              >
+                Crear Producto
+              </Button>
             </div>
           </form>
         </Form>
