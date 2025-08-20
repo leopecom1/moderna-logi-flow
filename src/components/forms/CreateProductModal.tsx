@@ -119,8 +119,8 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     queryFn: async () => {
       const { data, error } = await supabase
         .from("price_lists_config")
-        .select("price_list_1_name, price_list_2_name")
-        .single();
+        .select("price_list_1_name, price_list_2_name, auto_calculate_enabled, margin_percentage_list_1, margin_percentage_list_2")
+        .maybeSingle();
       
       if (error && error.code !== 'PGRST116') throw error;
       return data;
@@ -158,6 +158,8 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
   });
 
   const createNewCategory = form.watch("createNewCategory");
+  const useAutomaticPricing = form.watch("use_automatic_pricing");
+  const watchedCost = form.watch("cost");
 
   // Función para generar código automático
   const generateProductCode = async (categoryName: string): Promise<string> => {
@@ -251,6 +253,20 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     }
   };
 
+  // Calcular precios automáticamente si está habilitado
+  React.useEffect(() => {
+    if (useAutomaticPricing && watchedCost > 0 && priceConfig) {
+      const margin1 = priceConfig.margin_percentage_list_1 || 0;
+      const margin2 = priceConfig.margin_percentage_list_2 || 0;
+      
+      const calculatedPrice1 = watchedCost * (1 + margin1 / 100);
+      const calculatedPrice2 = watchedCost * (1 + margin2 / 100);
+      
+      form.setValue("price_list_1", calculatedPrice1);
+      form.setValue("price_list_2", calculatedPrice2);
+    }
+  }, [useAutomaticPricing, watchedCost, priceConfig, form]);
+
   // Calcular margen en tiempo real
   const price_list_1 = form.watch("price_list_1");
   const price_list_2 = form.watch("price_list_2");
@@ -300,12 +316,15 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         placeholder="0.00"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        disabled={useAutomaticPricing}
+                        className={useAutomaticPricing ? "bg-muted" : ""}
                       />
                     </FormControl>
                     <FormMessage />
                     {cost > 0 && (
                       <div className="text-xs text-muted-foreground">
                         Margen: {margin1.toFixed(2)}%
+                        {useAutomaticPricing && " (automático)"}
                       </div>
                     )}
                   </FormItem>
@@ -325,12 +344,15 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         placeholder="0.00"
                         {...field}
                         onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                        disabled={useAutomaticPricing}
+                        className={useAutomaticPricing ? "bg-muted" : ""}
                       />
                     </FormControl>
                     <FormMessage />
                     {cost > 0 && (
                       <div className="text-xs text-muted-foreground">
                         Margen: {margin2.toFixed(2)}%
+                        {useAutomaticPricing && " (automático)"}
                       </div>
                     )}
                   </FormItem>
