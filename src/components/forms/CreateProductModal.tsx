@@ -310,7 +310,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
           Nuevo Producto
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Crear Nuevo Producto</DialogTitle>
         </DialogHeader>
