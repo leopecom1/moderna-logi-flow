@@ -58,6 +58,8 @@ export const AppSidebar = () => {
       category: 'Principal',
       items: [
         { title: 'Dashboard', url: '/', icon: Home },
+        { title: 'Analytics & ML', url: '/analytics', icon: Brain },
+        { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
       ]
     },
     {
@@ -65,39 +67,52 @@ export const AppSidebar = () => {
       items: [
         { title: 'Usuarios', url: '/user-management', icon: Crown },
         { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
+        { title: 'Vehículos', url: '/vehiculos', icon: Car },
       ]
     },
     {
-      category: 'Operaciones',
+      category: 'Catálogo y Stock',
       items: [
-        { title: 'Clientes', url: '/customers', icon: Users },
         { title: 'Productos', url: '/products', icon: Package2 },
         { title: 'Inventario', url: '/inventory', icon: Package },
         { title: 'Movimientos Stock', url: '/stock-movements', icon: ArrowRightLeft },
-        { title: 'Pedidos', url: '/orders', icon: Package },
+        { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },
+      ]
+    },
+    {
+      category: 'Ventas y Clientes',
+      items: [
+        { title: 'Clientes', url: '/customers', icon: Users },
+        { title: 'Pedidos', url: '/orders', icon: ShoppingCart },
         { title: 'Entregas', url: '/deliveries', icon: Truck },
+      ]
+    },
+    {
+      category: 'Logística',
+      items: [
         { title: 'Rutas', url: '/routes', icon: Route },
-        { title: 'Vehículos', url: '/vehiculos', icon: Car },
+        { title: 'Optimización Rutas', url: '/route-optimization', icon: Navigation },
+      ]
+    },
+    {
+      category: 'Compras y Proveedores',
+      items: [
+        { title: 'Compras', url: '/purchases', icon: ShoppingCart },
+        { title: 'Pago Proveedores', url: '/supplier-payments', icon: CreditCard },
       ]
     },
     {
       category: 'Finanzas',
       items: [
-        { title: 'Compras', url: '/purchases', icon: ShoppingCart },
-        { title: 'Pago Proveedores', url: '/supplier-payments', icon: CreditCard },
-        { title: 'Pagos', url: '/payments', icon: CreditCard },
-        
+        { title: 'Pagos', url: '/payments', icon: DollarSign },
         { title: 'Cobros', url: '/collections', icon: Receipt },
         { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
       ]
     },
     {
-      category: 'Análisis e IA',
+      category: 'Reportes y Análisis',
       items: [
         { title: 'Reportes', url: '/reports', icon: BarChart3 },
-        { title: 'Optimización Rutas', url: '/route-optimization', icon: Navigation },
-        { title: 'Analytics & ML', url: '/analytics', icon: Brain },
-        { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
       ]
     },
     {
@@ -215,27 +230,6 @@ export const AppSidebar = () => {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
-        
-        {profile?.role === 'gerencia' && (
-          <SidebarGroup>
-            <SidebarGroupLabel>Herramientas</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to="/bulk-import" 
-                      className={({ isActive }) => getNavCls({ isActive })}
-                    >
-                      <Upload className="h-4 w-4" />
-                      {state !== 'collapsed' && <span>Importación Masiva</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
       </SidebarContent>
     </Sidebar>
   );
