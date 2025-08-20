@@ -31,6 +31,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Pencil } from "lucide-react";
+import { ProductVariantConfig } from "./ProductVariantConfig";
 
 const formSchema = z.object({
   code: z.string().min(1, "Código es requerido"),
@@ -470,6 +471,14 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                 </FormItem>
               )}
             />
+
+            {/* Configuración de variantes */}
+            {form.watch("has_variants") && (
+              <ProductVariantConfig
+                productId={product.id}
+                isCreating={false}
+              />
+            )}
 
             <FormField
               control={form.control}
