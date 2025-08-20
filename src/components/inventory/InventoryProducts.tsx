@@ -48,6 +48,9 @@ interface Product {
   code: string;
   category?: string;
   brand?: string;
+  price_list_1?: number;
+  price_list_2?: number;
+  cost?: number;
 }
 
 interface Warehouse {
@@ -55,10 +58,42 @@ interface Warehouse {
   name: string;
 }
 
+interface PriceListConfig {
+  price_list_1_name: string;
+  price_list_2_name: string;
+}
+
+interface ProductWithStock {
+  id: string;
+  name: string;
+  code: string;
+  category?: string;
+  brand?: string;
+  price_list_1?: number;
+  price_list_2?: number;
+  cost?: number;
+  warehouses: {
+    [warehouseId: string]: {
+      name: string;
+      current_stock: number;
+      minimum_stock: number;
+      maximum_stock: number;
+      unit_cost: number;
+      status: "low" | "normal" | "high" | "out";
+    };
+  };
+  total_stock: number;
+}
+
 export function InventoryProducts() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [productsWithStock, setProductsWithStock] = useState<ProductWithStock[]>([]);
+  const [priceListConfig, setPriceListConfig] = useState<PriceListConfig>({
+    price_list_1_name: 'Lista 1',
+    price_list_2_name: 'Lista 2'
+  });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedWarehouse, setSelectedWarehouse] = useState("all");
@@ -85,16 +120,25 @@ export function InventoryProducts() {
     try {
       setLoading(true);
       
-      // Fetch inventory items, products, and warehouses separately
-      const [inventoryResponse, productsResponse, warehousesResponse] = await Promise.all([
+      // Fetch inventory items, products, warehouses, and price config
+      const [inventoryResponse, productsResponse, warehousesResponse, priceConfigResponse] = await Promise.all([
         supabase.from("inventory_items").select("*").order("created_at", { ascending: false }),
-        supabase.from("products").select("id, name, code, category, brand").eq("is_active", true).order("name"),
-        supabase.from("warehouses").select("id, name").eq("is_active", true).order("name")
+        supabase.from("products").select("id, name, code, category, brand, price_list_1, price_list_2, cost").eq("is_active", true).order("name"),
+        supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
+        supabase.from("price_lists_config").select("price_list_1_name, price_list_2_name").maybeSingle()
       ]);
 
       if (inventoryResponse.error) throw inventoryResponse.error;
       if (productsResponse.error) throw productsResponse.error;
       if (warehousesResponse.error) throw warehousesResponse.error;
+
+      // Set price list config
+      if (priceConfigResponse.data) {
+        setPriceListConfig({
+          price_list_1_name: priceConfigResponse.data.price_list_1_name,
+          price_list_2_name: priceConfigResponse.data.price_list_2_name
+        });
+      }
 
       // Create maps for faster lookup
       const productsMap = new Map(productsResponse.data?.map(p => [p.id, p]) || []);
@@ -108,9 +152,51 @@ export function InventoryProducts() {
         warehouse_name: warehousesMap.get(item.warehouse_id)?.name || 'Depósito no encontrado',
       })) || [];
 
+      // Create products with stock structure
+      const productsWithStockMap = new Map<string, ProductWithStock>();
+      
+      // Initialize all products
+      productsResponse.data?.forEach(product => {
+        productsWithStockMap.set(product.id, {
+          ...product,
+          warehouses: {},
+          total_stock: 0
+        });
+      });
+
+      // Add stock information by warehouse
+      enrichedItems.forEach(item => {
+        const product = productsWithStockMap.get(item.product_id);
+        if (product && warehousesMap.has(item.warehouse_id)) {
+          const warehouse = warehousesMap.get(item.warehouse_id)!;
+          
+          // Determine stock status
+          let status: "low" | "normal" | "high" | "out" = "normal";
+          if (item.current_stock === 0) {
+            status = "out";
+          } else if (item.current_stock <= item.minimum_stock) {
+            status = "low";
+          } else if (item.current_stock >= item.maximum_stock) {
+            status = "high";
+          }
+
+          product.warehouses[item.warehouse_id] = {
+            name: warehouse.name,
+            current_stock: item.current_stock,
+            minimum_stock: item.minimum_stock,
+            maximum_stock: item.maximum_stock,
+            unit_cost: item.unit_cost,
+            status
+          };
+          
+          product.total_stock += item.current_stock;
+        }
+      });
+
       setItems(enrichedItems);
       setProducts(productsResponse.data || []);
       setWarehouses(warehousesResponse.data || []);
+      setProductsWithStock(Array.from(productsWithStockMap.values()));
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -179,6 +265,20 @@ export function InventoryProducts() {
     const matchesWarehouse = selectedWarehouse === "all" || item.warehouse_id === selectedWarehouse;
     
     return matchesSearch && matchesWarehouse;
+  });
+
+  const filteredProductsWithStock = productsWithStock.filter((product) => {
+    const matchesSearch = 
+      product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.brand?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (selectedWarehouse === "all") {
+      return matchesSearch;
+    } else {
+      return matchesSearch && product.warehouses[selectedWarehouse];
+    }
   });
 
   if (loading) {
@@ -291,6 +391,22 @@ export function InventoryProducts() {
                       <p className="font-semibold">{item.maximum_stock}</p>
                     </div>
                   </div>
+
+                  {/* Price Lists */}
+                  <div className="grid grid-cols-2 gap-4 text-sm pt-2 border-t">
+                    <div>
+                      <p className="text-muted-foreground">{priceListConfig.price_list_1_name}</p>
+                      <p className="font-semibold">
+                        ${products.find(p => p.id === item.product_id)?.price_list_1 || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">{priceListConfig.price_list_2_name}</p>
+                      <p className="font-semibold">
+                        ${products.find(p => p.id === item.product_id)?.price_list_2 || 0}
+                      </p>
+                    </div>
+                  </div>
                   
                   <div className="pt-2 border-t">
                     <p className="text-sm text-muted-foreground">Depósito</p>
@@ -313,66 +429,98 @@ export function InventoryProducts() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Costo Unit.</TableHead>
-                  <TableHead>Valor Total</TableHead>
-                  <TableHead>Depósito</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredItems.map((item) => {
-                  const stockStatus = getStockStatus(item);
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{item.product_name}</p>
-                          <p className="text-sm text-muted-foreground">{item.product_code}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-center">
-                          <p className="font-semibold">{item.current_stock}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.minimum_stock} - {item.maximum_stock}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">${item.unit_cost}</TableCell>
-                      <TableCell className="font-medium">
-                        ${(item.current_stock * item.unit_cost).toFixed(2)}
-                      </TableCell>
-                      <TableCell>{item.warehouse_name}</TableCell>
-                      <TableCell>
-                        <Badge variant={stockStatus.color as any}>
-                          {stockStatus.text}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedProduct({productId: item.product_id, warehouseId: item.warehouse_id})}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead>{priceListConfig.price_list_1_name}</TableHead>
+                    <TableHead>{priceListConfig.price_list_2_name}</TableHead>
+                    <TableHead>Stock Total</TableHead>
+                    {warehouses.map((warehouse) => (
+                      <TableHead key={warehouse.id} className="text-center">
+                        {warehouse.name}
+                      </TableHead>
+                    ))}
+                    <TableHead>Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProductsWithStock.map((product) => {
+                    const hasStock = Object.keys(product.warehouses).length > 0;
+                    return (
+                      <TableRow key={product.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-sm text-muted-foreground">{product.code}</p>
+                            {product.category && (
+                              <p className="text-xs text-muted-foreground">{product.category}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          ${product.price_list_1 || 0}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          ${product.price_list_2 || 0}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-center">
+                            <p className="font-semibold">{product.total_stock}</p>
+                          </div>
+                        </TableCell>
+                        {warehouses.map((warehouse) => {
+                          const warehouseStock = product.warehouses[warehouse.id];
+                          return (
+                            <TableCell key={warehouse.id} className="text-center">
+                              {warehouseStock ? (
+                                <div>
+                                  <p className="font-medium">{warehouseStock.current_stock}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Min: {warehouseStock.minimum_stock}
+                                  </p>
+                                  {warehouseStock.status === "low" && (
+                                    <Badge variant="destructive" className="text-xs">Bajo</Badge>
+                                  )}
+                                  {warehouseStock.status === "out" && (
+                                    <Badge variant="destructive" className="text-xs">Sin Stock</Badge>
+                                  )}
+                                  {warehouseStock.status === "high" && (
+                                    <Badge variant="secondary" className="text-xs">Alto</Badge>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                          );
+                        })}
+                        <TableCell>
+                          {hasStock && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                const firstWarehouse = Object.keys(product.warehouses)[0];
+                                setSelectedProduct({productId: product.id, warehouseId: firstWarehouse});
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {filteredItems.length === 0 && (
+      {(viewMode === "cards" ? filteredItems : filteredProductsWithStock).length === 0 && (
         <div className="text-center py-12">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">No hay productos en inventario</h3>
