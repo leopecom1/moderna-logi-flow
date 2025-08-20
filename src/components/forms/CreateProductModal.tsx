@@ -43,6 +43,7 @@ const formSchema = z.object({
   brand: z.string().optional(),
   is_active: z.boolean().default(true),
   use_automatic_pricing: z.boolean().default(true),
+  has_variants: z.boolean().default(false),
   createNewCategory: z.boolean().default(false),
   newCategoryName: z.string().optional(),
 });
@@ -152,6 +153,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       brand: "",
       is_active: true,
       use_automatic_pricing: true,
+      has_variants: false,
       createNewCategory: false,
       newCategoryName: "",
     },
@@ -226,6 +228,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         brand: values.brand === "none" ? null : values.brand || null,
         is_active: values.is_active,
         use_automatic_pricing: values.use_automatic_pricing,
+        has_variants: values.has_variants,
       };
 
       const { error } = await supabase
@@ -487,6 +490,27 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="has_variants"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">Producto con Variantes</FormLabel>
+                    <div className="text-sm text-muted-foreground">
+                      El producto tendrá variantes (color, tamaño, etc.)
+                    </div>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

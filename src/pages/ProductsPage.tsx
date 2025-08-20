@@ -9,6 +9,7 @@ import { CreateProductModal } from "@/components/forms/CreateProductModal";
 import { ConfigurationModal } from "@/components/forms/ConfigurationModal";
 import { EditProductModal } from "@/components/forms/EditProductModal";
 import { PriceListsConfigModal } from "@/components/forms/PriceListsConfigModal";
+import { VariantConfigModal } from "@/components/forms/VariantConfigModal";
 import { Search, Package, TrendingUp, Grid, Table, Settings } from "lucide-react";
 import { Tables } from "@/integrations/supabase/types";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -70,6 +71,7 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Productos</h1>
         <div className="flex gap-2">
+          <VariantConfigModal />
           <Button
             variant="outline"
             onClick={() => setShowPriceListsConfig(true)}
