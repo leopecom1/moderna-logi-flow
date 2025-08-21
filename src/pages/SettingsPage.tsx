@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { Settings, Save, Bell, Shield, Database } from 'lucide-react';
+import { Settings, Save, Bell, Shield, Database, Building2 } from 'lucide-react';
 import { UserManagement } from '@/components/admin/UserManagement';
+import { ConfigurationModal } from '@/components/forms/ConfigurationModal';
 
 const SettingsPage = () => {
   const [settings, setSettings] = useState({
@@ -244,6 +245,22 @@ const SettingsPage = () => {
                 onCheckedChange={(checked) => handleSystemChange('allowCashPayments', checked)}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Configuración de Datos Maestros */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Building2 className="h-5 w-5" />
+              <span>Datos Maestros</span>
+            </CardTitle>
+            <CardDescription>
+              Gestiona categorías, marcas, proveedores y sucursales
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ConfigurationModal />
           </CardContent>
         </Card>
 
