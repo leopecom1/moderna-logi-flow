@@ -83,7 +83,7 @@ export const AppSidebar = () => {
       category: 'Ventas y Clientes',
       items: [
         { title: 'Clientes', url: '/customers', icon: Users },
-        { title: 'Pedidos', url: '/orders', icon: ShoppingCart },
+        { title: 'Ventas', url: '/orders', icon: ShoppingCart },
         { title: 'Entregas', url: '/deliveries', icon: Truck },
       ]
     },
@@ -137,7 +137,7 @@ export const AppSidebar = () => {
       category: 'Ventas',
       items: [
         { title: 'Clientes', url: '/customers', icon: Users },
-        { title: 'Mis Pedidos', url: '/orders', icon: Package },
+        { title: 'Mis Ventas', url: '/orders', icon: Package },
         { title: 'Nuevo Pedido', url: '/orders/new', icon: UserPlus },
         { title: 'Entregas', url: '/deliveries', icon: Truck },
         { title: 'Pagos', url: '/payments', icon: DollarSign },
