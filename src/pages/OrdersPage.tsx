@@ -3,14 +3,21 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Search, Edit3 } from 'lucide-react';
+import { Package, Plus, Search, Edit3, Building2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
 import { EditOrderModal } from '@/components/forms/EditOrderModal';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 interface Order {
   id: string;
@@ -23,12 +30,19 @@ interface Order {
   customer_id: string;
   delivery_address: string;
   notes?: string;
+  branch_id?: string;
+}
+
+interface Branch {
+  id: string;
+  name: string;
 }
 
 const OrdersPage = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -37,13 +51,20 @@ const OrdersPage = () => {
 
   useEffect(() => {
     fetchOrders();
+    fetchBranches();
   }, []);
 
   const fetchOrders = async () => {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('*')
+        .select(`
+          *,
+          branches (
+            id,
+            name
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -52,11 +73,25 @@ const OrdersPage = () => {
       console.error('Error fetching orders:', error);
       toast({
         title: 'Error',
-        description: 'No se pudieron cargar los pedidos',
+        description: 'No se pudieron cargar las ventas',
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('branches')
+        .select('id, name')
+        .eq('is_active', true);
+
+      if (error) throw error;
+      setBranches(data || []);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
     }
   };
 
@@ -99,13 +134,13 @@ const OrdersPage = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Pedidos</h1>
-            <p className="text-muted-foreground">Gestiona todos los pedidos del sistema</p>
+            <h1 className="text-3xl font-bold">Ventas</h1>
+            <p className="text-muted-foreground">Gestiona todas las ventas del sistema</p>
           </div>
           {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Nuevo Pedido
+              Nueva Venta
             </Button>
           )}
         </div>
@@ -113,81 +148,96 @@ const OrdersPage = () => {
         <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por número de pedido o dirección..."
+            placeholder="Buscar por número de venta o dirección..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
           />
         </div>
 
-        <div className="grid gap-4">
-          {filteredOrders.map((order) => (
-            <Card 
-              key={order.id} 
-              className="hover:shadow-md transition-shadow"
-            >
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Package className="h-5 w-5 text-primary" />
-                    <CardTitle className="text-lg">{order.order_number}</CardTitle>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Número</TableHead>
+                <TableHead>Estado</TableHead>
+                <TableHead>Sucursal</TableHead>
+                <TableHead>Monto</TableHead>
+                <TableHead>Método Pago</TableHead>
+                <TableHead>Entrega</TableHead>
+                <TableHead>Dirección</TableHead>
+                <TableHead>Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOrders.map((order: any) => (
+                <TableRow key={order.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center space-x-2">
+                      <Package className="h-4 w-4 text-primary" />
+                      <span>{order.order_number}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <Badge className={getStatusColor(order.status)}>
                       {order.status}
                     </Badge>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">${order.total_amount}</p>
-                      <p className="text-sm text-muted-foreground">{order.payment_method}</p>
-                    </div>
-                    {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
+                  </TableCell>
+                  <TableCell>
+                    {order.branches ? (
+                      <div className="flex items-center space-x-1">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{order.branches.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">Sin sucursal</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-semibold">
+                    ${order.total_amount}
+                  </TableCell>
+                  <TableCell>{order.payment_method}</TableCell>
+                  <TableCell>
+                    {new Date(order.delivery_date).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="max-w-xs truncate">
+                    {order.delivery_address}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedOrderId(order.id);
+                            setShowEditModal(true);
+                          }}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedOrderId(order.id);
-                          setShowEditModal(true);
-                        }}
+                        onClick={() => navigate(`/orders/${order.id}`)}
                       >
-                        <Edit3 className="h-4 w-4" />
+                        Ver
                       </Button>
-                    )}
-                  </div>
-                </div>
-                <CardDescription>
-                  Fecha de entrega: {new Date(order.delivery_date).toLocaleDateString()}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <p><strong>Dirección:</strong> {order.delivery_address}</p>
-                  {order.notes && <p><strong>Notas:</strong> {order.notes}</p>}
-                  <p className="text-sm text-muted-foreground">
-                    Creado: {new Date(order.created_at).toLocaleString()}
-                  </p>
-                </div>
-                <div className="mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/orders/${order.id}`)}
-                    className="w-full"
-                  >
-                    Ver Detalles
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
 
         {filteredOrders.length === 0 && (
           <div className="text-center py-12">
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No se encontraron pedidos</h3>
+            <h3 className="text-lg font-semibold mb-2">No se encontraron ventas</h3>
             <p className="text-muted-foreground">
-              {searchTerm ? 'Intenta con otros términos de búsqueda' : 'Aún no hay pedidos registrados'}
+              {searchTerm ? 'Intenta con otros términos de búsqueda' : 'Aún no hay ventas registradas'}
             </p>
           </div>
         )}

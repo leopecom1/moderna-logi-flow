@@ -64,6 +64,42 @@ export type Database = {
           },
         ]
       }
+      branches: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          manager_name: string | null
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          manager_name?: string | null
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          manager_name?: string | null
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       brands: {
         Row: {
           created_at: string
@@ -898,6 +934,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          branch_id: string | null
           cadete_id: string | null
           created_at: string
           customer_id: string
@@ -917,6 +954,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
           customer_id: string
@@ -936,6 +974,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
           customer_id?: string
@@ -955,6 +994,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]

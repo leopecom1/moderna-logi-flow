@@ -69,11 +69,17 @@ interface OrderProduct {
   needs_movement: boolean;
 }
 
+interface Branch {
+  id: string;
+  name: string;
+}
+
 export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateOrderModalProps) => {
   const { profile } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPlaceDetails, setSelectedPlaceDetails] = useState<any>(null);
   const [isManualInput, setIsManualInput] = useState(false);
@@ -81,6 +87,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const [orderProducts, setOrderProducts] = useState<OrderProduct[]>([]);
   const [formData, setFormData] = useState({
     customer_id: '',
+    branch_id: '',
     payment_method: '',
     price_list: 'price_list_1', // Nueva selección de lista de precio
     delivery_date: '',
@@ -111,6 +118,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       fetchCustomers();
       fetchProducts();
       fetchWarehouses();
+      fetchBranches();
       fetchPriceListConfig();
       generateOrderNumber();
     }
@@ -177,6 +185,21 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       setWarehouses(data || []);
     } catch (error) {
       console.error('Error fetching warehouses:', error);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('branches')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setBranches(data || []);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
     }
   };
 
@@ -303,6 +326,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       const orderData = {
         customer_id: customerId,
         seller_id: profile.user_id,
+        branch_id: formData.branch_id,
         products: JSON.stringify(orderProducts),
         total_amount: getTotalAmount(),
         payment_method: formData.payment_method as 'efectivo' | 'tarjeta' | 'transferencia' | 'cuenta_corriente',
@@ -370,6 +394,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const resetForm = () => {
     setFormData({
       customer_id: '',
+      branch_id: '',
       payment_method: '',
       price_list: 'price_list_1',
       delivery_date: '',
@@ -766,15 +791,33 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="delivery_date">Fecha de Entrega *</Label>
-            <Input
-              id="delivery_date"
-              type="date"
-              value={formData.delivery_date}
-              onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
-              required
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="branch_id">Sucursal *</Label>
+              <Select value={formData.branch_id} onValueChange={(value) => setFormData(prev => ({ ...prev, branch_id: value }))} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar sucursal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((branch) => (
+                    <SelectItem key={branch.id} value={branch.id}>
+                      {branch.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delivery_date">Fecha de Entrega *</Label>
+              <Input
+                id="delivery_date"
+                type="date"
+                value={formData.delivery_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
+                required
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

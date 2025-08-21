@@ -8,10 +8,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Folder, Tag, Truck } from "lucide-react";
+import { Settings, Folder, Tag, Truck, Building2 } from "lucide-react";
 import { CategoryManagementPanel } from "./CategoryManagementPanel";
 import { BrandManagementPanel } from "./BrandManagementPanel";
 import { SupplierManagementPanel } from "./SupplierManagementPanel";
+import { BranchManagementPanel } from "./BranchManagementPanel";
 
 interface ConfigurationModalProps {
   onConfigurationUpdated?: () => void;
@@ -38,7 +39,7 @@ export function ConfigurationModal({ onConfigurationUpdated }: ConfigurationModa
         </DialogHeader>
         
         <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="categories" className="flex items-center gap-2">
               <Folder className="h-4 w-4" />
               Categorías
@@ -50,6 +51,10 @@ export function ConfigurationModal({ onConfigurationUpdated }: ConfigurationModa
             <TabsTrigger value="suppliers" className="flex items-center gap-2">
               <Truck className="h-4 w-4" />
               Proveedores
+            </TabsTrigger>
+            <TabsTrigger value="branches" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Sucursales
             </TabsTrigger>
           </TabsList>
           
@@ -63,6 +68,10 @@ export function ConfigurationModal({ onConfigurationUpdated }: ConfigurationModa
           
           <TabsContent value="suppliers" className="mt-4">
             <SupplierManagementPanel onSupplierUpdated={handleConfigUpdate} />
+          </TabsContent>
+          
+          <TabsContent value="branches" className="mt-4">
+            <BranchManagementPanel onBranchUpdated={handleConfigUpdate} />
           </TabsContent>
         </Tabs>
       </DialogContent>
