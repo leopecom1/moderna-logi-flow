@@ -1259,8 +1259,11 @@ export type Database = {
           price: number
           price_list_1: number
           price_list_2: number
+          supplier_code: string | null
           updated_at: string
           use_automatic_pricing: boolean
+          warranty_months: number | null
+          warranty_years: number | null
         }
         Insert: {
           brand?: string | null
@@ -1276,8 +1279,11 @@ export type Database = {
           price: number
           price_list_1?: number
           price_list_2?: number
+          supplier_code?: string | null
           updated_at?: string
           use_automatic_pricing?: boolean
+          warranty_months?: number | null
+          warranty_years?: number | null
         }
         Update: {
           brand?: string | null
@@ -1293,8 +1299,11 @@ export type Database = {
           price?: number
           price_list_1?: number
           price_list_2?: number
+          supplier_code?: string | null
           updated_at?: string
           use_automatic_pricing?: boolean
+          warranty_months?: number | null
+          warranty_years?: number | null
         }
         Relationships: []
       }

@@ -41,6 +41,9 @@ const formSchema = z.object({
   cost: z.number().min(0, "Costo debe ser mayor a 0"),
   category: z.string(),
   brand: z.string(),
+  warranty_years: z.number().min(0).optional(),
+  warranty_months: z.number().min(0).max(11).optional(),
+  supplier_code: z.string().optional(),
   is_active: z.boolean(),
   use_automatic_pricing: z.boolean().default(true),
   has_variants: z.boolean().default(false),
@@ -55,6 +58,9 @@ interface Product {
   price: number;
   price_list_1: number;
   price_list_2: number;
+  warranty_years?: number;
+  warranty_months?: number;
+  supplier_code?: string;
   cost: number;
   category?: string;
   brand?: string;
@@ -152,6 +158,9 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
       cost: product.cost,
       category: product.category || "none",
       brand: product.brand || "none",
+      warranty_years: product.warranty_years || 0,
+      warranty_months: product.warranty_months || 0,
+      supplier_code: product.supplier_code || "",
       is_active: product.is_active,
       use_automatic_pricing: product.use_automatic_pricing ?? true,
       has_variants: product.has_variants ?? false,
@@ -168,6 +177,9 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
         cost: product.cost,
         category: product.category || "none",
         brand: product.brand || "none",
+        warranty_years: product.warranty_years || 0,
+        warranty_months: product.warranty_months || 0,
+        supplier_code: product.supplier_code || "",
         is_active: product.is_active,
         use_automatic_pricing: product.use_automatic_pricing ?? true,
         has_variants: product.has_variants ?? false,
@@ -209,8 +221,11 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
           price_list_1: values.price_list_1,
           price_list_2: values.price_list_2,
           cost: values.cost,
-          category: values.category === "none" ? null : values.category,
-          brand: values.brand === "none" ? null : values.brand,
+        category: values.category === "none" ? null : values.category,
+        brand: values.brand === "none" ? null : values.brand,
+        warranty_years: values.warranty_years || null,
+        warranty_months: values.warranty_months || null,
+        supplier_code: values.supplier_code || null,
           margin_percentage: margin1,
           is_active: values.is_active,
           use_automatic_pricing: values.use_automatic_pricing,
@@ -371,6 +386,61 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                 )}
               />
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="warranty_years"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Garantía (Años)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="warranty_months"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Garantía (Meses)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        max="11"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="supplier_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código Proveedor</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Código del proveedor" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

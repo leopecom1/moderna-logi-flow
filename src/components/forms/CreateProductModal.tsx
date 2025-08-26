@@ -42,6 +42,9 @@ const formSchema = z.object({
   cost: z.number().min(0, "El costo debe ser mayor a 0"),
   category: z.string().min(1, "Categoría es requerida"),
   brand: z.string().optional(),
+  warranty_years: z.number().min(0).optional(),
+  warranty_months: z.number().min(0).max(11).optional(),
+  supplier_code: z.string().optional(),
   is_active: z.boolean().default(true),
   use_automatic_pricing: z.boolean().default(true),
   has_variants: z.boolean().default(false),
@@ -152,6 +155,9 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       cost: 0,
       category: "",
       brand: "",
+      warranty_years: 0,
+      warranty_months: 0,
+      supplier_code: "",
       is_active: true,
       use_automatic_pricing: true,
       has_variants: false,
@@ -231,6 +237,9 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         cost: values.cost,
         category: finalCategory === "none" ? null : finalCategory || null,
         brand: values.brand === "none" ? null : values.brand || null,
+        warranty_years: values.warranty_years || null,
+        warranty_months: values.warranty_months || null,
+        supplier_code: values.supplier_code || null,
         is_active: values.is_active,
         use_automatic_pricing: values.use_automatic_pricing,
         has_variants: values.has_variants,
@@ -406,6 +415,61 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                       {...field}
                       onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+             />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="warranty_years"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Garantía (Años)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="warranty_months"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Garantía (Meses)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        max="11"
+                        {...field}
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="supplier_code"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Código Proveedor</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Código del proveedor" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
