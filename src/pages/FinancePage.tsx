@@ -151,6 +151,37 @@ const FinancePage = () => {
         });
       }
 
+      // Fetch orders with bank transfers (pending payments)
+      const { data: orders } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          created_at,
+          total_amount,
+          payment_method,
+          status,
+          order_number,
+          customers:customer_id (name)
+        `)
+        .eq('payment_method', 'transferencia')
+        .order('created_at', { ascending: false });
+
+      if (orders) {
+        orders.forEach((order: any) => {
+          movements.push({
+            id: order.id,
+            date: format(new Date(order.created_at), 'yyyy-MM-dd'),
+            type: 'transferencia',
+            amount: order.total_amount,
+            description: `Orden pendiente - ${order.customers?.name || 'Cliente'}`,
+            customer: order.customers?.name,
+            reference: order.order_number,
+            status: order.status === 'pendiente' ? 'pendiente' : order.status,
+            method: order.payment_method
+          });
+        });
+      }
+
       // Sort by date (most recent first)
       return movements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
