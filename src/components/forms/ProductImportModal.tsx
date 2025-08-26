@@ -23,7 +23,6 @@ interface ImportResult {
 }
 
 interface ProductRow {
-  codigo: string;
   descripcion: string;
   anos_garantia?: number;
   meses_garantia?: number;
@@ -37,7 +36,6 @@ interface ProductRow {
 
 const SAMPLE_DATA: ProductRow[] = [
   {
-    codigo: 'EL001',
     descripcion: 'Smartphone Samsung Galaxy A54',
     anos_garantia: 1,
     meses_garantia: 6,
@@ -49,7 +47,6 @@ const SAMPLE_DATA: ProductRow[] = [
     codigo_proveedor: 'SAM-A54-128'
   },
   {
-    codigo: 'EL002', 
     descripcion: 'Auriculares Bluetooth Sony',
     anos_garantia: 0,
     meses_garantia: 6,
@@ -77,7 +74,6 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
     
     // Set column widths
     const wscols = [
-      {wch: 10}, // codigo
       {wch: 30}, // descripcion
       {wch: 12}, // anos_garantia
       {wch: 12}, // meses_garantia
@@ -148,14 +144,6 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
 
     data.forEach((row, index) => {
       // Validar campos requeridos
-      if (!row.codigo || row.codigo.toString().trim() === '') {
-        errors.push({
-          row: index + 1,
-          error: 'El código es requerido',
-          data: row
-        });
-      }
-
       if (!row.descripcion || row.descripcion.toString().trim() === '') {
         errors.push({
           row: index + 1,
@@ -272,27 +260,8 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
         const row = validData[i];
         
         try {
-          // Verificar si el código ya existe
-          const { data: existingProduct } = await supabase
-            .from('products')
-            .select('id')
-            .eq('code', row.codigo)
-            .single();
-
-          if (existingProduct) {
-            importErrors.push({
-              row: i + 1,
-              error: `El código "${row.codigo}" ya existe`,
-              data: row
-            });
-            continue;
-          }
-
-          // Generar código si está vacío
-          let productCode = row.codigo;
-          if (!productCode || productCode.trim() === '') {
-            productCode = await generateProductCode(row.categoria);
-          }
+          // Generar código automáticamente basado en la categoría
+          const productCode = await generateProductCode(row.categoria);
 
           await supabase.from('products').insert({
             code: productCode,
@@ -385,19 +354,18 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
                 <div>
                   <h5 className="font-medium mb-2">Columnas requeridas (en este orden):</h5>
                   <div className="grid grid-cols-2 gap-2">
-                    <Badge variant="destructive">1. codigo</Badge>
-                    <Badge variant="destructive">2. descripcion</Badge>
-                    <Badge variant="secondary">3. anos_garantia</Badge>
-                    <Badge variant="secondary">4. meses_garantia</Badge>
-                    <Badge variant="destructive">5. costo</Badge>
-                    <Badge variant="destructive">6. precio_lista_1</Badge>
-                    <Badge variant="secondary">7. precio_lista_2</Badge>
-                    <Badge variant="secondary">8. categoria</Badge>
-                    <Badge variant="secondary">9. marca</Badge>
-                    <Badge variant="secondary">10. codigo_proveedor</Badge>
+                    <Badge variant="destructive">1. descripcion</Badge>
+                    <Badge variant="secondary">2. anos_garantia</Badge>
+                    <Badge variant="secondary">3. meses_garantia</Badge>
+                    <Badge variant="destructive">4. costo</Badge>
+                    <Badge variant="destructive">5. precio_lista_1</Badge>
+                    <Badge variant="secondary">6. precio_lista_2</Badge>
+                    <Badge variant="secondary">7. categoria</Badge>
+                    <Badge variant="secondary">8. marca</Badge>
+                    <Badge variant="secondary">9. codigo_proveedor</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Los campos en rojo son obligatorios, los campos en gris son opcionales.
+                    Los campos en rojo son obligatorios, los campos en gris son opcionales. El código del producto se genera automáticamente.
                   </p>
                 </div>
                 <Button onClick={downloadTemplate} variant="outline">
@@ -468,23 +436,23 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
                       <table className="w-full text-sm border-collapse border border-border">
                         <thead>
                           <tr className="bg-muted">
-                            <th className="border border-border p-2 text-left">Código</th>
                             <th className="border border-border p-2 text-left">Descripción</th>
                             <th className="border border-border p-2 text-left">Costo</th>
                             <th className="border border-border p-2 text-left">Precio Lista 1</th>
                             <th className="border border-border p-2 text-left">Garantía</th>
+                            <th className="border border-border p-2 text-left">Categoría</th>
                           </tr>
                         </thead>
                         <tbody>
                           {parsedData.slice(0, 3).map((row, index) => (
                             <tr key={index}>
-                              <td className="border border-border p-2">{row.codigo}</td>
                               <td className="border border-border p-2">{row.descripcion}</td>
                               <td className="border border-border p-2">${row.costo}</td>
                               <td className="border border-border p-2">${row.precio_lista_1}</td>
                               <td className="border border-border p-2">
                                 {row.anos_garantia || 0}a {row.meses_garantia || 0}m
                               </td>
+                              <td className="border border-border p-2">{row.categoria || '-'}</td>
                             </tr>
                           ))}
                         </tbody>
