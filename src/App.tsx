@@ -14,7 +14,7 @@ import RouteDetailPage from "./pages/RouteDetailPage";
 import IncidentsPage from "./pages/IncidentsPage";
 import PaymentsPage from "./pages/PaymentsPage";
 import ProductsPage from "./pages/ProductsPage";
-
+import FinancePage from "./pages/FinancePage";
 import PurchasesPage from "./pages/PurchasesPage";
 import CollectionsPage from "./pages/CollectionsPage";
 import AccountsReceivablePage from "./pages/AccountsReceivablePage";
@@ -73,6 +73,7 @@ function App() {
             <Route path="/routes/:id" element={<RouteDetailPage />} />
             <Route path="/incidents" element={<IncidentsPage />} />
             <Route path="/payments" element={<PaymentsPage />} />
+            <Route path="/finance" element={<FinancePage />} />
             <Route path="/collections" element={<CollectionsPage />} />
             <Route path="/accounts-receivable" element={<AccountsReceivablePage />} />
             <Route path="/purchases" element={<PurchasesPage />} />

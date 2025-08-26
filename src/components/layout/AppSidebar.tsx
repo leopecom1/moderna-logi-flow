@@ -104,6 +104,7 @@ export const AppSidebar = () => {
     {
       category: 'Finanzas',
       items: [
+        { title: 'Panel Financiero', url: '/finance', icon: TrendingUp },
         { title: 'Pagos', url: '/payments', icon: DollarSign },
         { title: 'Cobros', url: '/collections', icon: Receipt },
         { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
