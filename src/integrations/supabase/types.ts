@@ -207,6 +207,51 @@ export type Database = {
           },
         ]
       }
+      card_liquidations: {
+        Row: {
+          amount: number
+          card_type: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          expected_arrival_date: string | null
+          id: string
+          liquidation_date: string
+          notes: string | null
+          payment_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          card_type: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          expected_arrival_date?: string | null
+          id?: string
+          liquidation_date: string
+          notes?: string | null
+          payment_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          card_type?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          expected_arrival_date?: string | null
+          id?: string
+          liquidation_date?: string
+          notes?: string | null
+          payment_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -1013,9 +1058,11 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          card_type: string | null
           created_at: string
           id: string
           liquidated_at: string | null
+          liquidation_date: string | null
           notes: string | null
           order_id: string
           paid_at: string | null
@@ -1026,9 +1073,11 @@ export type Database = {
         }
         Insert: {
           amount: number
+          card_type?: string | null
           created_at?: string
           id?: string
           liquidated_at?: string | null
+          liquidation_date?: string | null
           notes?: string | null
           order_id: string
           paid_at?: string | null
@@ -1039,9 +1088,11 @@ export type Database = {
         }
         Update: {
           amount?: number
+          card_type?: string | null
           created_at?: string
           id?: string
           liquidated_at?: string | null
+          liquidation_date?: string | null
           notes?: string | null
           order_id?: string
           paid_at?: string | null

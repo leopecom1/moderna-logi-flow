@@ -1,15 +1,21 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { MessageLoading } from '@/components/ui/message-loading';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { DollarSign, CreditCard, ArrowRightLeft, Building, Search } from 'lucide-react';
+import { DollarSign, CreditCard, ArrowRightLeft, Building, Search, Eye, CheckCircle, Filter } from 'lucide-react';
+import { MovementDetailModal } from '@/components/forms/MovementDetailModal';
+import { CardLiquidationsPanel } from '@/components/forms/CardLiquidationsPanel';
 
 interface FinanceMovement {
   id: string;
@@ -22,10 +28,17 @@ interface FinanceMovement {
   reference?: string;
   status: string;
   method?: string;
+  liquidation_date?: string;
+  card_type?: string;
 }
 
 const FinancePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMovement, setSelectedMovement] = useState<FinanceMovement | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const queryClient = useQueryClient();
 
   const { data: movements, isLoading, refetch } = useQuery({
     queryKey: ['finance-movements'],
@@ -77,6 +90,8 @@ const FinancePage = () => {
           payment_method,
           status,
           reference_number,
+          liquidation_date,
+          card_type,
           orders:order_id (
             customers:customer_id (name)
           )
@@ -98,7 +113,9 @@ const FinancePage = () => {
             customer: payment.orders?.customers?.name,
             reference: payment.reference_number,
             status: payment.status,
-            method: payment.payment_method
+            method: payment.payment_method,
+            liquidation_date: payment.liquidation_date,
+            card_type: payment.card_type
           });
         });
       }
@@ -139,12 +156,44 @@ const FinancePage = () => {
     }
   });
 
-  const filteredMovements = movements?.filter(movement =>
-    movement.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    movement.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    movement.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    movement.reference?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const confirmTransferMutation = useMutation({
+    mutationFn: async (movementId: string) => {
+      // Update the payment status to confirmed
+      const { error } = await supabase
+        .from('payments')
+        .update({ status: 'pagado' })
+        .eq('id', movementId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Transferencia confirmada",
+        description: "La transferencia ha sido marcada como confirmada"
+      });
+      queryClient.invalidateQueries({ queryKey: ['finance-movements'] });
+      setShowDetailModal(false);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo confirmar la transferencia",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const filteredMovements = movements?.filter(movement => {
+    const matchesSearch = movement.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      movement.reference?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesType = filterType === 'all' || movement.type === filterType;
+    const matchesStatus = filterStatus === 'all' || movement.status === filterStatus;
+    
+    return matchesSearch && matchesType && matchesStatus;
+  }) || [];
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -202,6 +251,15 @@ const FinancePage = () => {
     );
   };
 
+  const handleViewDetails = (movement: FinanceMovement) => {
+    setSelectedMovement(movement);
+    setShowDetailModal(true);
+  };
+
+  const handleConfirmTransfer = (movementId: string) => {
+    confirmTransferMutation.mutate(movementId);
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-UY', {
       style: 'currency',
@@ -212,6 +270,7 @@ const FinancePage = () => {
   const totalAmount = filteredMovements.reduce((sum, movement) => sum + movement.amount, 0);
   const totalIncome = filteredMovements.filter(m => m.amount > 0).reduce((sum, m) => sum + m.amount, 0);
   const totalOutcome = Math.abs(filteredMovements.filter(m => m.amount < 0).reduce((sum, m) => sum + m.amount, 0));
+  const pendingTransfers = filteredMovements.filter(m => m.type === 'transferencia' && m.status === 'pendiente');
 
   if (isLoading) {
     return (
@@ -238,124 +297,217 @@ const FinancePage = () => {
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Balance Total</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
-              <p className="text-xs text-muted-foreground">
-                Ingresos menos egresos
-              </p>
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="movements" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="movements">Movimientos</TabsTrigger>
+            <TabsTrigger value="liquidations">Liquidaciones Tarjetas</TabsTrigger>
+          </TabsList>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Ingresos</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</div>
-              <p className="text-xs text-muted-foreground">
-                Cobros y pagos recibidos
-              </p>
-            </CardContent>
-          </Card>
+          <TabsContent value="movements" className="space-y-6">
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Balance Total</CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(totalAmount)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Ingresos menos egresos
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Egresos</CardTitle>
-              <DollarSign className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{formatCurrency(totalOutcome)}</div>
-              <p className="text-xs text-muted-foreground">
-                Pagos realizados
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Ingresos</CardTitle>
+                  <DollarSign className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Cobros y pagos recibidos
+                  </p>
+                </CardContent>
+              </Card>
 
-        {/* Search and Filter */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Movimientos Financieros</CardTitle>
-            <CardDescription>
-              Historial completo de todos los movimientos financieros
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center space-x-2 mb-4">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por descripción, cliente, proveedor o referencia..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
-              />
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Egresos</CardTitle>
+                  <DollarSign className="h-4 w-4 text-red-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{formatCurrency(totalOutcome)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Pagos realizados
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Transferencias Pendientes</CardTitle>
+                  <ArrowRightLeft className="h-4 w-4 text-yellow-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-600">{pendingTransfers.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Esperando confirmación
+                  </p>
+                </CardContent>
+              </Card>
             </div>
 
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Método</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                    <TableHead>Referencia</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMovements.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground">
-                        No se encontraron movimientos financieros
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredMovements.map((movement) => (
-                      <TableRow key={movement.id}>
-                        <TableCell>
-                          {format(new Date(movement.date), 'dd/MM/yyyy', { locale: es })}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {getTypeIcon(movement.type)}
-                            {getTypeBadge(movement.type)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {movement.description}
-                        </TableCell>
-                        <TableCell>
-                          {movement.method || '-'}
-                        </TableCell>
-                        <TableCell className={`text-right font-mono ${
-                          movement.amount >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {formatCurrency(movement.amount)}
-                        </TableCell>
-                        <TableCell>
-                          {movement.reference || '-'}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(movement.status)}
-                        </TableCell>
+            {/* Search and Filter */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Movimientos Financieros</CardTitle>
+                <CardDescription>
+                  Historial completo de todos los movimientos financieros
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                  <div className="flex items-center space-x-2 flex-1">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar por descripción, cliente, proveedor o referencia..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filtrar por tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los tipos</SelectItem>
+                      <SelectItem value="cobro">Cobros</SelectItem>
+                      <SelectItem value="pago">Pagos</SelectItem>
+                      <SelectItem value="transferencia">Transferencias</SelectItem>
+                      <SelectItem value="tarjeta_credito">Tarjetas de Crédito</SelectItem>
+                      <SelectItem value="credito_moderna">Crédito Moderna</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filtrar por estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los estados</SelectItem>
+                      <SelectItem value="pendiente">Pendiente</SelectItem>
+                      <SelectItem value="confirmado">Confirmado</SelectItem>
+                      <SelectItem value="pagado">Pagado</SelectItem>
+                      <SelectItem value="cancelado">Cancelado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead>Descripción</TableHead>
+                        <TableHead>Método</TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                        <TableHead>Referencia</TableHead>
+                        <TableHead>Estado</TableHead>
+                        <TableHead>Acciones</TableHead>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMovements.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-muted-foreground">
+                            No se encontraron movimientos financieros
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredMovements.map((movement) => (
+                          <TableRow key={movement.id}>
+                            <TableCell>
+                              {format(new Date(movement.date), 'dd/MM/yyyy', { locale: es })}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center space-x-2">
+                                {getTypeIcon(movement.type)}
+                                {getTypeBadge(movement.type)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {movement.description}
+                              {movement.liquidation_date && (
+                                <div className="text-xs text-muted-foreground">
+                                  Liquidación: {format(new Date(movement.liquidation_date), 'dd/MM/yyyy', { locale: es })}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {movement.method || '-'}
+                              {movement.card_type && (
+                                <div className="text-xs text-muted-foreground">
+                                  {movement.card_type}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className={`text-right font-mono ${
+                              movement.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                            }`}>
+                              {formatCurrency(movement.amount)}
+                            </TableCell>
+                            <TableCell>
+                              {movement.reference || '-'}
+                            </TableCell>
+                            <TableCell>
+                              {getStatusBadge(movement.status)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleViewDetails(movement)}
+                                >
+                                  <Eye className="h-3 w-3" />
+                                </Button>
+                                {movement.type === 'transferencia' && movement.status === 'pendiente' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleConfirmTransfer(movement.id)}
+                                    disabled={confirmTransferMutation.isPending}
+                                  >
+                                    <CheckCircle className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="liquidations">
+            <CardLiquidationsPanel />
+          </TabsContent>
+        </Tabs>
+
+        {/* Detail Modal */}
+        <MovementDetailModal
+          isOpen={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          movement={selectedMovement}
+          onConfirmTransfer={handleConfirmTransfer}
+        />
       </div>
     </MainLayout>
   );
