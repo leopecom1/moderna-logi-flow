@@ -193,13 +193,26 @@ const FinancePage = () => {
 
   const confirmTransferMutation = useMutation({
     mutationFn: async (movementId: string) => {
-      // Update the payment status to confirmed
-      const { error } = await supabase
-        .from('payments')
-        .update({ status: 'pagado' })
-        .eq('id', movementId);
+      // Check if this is an order (transferencia from orders table)
+      const movement = movements?.find(m => m.id === movementId);
+      
+      if (movement?.type === 'transferencia' && movement.reference?.startsWith('PED-')) {
+        // This is an order, update the order status
+        const { error } = await supabase
+          .from('orders')
+          .update({ status: 'pago_ingresado' })
+          .eq('id', movementId);
 
-      if (error) throw error;
+        if (error) throw error;
+      } else {
+        // This is a payment, update the payment status
+        const { error } = await supabase
+          .from('payments')
+          .update({ status: 'pagado' })
+          .eq('id', movementId);
+
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast({
