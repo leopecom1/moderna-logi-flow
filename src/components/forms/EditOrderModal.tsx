@@ -43,7 +43,7 @@ interface Order {
   delivery_departamento?: string;
   delivery_time_slot?: string;
   notes?: string;
-  status: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'cancelado';
+  status: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'cancelado' | 'pago_ingresado';
 }
 
 export const EditOrderModal = ({ open, onOpenChange, onOrderUpdated, orderId }: EditOrderModalProps) => {
@@ -150,7 +150,7 @@ export const EditOrderModal = ({ open, onOpenChange, onOrderUpdated, orderId }: 
         delivery_departamento: formData.delivery_departamento || null,
         delivery_time_slot: formData.delivery_time_slot || null,
         notes: formData.notes || null,
-        status: formData.status as 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'cancelado',
+        status: formData.status as 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'cancelado' | 'pago_ingresado',
       };
 
       const { error } = await supabase
@@ -252,6 +252,7 @@ export const EditOrderModal = ({ open, onOpenChange, onOrderUpdated, orderId }: 
                 <SelectItem value="asignado">Asignado</SelectItem>
                 <SelectItem value="en_ruta">En Ruta</SelectItem>
                 <SelectItem value="entregado">Entregado</SelectItem>
+                <SelectItem value="pago_ingresado">Pago Ingresado</SelectItem>
                 <SelectItem value="cancelado">Cancelado</SelectItem>
               </SelectContent>
             </Select>

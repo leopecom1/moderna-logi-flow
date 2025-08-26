@@ -1941,6 +1941,7 @@ export type Database = {
         | "en_ruta"
         | "entregado"
         | "cancelado"
+        | "pago_ingresado"
       payment_method:
         | "efectivo"
         | "tarjeta"
@@ -2106,6 +2107,7 @@ export const Constants = {
         "en_ruta",
         "entregado",
         "cancelado",
+        "pago_ingresado",
       ],
       payment_method: [
         "efectivo",

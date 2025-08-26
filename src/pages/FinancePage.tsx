@@ -200,7 +200,7 @@ const FinancePage = () => {
         // This is an order, update the order status
         const { error } = await supabase
           .from('orders')
-          .update({ status: 'pago_ingresado' })
+          .update({ status: 'pago_ingresado' as any })
           .eq('id', movementId);
 
         if (error) throw error;
@@ -289,12 +289,21 @@ const FinancePage = () => {
       confirmado: "default",
       pendiente: "secondary",
       pagado: "default",
+      pago_ingresado: "default",
       cancelado: "destructive"
+    };
+
+    const labels: Record<string, string> = {
+      pendiente: "Pendiente",
+      confirmado: "Confirmado", 
+      pagado: "Pagado",
+      pago_ingresado: "Pago Ingresado",
+      cancelado: "Cancelado"
     };
 
     return (
       <Badge variant={variants[status] || "outline"}>
-        {status}
+        {labels[status] || status}
       </Badge>
     );
   };
@@ -449,6 +458,7 @@ const FinancePage = () => {
                       <SelectItem value="pendiente">Pendiente</SelectItem>
                       <SelectItem value="confirmado">Confirmado</SelectItem>
                       <SelectItem value="pagado">Pagado</SelectItem>
+                      <SelectItem value="pago_ingresado">Pago Ingresado</SelectItem>
                       <SelectItem value="cancelado">Cancelado</SelectItem>
                     </SelectContent>
                   </Select>
