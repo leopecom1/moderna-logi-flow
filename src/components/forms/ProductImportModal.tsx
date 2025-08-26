@@ -23,39 +23,39 @@ interface ImportResult {
 }
 
 interface ProductRow {
-  descripcion: string;
-  anos_garantia?: number;
-  meses_garantia?: number;
+  nombre: string;
+  lista_general: number;
+  lista_credito: number;
+  garantia_anos: number;
+  garantia_meses: number;
+  codigo_proveedor: string;
   costo: number;
-  precio_lista_1: number;
-  precio_lista_2?: number;
   categoria?: string;
   marca?: string;
-  codigo_proveedor?: string;
 }
 
 const SAMPLE_DATA: ProductRow[] = [
   {
-    descripcion: 'Smartphone Samsung Galaxy A54',
-    anos_garantia: 1,
-    meses_garantia: 6,
+    nombre: 'Smartphone Samsung Galaxy A54',
+    lista_general: 35000,
+    lista_credito: 32000,
+    garantia_anos: 1,
+    garantia_meses: 6,
+    codigo_proveedor: 'SAM-A54-128',
     costo: 25000,
-    precio_lista_1: 35000,
-    precio_lista_2: 32000,
     categoria: 'Electrónicos',
-    marca: 'Samsung',
-    codigo_proveedor: 'SAM-A54-128'
+    marca: 'Samsung'
   },
   {
-    descripcion: 'Auriculares Bluetooth Sony',
-    anos_garantia: 0,
-    meses_garantia: 6,
+    nombre: 'Auriculares Bluetooth Sony',
+    lista_general: 8500,
+    lista_credito: 7800,
+    garantia_anos: 0,
+    garantia_meses: 6,
+    codigo_proveedor: 'SONY-BT-001',
     costo: 5500,
-    precio_lista_1: 8500,
-    precio_lista_2: 7800,
     categoria: 'Electrónicos',
-    marca: 'Sony',
-    codigo_proveedor: 'SONY-BT-001'
+    marca: 'Sony'
   }
 ];
 
@@ -74,15 +74,15 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
     
     // Set column widths
     const wscols = [
-      {wch: 30}, // descripcion
-      {wch: 12}, // anos_garantia
-      {wch: 12}, // meses_garantia
+      {wch: 30}, // nombre
+      {wch: 12}, // lista_general
+      {wch: 12}, // lista_credito
+      {wch: 12}, // garantia_anos
+      {wch: 12}, // garantia_meses
+      {wch: 20}, // codigo_proveedor
       {wch: 10}, // costo
-      {wch: 12}, // precio_lista_1
-      {wch: 12}, // precio_lista_2
       {wch: 15}, // categoria
       {wch: 15}, // marca
-      {wch: 20}, // codigo_proveedor
     ];
     ws['!cols'] = wscols;
     
@@ -144,10 +144,50 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
 
     data.forEach((row, index) => {
       // Validar campos requeridos
-      if (!row.descripcion || row.descripcion.toString().trim() === '') {
+      if (!row.nombre || row.nombre.toString().trim() === '') {
         errors.push({
           row: index + 1,
-          error: 'La descripción es requerida',
+          error: 'El nombre es requerido',
+          data: row
+        });
+      }
+
+      if (!row.lista_general || isNaN(Number(row.lista_general))) {
+        errors.push({
+          row: index + 1,
+          error: 'La lista general debe ser un número válido',
+          data: row
+        });
+      }
+
+      if (!row.lista_credito || isNaN(Number(row.lista_credito))) {
+        errors.push({
+          row: index + 1,
+          error: 'La lista crédito debe ser un número válido',
+          data: row
+        });
+      }
+
+      if (row.garantia_anos === undefined || row.garantia_anos === null || isNaN(Number(row.garantia_anos))) {
+        errors.push({
+          row: index + 1,
+          error: 'Los años de garantía son requeridos y deben ser un número',
+          data: row
+        });
+      }
+
+      if (row.garantia_meses === undefined || row.garantia_meses === null || isNaN(Number(row.garantia_meses))) {
+        errors.push({
+          row: index + 1,
+          error: 'Los meses de garantía son requeridos y deben ser un número',
+          data: row
+        });
+      }
+
+      if (!row.codigo_proveedor || row.codigo_proveedor.toString().trim() === '') {
+        errors.push({
+          row: index + 1,
+          error: 'El código proveedor es requerido',
           data: row
         });
       }
@@ -156,14 +196,6 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
         errors.push({
           row: index + 1,
           error: 'El costo debe ser un número válido',
-          data: row
-        });
-      }
-
-      if (!row.precio_lista_1 || isNaN(Number(row.precio_lista_1))) {
-        errors.push({
-          row: index + 1,
-          error: 'El precio de lista 1 debe ser un número válido',
           data: row
         });
       }
@@ -177,24 +209,32 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
         });
       }
 
-      if (row.precio_lista_1 && Number(row.precio_lista_1) < 0) {
+      if (row.lista_general && Number(row.lista_general) < 0) {
         errors.push({
           row: index + 1,
-          error: 'El precio de lista 1 debe ser mayor o igual a 0',
+          error: 'La lista general debe ser mayor o igual a 0',
+          data: row
+        });
+      }
+
+      if (row.lista_credito && Number(row.lista_credito) < 0) {
+        errors.push({
+          row: index + 1,
+          error: 'La lista crédito debe ser mayor o igual a 0',
           data: row
         });
       }
 
       // Validar garantía
-      if (row.anos_garantia && (isNaN(Number(row.anos_garantia)) || Number(row.anos_garantia) < 0)) {
+      if (row.garantia_anos !== undefined && (Number(row.garantia_anos) < 0)) {
         errors.push({
           row: index + 1,
-          error: 'Los años de garantía deben ser un número mayor o igual a 0',
+          error: 'Los años de garantía deben ser mayor o igual a 0',
           data: row
         });
       }
 
-      if (row.meses_garantia && (isNaN(Number(row.meses_garantia)) || Number(row.meses_garantia) < 0 || Number(row.meses_garantia) > 11)) {
+      if (row.garantia_meses !== undefined && (Number(row.garantia_meses) < 0 || Number(row.garantia_meses) > 11)) {
         errors.push({
           row: index + 1,
           error: 'Los meses de garantía deben ser un número entre 0 y 11',
@@ -265,16 +305,16 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
 
           await supabase.from('products').insert({
             code: productCode,
-            name: row.descripcion,
-            price: Number(row.precio_lista_1),
-            price_list_1: Number(row.precio_lista_1),
-            price_list_2: Number(row.precio_lista_2) || 0,
+            name: row.nombre,
+            price: Number(row.lista_general),
+            price_list_1: Number(row.lista_general),
+            price_list_2: Number(row.lista_credito),
             cost: Number(row.costo),
             category: row.categoria || null,
             brand: row.marca || null,
-            warranty_years: Number(row.anos_garantia) || null,
-            warranty_months: Number(row.meses_garantia) || null,
-            supplier_code: row.codigo_proveedor || null,
+            warranty_years: Number(row.garantia_anos),
+            warranty_months: Number(row.garantia_meses),
+            supplier_code: row.codigo_proveedor,
             is_active: true,
             use_automatic_pricing: false,
             has_variants: false
@@ -354,15 +394,15 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
                 <div>
                   <h5 className="font-medium mb-2">Columnas requeridas (en este orden):</h5>
                   <div className="grid grid-cols-2 gap-2">
-                    <Badge variant="destructive">1. descripcion</Badge>
-                    <Badge variant="secondary">2. anos_garantia</Badge>
-                    <Badge variant="secondary">3. meses_garantia</Badge>
-                    <Badge variant="destructive">4. costo</Badge>
-                    <Badge variant="destructive">5. precio_lista_1</Badge>
-                    <Badge variant="secondary">6. precio_lista_2</Badge>
-                    <Badge variant="secondary">7. categoria</Badge>
-                    <Badge variant="secondary">8. marca</Badge>
-                    <Badge variant="secondary">9. codigo_proveedor</Badge>
+                    <Badge variant="destructive">1. nombre</Badge>
+                    <Badge variant="destructive">2. lista_general</Badge>
+                    <Badge variant="destructive">3. lista_credito</Badge>
+                    <Badge variant="destructive">4. garantia_anos</Badge>
+                    <Badge variant="destructive">5. garantia_meses</Badge>
+                    <Badge variant="destructive">6. codigo_proveedor</Badge>
+                    <Badge variant="destructive">7. costo</Badge>
+                    <Badge variant="secondary">8. categoria</Badge>
+                    <Badge variant="secondary">9. marca</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
                     Los campos en rojo son obligatorios, los campos en gris son opcionales. El código del producto se genera automáticamente.
@@ -436,23 +476,25 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
                       <table className="w-full text-sm border-collapse border border-border">
                         <thead>
                           <tr className="bg-muted">
-                            <th className="border border-border p-2 text-left">Descripción</th>
-                            <th className="border border-border p-2 text-left">Costo</th>
-                            <th className="border border-border p-2 text-left">Precio Lista 1</th>
+                            <th className="border border-border p-2 text-left">Nombre</th>
+                            <th className="border border-border p-2 text-left">Lista General</th>
+                            <th className="border border-border p-2 text-left">Lista Crédito</th>
                             <th className="border border-border p-2 text-left">Garantía</th>
-                            <th className="border border-border p-2 text-left">Categoría</th>
+                            <th className="border border-border p-2 text-left">Código Proveedor</th>
+                            <th className="border border-border p-2 text-left">Costo</th>
                           </tr>
                         </thead>
                         <tbody>
                           {parsedData.slice(0, 3).map((row, index) => (
                             <tr key={index}>
-                              <td className="border border-border p-2">{row.descripcion}</td>
-                              <td className="border border-border p-2">${row.costo}</td>
-                              <td className="border border-border p-2">${row.precio_lista_1}</td>
+                              <td className="border border-border p-2">{row.nombre}</td>
+                              <td className="border border-border p-2">${row.lista_general}</td>
+                              <td className="border border-border p-2">${row.lista_credito}</td>
                               <td className="border border-border p-2">
-                                {row.anos_garantia || 0}a {row.meses_garantia || 0}m
+                                {row.garantia_anos || 0}a {row.garantia_meses || 0}m
                               </td>
-                              <td className="border border-border p-2">{row.categoria || '-'}</td>
+                              <td className="border border-border p-2">{row.codigo_proveedor}</td>
+                              <td className="border border-border p-2">${row.costo}</td>
                             </tr>
                           ))}
                         </tbody>
