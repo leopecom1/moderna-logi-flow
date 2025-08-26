@@ -166,19 +166,23 @@ const FinancePage = () => {
         .eq('payment_method', 'transferencia')
         .order('created_at', { ascending: false });
 
+      console.log('Orders with transferencia:', orders);
+
       if (orders) {
         orders.forEach((order: any) => {
-          movements.push({
+          const movement: FinanceMovement = {
             id: order.id,
             date: format(new Date(order.created_at), 'yyyy-MM-dd'),
-            type: 'transferencia',
+            type: 'transferencia' as const,
             amount: order.total_amount,
             description: `Orden pendiente - ${order.customers?.name || 'Cliente'}`,
             customer: order.customers?.name,
             reference: order.order_number,
             status: order.status === 'pendiente' ? 'pendiente' : order.status,
             method: order.payment_method
-          });
+          };
+          console.log('Adding order movement:', movement);
+          movements.push(movement);
         });
       }
 
