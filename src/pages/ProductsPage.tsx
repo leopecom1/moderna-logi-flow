@@ -1,19 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/integrations/supabase/client";
-import { CreateProductModal } from "@/components/forms/CreateProductModal";
-import { ConfigurationModal } from "@/components/forms/ConfigurationModal";
-import { EditProductModal } from "@/components/forms/EditProductModal";
-import { PriceListsConfigModal } from "@/components/forms/PriceListsConfigModal";
-import { VariantConfigModal } from "@/components/forms/VariantConfigModal";
-import { Search, Package, TrendingUp, Grid, Table, Settings } from "lucide-react";
-import { Tables } from "@/integrations/supabase/types";
+import { Badge } from "@/components/ui/badge";
+import { Search, Grid, List, Settings, Upload, Download, Package, TrendingUp, Table } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MessageLoading } from "@/components/ui/message-loading";
+import { CreateProductModal } from "@/components/forms/CreateProductModal";
+import { EditProductModal } from "@/components/forms/EditProductModal";
+import { ConfigurationModal } from "@/components/forms/ConfigurationModal";
+import { VariantConfigModal } from "@/components/forms/VariantConfigModal";
+import { PriceListsConfigModal } from "@/components/forms/PriceListsConfigModal";
+import { ProductImportModal } from "@/components/forms/ProductImportModal";
+import { toast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 import {
   Table as TableComponent,
   TableBody,
@@ -23,14 +25,32 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-type Product = Tables<"products">;
+interface Product {
+  id: string;
+  code: string;
+  name: string;
+  price: number;
+  cost: number;
+  price_list_1: number;
+  price_list_2: number;
+  margin_percentage?: number;
+  category?: string;
+  brand?: string;
+  warranty_years?: number;
+  warranty_months?: number;
+  supplier_code?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function ProductsPage() {
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [viewMode, setViewMode] = React.useState<"cards" | "table">("cards");
-  const [showPriceListsConfig, setShowPriceListsConfig] = React.useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [showPriceListsConfig, setShowPriceListsConfig] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
 
-  const { data: products, isLoading, refetch } = useQuery({
+  const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -52,8 +72,45 @@ export default function ProductsPage() {
 
   const activeProducts = products?.filter(p => p.is_active).length || 0;
   const totalProducts = products?.length || 0;
-  const avgMargin = products?.length ? 
-    products.reduce((sum, p) => sum + (p.margin_percentage || 0), 0) / products.length : 0;
+  const avgMargin = totalProducts > 0 ? filteredProducts.reduce((sum, product) => sum + (product.margin_percentage || 0), 0) / totalProducts : 0;
+
+  const handleExportProducts = async () => {
+    try {
+      const productsData = filteredProducts.map(product => ({
+        codigo: product.code,
+        descripcion: product.name,
+        anos_garantia: product.warranty_years || 0,
+        meses_garantia: product.warranty_months || 0,
+        costo: product.cost,
+        precio_lista_1: product.price_list_1 || product.price,
+        precio_lista_2: product.price_list_2 || 0,
+        categoria: product.category || '',
+        marca: product.brand || '',
+        codigo_proveedor: product.supplier_code || '',
+        activo: product.is_active ? 'Sí' : 'No'
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(productsData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+      
+      const now = new Date();
+      const timestamp = now.toISOString().split('T')[0];
+      XLSX.writeFile(wb, `productos_${timestamp}.xlsx`);
+
+      toast({
+        title: "Exportación exitosa",
+        description: `Se exportaron ${productsData.length} productos`,
+      });
+    } catch (error) {
+      console.error('Error exporting products:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo exportar los productos",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -71,6 +128,20 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Productos</h1>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowImportModal(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Importar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportProducts}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Exportar
+          </Button>
           <VariantConfigModal />
           <Button
             variant="outline"
@@ -303,9 +374,13 @@ export default function ProductsPage() {
       )}
       
       <PriceListsConfigModal 
-        open={showPriceListsConfig}
+        open={showPriceListsConfig} 
         onOpenChange={setShowPriceListsConfig}
-        onConfigUpdated={refetch}
+      />
+      <ProductImportModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+        onImportComplete={refetch}
       />
       </div>
     </MainLayout>
