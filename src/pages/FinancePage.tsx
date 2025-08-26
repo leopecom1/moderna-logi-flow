@@ -16,6 +16,7 @@ import { es } from 'date-fns/locale';
 import { DollarSign, CreditCard, ArrowRightLeft, Building, Search, Eye, CheckCircle, Filter } from 'lucide-react';
 import { MovementDetailModal } from '@/components/forms/MovementDetailModal';
 import { CardLiquidationsPanel } from '@/components/forms/CardLiquidationsPanel';
+import { CreditCardConfirmModal } from '@/components/forms/CreditCardConfirmModal';
 
 interface FinanceMovement {
   id: string;
@@ -38,6 +39,8 @@ const FinancePage = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showCreditCardModal, setShowCreditCardModal] = useState(false);
+  const [selectedCreditCardPayment, setSelectedCreditCardPayment] = useState<FinanceMovement | null>(null);
   const queryClient = useQueryClient();
 
   const { data: movements, isLoading, refetch } = useQuery({
@@ -231,6 +234,57 @@ const FinancePage = () => {
     }
   });
 
+  const confirmCreditCardMutation = useMutation({
+    mutationFn: async ({ paymentId, liquidationDate, cardType, amount }: { 
+      paymentId: string; 
+      liquidationDate: Date; 
+      cardType: string; 
+      amount: number; 
+    }) => {
+      // First, update the payment status
+      const { error: paymentError } = await supabase
+        .from('payments')
+        .update({ 
+          status: 'pagado',
+          liquidation_date: liquidationDate.toISOString().split('T')[0],
+          card_type: cardType
+        })
+        .eq('id', paymentId);
+
+      if (paymentError) throw paymentError;
+
+      // Then, create the card liquidation record
+      const { error: liquidationError } = await supabase
+        .from('card_liquidations')
+        .insert({
+          payment_id: paymentId,
+          liquidation_date: liquidationDate.toISOString().split('T')[0],
+          amount: amount,
+          card_type: cardType,
+          status: 'pendiente'
+        });
+
+      if (liquidationError) throw liquidationError;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Pago con tarjeta confirmado",
+        description: "Se ha registrado la liquidación de la tarjeta"
+      });
+      queryClient.invalidateQueries({ queryKey: ['finance-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['card-liquidations'] });
+      setShowCreditCardModal(false);
+      setSelectedCreditCardPayment(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "No se pudo confirmar el pago con tarjeta",
+        variant: "destructive"
+      });
+    }
+  });
+
   const filteredMovements = movements?.filter(movement => {
     const matchesSearch = movement.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       movement.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -314,7 +368,27 @@ const FinancePage = () => {
   };
 
   const handleConfirmTransfer = (movementId: string) => {
-    confirmTransferMutation.mutate(movementId);
+    const movement = movements?.find(m => m.id === movementId);
+    
+    // Check if this is a credit card payment
+    if (movement?.type === 'tarjeta_credito') {
+      setSelectedCreditCardPayment(movement);
+      setShowCreditCardModal(true);
+      setShowDetailModal(false);
+    } else {
+      confirmTransferMutation.mutate(movementId);
+    }
+  };
+
+  const handleConfirmCreditCard = (data: { liquidationDate: Date; cardType: string }) => {
+    if (!selectedCreditCardPayment) return;
+    
+    confirmCreditCardMutation.mutate({
+      paymentId: selectedCreditCardPayment.id,
+      liquidationDate: data.liquidationDate,
+      cardType: data.cardType,
+      amount: selectedCreditCardPayment.amount
+    });
   };
 
   const formatCurrency = (amount: number) => {
@@ -533,13 +607,22 @@ const FinancePage = () => {
                                 >
                                   <Eye className="h-3 w-3" />
                                 </Button>
-                                {movement.type === 'transferencia' && movement.status === 'pendiente' && (
+                                {(movement.type === 'transferencia' && movement.status === 'pendiente') && (
                                   <Button
                                     size="sm"
                                     onClick={() => handleConfirmTransfer(movement.id)}
                                     disabled={confirmTransferMutation.isPending}
                                   >
                                     <CheckCircle className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                {(movement.type === 'tarjeta_credito' && movement.status === 'pendiente') && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleConfirmTransfer(movement.id)}
+                                    disabled={confirmCreditCardMutation.isPending}
+                                  >
+                                    <CreditCard className="h-3 w-3" />
                                   </Button>
                                 )}
                               </div>
@@ -565,6 +648,18 @@ const FinancePage = () => {
           onClose={() => setShowDetailModal(false)}
           movement={selectedMovement}
           onConfirmTransfer={handleConfirmTransfer}
+        />
+
+        {/* Credit Card Confirm Modal */}
+        <CreditCardConfirmModal
+          isOpen={showCreditCardModal}
+          onClose={() => {
+            setShowCreditCardModal(false);
+            setSelectedCreditCardPayment(null);
+          }}
+          onConfirm={handleConfirmCreditCard}
+          amount={selectedCreditCardPayment?.amount || 0}
+          isLoading={confirmCreditCardMutation.isPending}
         />
       </div>
     </MainLayout>
