@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Settings, Calendar, DollarSign, Receipt, Send } from 'lucide-react';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { CreateCashRegisterModal } from '@/components/forms/CreateCashRegisterModal';
 import { DailyCashClosureModal } from '@/components/forms/DailyCashClosureModal';
 import { PettyCashExpenseModal } from '@/components/forms/PettyCashExpenseModal';
@@ -176,7 +177,8 @@ export default function CashManagementPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <MainLayout>
+      <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gestión de Cajas</h1>
@@ -451,6 +453,7 @@ export default function CashManagementPage() {
         open={showConfigModal} 
         onOpenChange={setShowConfigModal}
       />
-    </div>
+      </div>
+    </MainLayout>
   );
 }

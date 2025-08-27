@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { KPIGrid, RealtimeActivityFeed } from '@/components/dashboard/DashboardMetrics';
 import { MessageLoading } from '@/components/ui/message-loading';
+import { CashClosureAlert } from '@/components/alerts/CashClosureAlert';
 import { 
   Package, 
   Truck, 
@@ -246,6 +247,7 @@ export default function Dashboard() {
 
   const getGerenciaDashboard = () => (
     <div className="space-y-6">
+      <CashClosureAlert />
       <div className="flex items-center justify-between animate-element animate-delay-100">
         <div>
           <h1 className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight">Dashboard Gerencia</h1>
