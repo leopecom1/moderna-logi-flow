@@ -235,7 +235,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         price_list_1: values.price_list_1,
         price_list_2: values.price_list_2,
         cost: values.cost,
-        category: finalCategory === "none" ? null : finalCategory || null,
+        category_id: finalCategory === "none" ? null : finalCategory || null,
         brand: values.brand === "none" ? null : values.brand || null,
         warranty_years: values.warranty_years || null,
         warranty_months: values.warranty_months || null,
@@ -524,14 +524,14 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         <SelectContent>
                           {!createNewCategory && categories?.grouped?.map((category) => (
                             <React.Fragment key={category.id}>
-                              <SelectItem value={category.name}>
-                                {category.name}
+                            <SelectItem value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                            {category.subcategories?.map((sub) => (
+                              <SelectItem key={sub.id} value={sub.id} className="pl-6">
+                                └ {sub.name}
                               </SelectItem>
-                              {category.subcategories?.map((sub) => (
-                                <SelectItem key={sub.id} value={sub.name} className="pl-6">
-                                  └ {sub.name}
-                                </SelectItem>
-                              ))}
+                            ))}
                             </React.Fragment>
                           ))}
                         </SelectContent>

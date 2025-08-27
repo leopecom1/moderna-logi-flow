@@ -34,7 +34,7 @@ interface Product {
   price_list_1: number;
   price_list_2: number;
   margin_percentage?: number;
-  category?: string;
+  category_id?: string;
   brand?: string;
   warranty_years?: number;
   warranty_months?: number;
@@ -42,6 +42,10 @@ interface Product {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  categories?: {
+    id: string;
+    name: string;
+  };
 }
 
 export default function ProductsPage() {
@@ -55,7 +59,10 @@ export default function ProductsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(`
+          *,
+          categories(id, name)
+        `)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -66,7 +73,7 @@ export default function ProductsPage() {
   const filteredProducts = products?.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.brand?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
@@ -84,7 +91,7 @@ export default function ProductsPage() {
         costo: product.cost,
         precio_lista_1: product.price_list_1 || product.price,
         precio_lista_2: product.price_list_2 || 0,
-        categoria: product.category || '',
+        categoria: product.categories?.name || '',
         marca: product.brand || '',
         codigo_proveedor: product.supplier_code || '',
         activo: product.is_active ? 'Sí' : 'No'
@@ -245,11 +252,11 @@ export default function ProductsPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                {(product.category || product.brand) && (
+                {(product.categories?.name || product.brand) && (
                   <div className="flex flex-wrap gap-2">
-                    {product.category && (
+                    {product.categories?.name && (
                       <Badge variant="outline" className="text-xs">
-                        {product.category}
+                        {product.categories.name}
                       </Badge>
                     )}
                     {product.brand && (
@@ -312,9 +319,9 @@ export default function ProductsPage() {
                     <TableCell className="font-medium">{product.code}</TableCell>
                     <TableCell>{product.name}</TableCell>
                     <TableCell>
-                      {product.category ? (
+                      {product.categories?.name ? (
                         <Badge variant="outline" className="text-xs">
-                          {product.category}
+                          {product.categories.name}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground">-</span>

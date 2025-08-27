@@ -279,6 +279,25 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
     return newCode;
   };
 
+  const getCategoryIdByName = async (categoryName?: string): Promise<string | null> => {
+    if (!categoryName || categoryName.trim() === '') {
+      return null;
+    }
+    
+    const { data: category, error } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('name', categoryName.trim())
+      .single();
+      
+    if (error || !category) {
+      console.warn(`Category not found: ${categoryName}`);
+      return null;
+    }
+    
+    return category.id;
+  };
+
   const importData = async () => {
     if (!parsedData.length) return;
 
@@ -302,6 +321,9 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
         try {
           // Generar código automáticamente basado en la categoría
           const productCode = await generateProductCode(row.categoria);
+          
+          // Obtener ID de categoría si existe
+          const categoryId = await getCategoryIdByName(row.categoria);
 
           await supabase.from('products').insert({
             code: productCode,
@@ -310,7 +332,7 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
             price_list_1: row.lista_general ? Number(row.lista_general) : Number(row.costo),
             price_list_2: row.lista_credito ? Number(row.lista_credito) : Number(row.costo),
             cost: Number(row.costo),
-            category: row.categoria || null,
+            category_id: categoryId,
             brand: row.marca || null,
             warranty_years: row.garantia_anos ? Number(row.garantia_anos) : 0,
             warranty_months: row.garantia_meses ? Number(row.garantia_meses) : 0,

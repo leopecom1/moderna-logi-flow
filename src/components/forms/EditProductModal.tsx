@@ -62,7 +62,11 @@ interface Product {
   warranty_months?: number;
   supplier_code?: string;
   cost: number;
-  category?: string;
+  category_id?: string;
+  categories?: {
+    id: string;
+    name: string;
+  };
   brand?: string;
   is_active: boolean;
   use_automatic_pricing?: boolean;
@@ -156,7 +160,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
       price_list_1: product.price_list_1 || product.price,
       price_list_2: product.price_list_2 || 0,
       cost: product.cost,
-      category: product.category || "none",
+      category: product.categories?.id || "none",
       brand: product.brand || "none",
       warranty_years: product.warranty_years || 0,
       warranty_months: product.warranty_months || 0,
@@ -175,7 +179,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
         price_list_1: product.price_list_1 || product.price,
         price_list_2: product.price_list_2 || 0,
         cost: product.cost,
-        category: product.category || "none",
+        category: product.categories?.id || "none",
         brand: product.brand || "none",
         warranty_years: product.warranty_years || 0,
         warranty_months: product.warranty_months || 0,
@@ -221,7 +225,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
           price_list_1: values.price_list_1,
           price_list_2: values.price_list_2,
           cost: values.cost,
-        category: values.category === "none" ? null : values.category,
+        category_id: values.category === "none" ? null : values.category,
         brand: values.brand === "none" ? null : values.brand,
         warranty_years: values.warranty_years || null,
         warranty_months: values.warranty_months || null,
@@ -477,11 +481,11 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                         <SelectItem value="none">Sin categoría</SelectItem>
                         {categories?.grouped?.map((category) => (
                           <React.Fragment key={category.id}>
-                            <SelectItem value={category.name}>
+                            <SelectItem value={category.id}>
                               {category.name}
                             </SelectItem>
                             {category.subcategories?.map((sub) => (
-                              <SelectItem key={sub.id} value={sub.name} className="pl-6">
+                              <SelectItem key={sub.id} value={sub.id} className="pl-6">
                                 └ {sub.name}
                               </SelectItem>
                             ))}

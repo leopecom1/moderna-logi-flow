@@ -46,7 +46,10 @@ interface Product {
   id: string;
   name: string;
   code: string;
-  category?: string;
+  categories?: {
+    id: string;
+    name: string;
+  };
   brand?: string;
   price_list_1?: number;
   price_list_2?: number;
@@ -67,7 +70,10 @@ interface ProductWithStock {
   id: string;
   name: string;
   code: string;
-  category?: string;
+  categories?: {
+    id: string;
+    name: string;
+  };
   brand?: string;
   price_list_1?: number;
   price_list_2?: number;
@@ -123,7 +129,16 @@ export function InventoryProducts() {
       // Fetch inventory items, products, warehouses, and price config
       const [inventoryResponse, productsResponse, warehousesResponse, priceConfigResponse] = await Promise.all([
         supabase.from("inventory_items").select("*").order("created_at", { ascending: false }),
-        supabase.from("products").select("id, name, code, category, brand, price_list_1, price_list_2, cost").eq("is_active", true).order("name"),
+        supabase.from("products").select(`
+          id, 
+          name, 
+          code, 
+          categories(id, name), 
+          brand, 
+          price_list_1, 
+          price_list_2, 
+          cost
+        `).eq("is_active", true).order("name"),
         supabase.from("warehouses").select("id, name").eq("is_active", true).order("name"),
         supabase.from("price_lists_config").select("price_list_1_name, price_list_2_name").maybeSingle()
       ]);
@@ -271,7 +286,7 @@ export function InventoryProducts() {
     const matchesSearch = 
       product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.brand?.toLowerCase().includes(searchTerm.toLowerCase());
     
     if (selectedWarehouse === "all") {
@@ -454,8 +469,8 @@ export function InventoryProducts() {
                           <div>
                             <p className="font-medium">{product.name}</p>
                             <p className="text-sm text-muted-foreground">{product.code}</p>
-                            {product.category && (
-                              <p className="text-xs text-muted-foreground">{product.category}</p>
+                            {product.categories?.name && (
+                              <p className="text-xs text-muted-foreground">{product.categories.name}</p>
                             )}
                           </div>
                         </TableCell>
