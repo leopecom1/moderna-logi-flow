@@ -239,13 +239,13 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
     return errors;
   };
 
-  const generateProductCode = async (categoryName?: string): Promise<string> => {
-    if (!categoryName || categoryName === "none") {
-      return "GE001"; // Código genérico si no hay categoría
-    }
+  // Track used codes during this import session
+  const usedCodes = new Set<string>();
 
-    // Obtener las primeras 2 letras de la categoría
-    const categoryPrefix = categoryName.substring(0, 2).toUpperCase();
+  const generateProductCode = async (categoryName?: string): Promise<string> => {
+    const categoryPrefix = (!categoryName || categoryName === "none") 
+      ? "GE" 
+      : categoryName.substring(0, 2).toUpperCase();
 
     // Buscar el último código usado para esta categoría
     const { data: existingProducts, error } = await supabase
@@ -257,20 +257,26 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
 
     if (error) {
       console.error("Error fetching existing codes:", error);
-      return `${categoryPrefix}001`;
     }
 
-    if (!existingProducts || existingProducts.length === 0) {
-      return `${categoryPrefix}001`;
+    let lastNumber = 0;
+    if (existingProducts && existingProducts.length > 0) {
+      const lastCode = existingProducts[0].code;
+      const numberPart = lastCode.substring(2);
+      lastNumber = parseInt(numberPart) || 0;
     }
 
-    // Extraer el número del último código
-    const lastCode = existingProducts[0].code;
-    const numberPart = lastCode.substring(2);
-    const nextNumber = parseInt(numberPart) + 1;
-
-    // Formatear con ceros a la izquierda (3 dígitos)
-    return `${categoryPrefix}${nextNumber.toString().padStart(3, '0')}`;
+    // Generate unique code by checking both database and current session
+    let nextNumber = lastNumber + 1;
+    let newCode = `${categoryPrefix}${nextNumber.toString().padStart(3, '0')}`;
+    
+    while (usedCodes.has(newCode)) {
+      nextNumber++;
+      newCode = `${categoryPrefix}${nextNumber.toString().padStart(3, '0')}`;
+    }
+    
+    usedCodes.add(newCode);
+    return newCode;
   };
 
   const importData = async () => {
@@ -279,6 +285,7 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
     setImporting(true);
     setProgress(0);
     setResult(null);
+    usedCodes.clear(); // Reset used codes for this import session
 
     const errors = validateData(parsedData);
     const validData = parsedData.filter((_, index) => 
