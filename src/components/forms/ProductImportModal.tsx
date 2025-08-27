@@ -24,11 +24,11 @@ interface ImportResult {
 
 interface ProductRow {
   nombre: string;
-  lista_general: number;
-  lista_credito: number;
-  garantia_anos: number;
-  garantia_meses: number;
-  codigo_proveedor: string;
+  lista_general?: number;
+  lista_credito?: number;
+  garantia_anos?: number;
+  garantia_meses?: number;
+  codigo_proveedor?: string;
   costo: number;
   categoria?: string;
   marca?: string;
@@ -143,7 +143,7 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
     const errors: Array<{ row: number; error: string; data: any }> = [];
 
     data.forEach((row, index) => {
-      // Validar campos requeridos
+      // Validar campos requeridos (solo nombre y costo)
       if (!row.nombre || row.nombre.toString().trim() === '') {
         errors.push({
           row: index + 1,
@@ -152,7 +152,16 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
         });
       }
 
-      if (!row.lista_general || isNaN(Number(row.lista_general))) {
+      if (!row.costo || isNaN(Number(row.costo))) {
+        errors.push({
+          row: index + 1,
+          error: 'El costo debe ser un número válido',
+          data: row
+        });
+      }
+
+      // Validar campos opcionales solo si tienen valor
+      if (row.lista_general && isNaN(Number(row.lista_general))) {
         errors.push({
           row: index + 1,
           error: 'La lista general debe ser un número válido',
@@ -160,7 +169,7 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
         });
       }
 
-      if (!row.lista_credito || isNaN(Number(row.lista_credito))) {
+      if (row.lista_credito && isNaN(Number(row.lista_credito))) {
         errors.push({
           row: index + 1,
           error: 'La lista crédito debe ser un número válido',
@@ -168,34 +177,18 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
         });
       }
 
-      if (row.garantia_anos === undefined || row.garantia_anos === null || isNaN(Number(row.garantia_anos))) {
+      if (row.garantia_anos !== undefined && row.garantia_anos !== null && String(row.garantia_anos).trim() !== '' && isNaN(Number(row.garantia_anos))) {
         errors.push({
           row: index + 1,
-          error: 'Los años de garantía son requeridos y deben ser un número',
+          error: 'Los años de garantía deben ser un número',
           data: row
         });
       }
 
-      if (row.garantia_meses === undefined || row.garantia_meses === null || isNaN(Number(row.garantia_meses))) {
+      if (row.garantia_meses !== undefined && row.garantia_meses !== null && String(row.garantia_meses).trim() !== '' && isNaN(Number(row.garantia_meses))) {
         errors.push({
           row: index + 1,
-          error: 'Los meses de garantía son requeridos y deben ser un número',
-          data: row
-        });
-      }
-
-      if (!row.codigo_proveedor || row.codigo_proveedor.toString().trim() === '') {
-        errors.push({
-          row: index + 1,
-          error: 'El código proveedor es requerido',
-          data: row
-        });
-      }
-
-      if (!row.costo || isNaN(Number(row.costo))) {
-        errors.push({
-          row: index + 1,
-          error: 'El costo debe ser un número válido',
+          error: 'Los meses de garantía deben ser un número',
           data: row
         });
       }
@@ -306,15 +299,15 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
           await supabase.from('products').insert({
             code: productCode,
             name: row.nombre,
-            price: Number(row.lista_general),
-            price_list_1: Number(row.lista_general),
-            price_list_2: Number(row.lista_credito),
+            price: row.lista_general ? Number(row.lista_general) : Number(row.costo),
+            price_list_1: row.lista_general ? Number(row.lista_general) : Number(row.costo),
+            price_list_2: row.lista_credito ? Number(row.lista_credito) : Number(row.costo),
             cost: Number(row.costo),
             category: row.categoria || null,
             brand: row.marca || null,
-            warranty_years: Number(row.garantia_anos),
-            warranty_months: Number(row.garantia_meses),
-            supplier_code: row.codigo_proveedor,
+            warranty_years: row.garantia_anos ? Number(row.garantia_anos) : 0,
+            warranty_months: row.garantia_meses ? Number(row.garantia_meses) : 0,
+            supplier_code: row.codigo_proveedor || null,
             is_active: true,
             use_automatic_pricing: false,
             has_variants: false
@@ -395,17 +388,17 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
                   <h5 className="font-medium mb-2">Columnas requeridas (en este orden):</h5>
                   <div className="grid grid-cols-2 gap-2">
                     <Badge variant="destructive">1. nombre</Badge>
-                    <Badge variant="destructive">2. lista_general</Badge>
-                    <Badge variant="destructive">3. lista_credito</Badge>
-                    <Badge variant="destructive">4. garantia_anos</Badge>
-                    <Badge variant="destructive">5. garantia_meses</Badge>
-                    <Badge variant="destructive">6. codigo_proveedor</Badge>
+                    <Badge variant="secondary">2. lista_general</Badge>
+                    <Badge variant="secondary">3. lista_credito</Badge>
+                    <Badge variant="secondary">4. garantia_anos</Badge>
+                    <Badge variant="secondary">5. garantia_meses</Badge>
+                    <Badge variant="secondary">6. codigo_proveedor</Badge>
                     <Badge variant="destructive">7. costo</Badge>
                     <Badge variant="secondary">8. categoria</Badge>
                     <Badge variant="secondary">9. marca</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Los campos en rojo son obligatorios, los campos en gris son opcionales. El código del producto se genera automáticamente.
+                    Solo <strong>nombre</strong> y <strong>costo</strong> son obligatorios. Los demás campos son opcionales y pueden estar vacíos.
                   </p>
                 </div>
                 <Button onClick={downloadTemplate} variant="outline">
