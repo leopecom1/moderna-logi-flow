@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Grid, List, Settings, Upload, Download, Package, TrendingUp, Table } from "lucide-react";
+import { Search, Grid, List, Settings, Upload, Download, Package, TrendingUp, Table, Hash } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MessageLoading } from "@/components/ui/message-loading";
 import { CreateProductModal } from "@/components/forms/CreateProductModal";
@@ -14,6 +14,7 @@ import { ConfigurationModal } from "@/components/forms/ConfigurationModal";
 import { VariantConfigModal } from "@/components/forms/VariantConfigModal";
 import { PriceListsConfigModal } from "@/components/forms/PriceListsConfigModal";
 import { ProductImportModal } from "@/components/forms/ProductImportModal";
+import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import {
@@ -53,6 +54,7 @@ export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [showPriceListsConfig, setShowPriceListsConfig] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const navigate = useNavigate();
 
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ["products"],
@@ -135,6 +137,13 @@ export default function ProductsPage() {
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Gestión de Productos</h1>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => navigate('/references')}
+          >
+            <Hash className="mr-2 h-4 w-4" />
+            Referencias
+          </Button>
           <Button
             variant="outline"
             onClick={() => setShowImportModal(true)}

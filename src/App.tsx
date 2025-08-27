@@ -37,6 +37,7 @@ import CadeteDetailPage from "./pages/CadeteDetailPage";
 import VehiculosPage from "./pages/VehiculosPage";
 import SupplierPaymentsPage from "./pages/SupplierPaymentsPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
+import ReferencesPage from "./pages/ReferencesPage";
 import NotFound from "./pages/NotFound";
 
 // Create a simple QueryClient instance
@@ -84,7 +85,7 @@ function App() {
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/user-management" element={<UserManagementPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/references" element={<ReferencesPage />} />
             <Route path="/route-optimization" element={<RouteOptimizationPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/business" element={<BusinessManagementPage />} />

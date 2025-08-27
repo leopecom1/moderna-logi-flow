@@ -92,7 +92,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
-        .select("id, name, parent_id")
+        .select("id, name, parent_id, reference_number")
         .eq("is_active", true)
         .order("parent_id", { ascending: true, nullsFirst: true })
         .order("name");
@@ -118,7 +118,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
     queryFn: async () => {
       const { data, error } = await supabase
         .from("brands")
-        .select("id, name")
+        .select("id, name, reference_number")
         .eq("is_active", true)
         .order("name");
       
@@ -482,11 +482,11 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                         {categories?.grouped?.map((category) => (
                           <React.Fragment key={category.id}>
                             <SelectItem value={category.id}>
-                              {category.name}
+                              {category.name} ({category.reference_number})
                             </SelectItem>
                             {category.subcategories?.map((sub) => (
                               <SelectItem key={sub.id} value={sub.id} className="pl-6">
-                                └ {sub.name}
+                                └ {sub.name} ({sub.reference_number})
                               </SelectItem>
                             ))}
                           </React.Fragment>
@@ -512,10 +512,10 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">Sin marca</SelectItem>
-                        {brands?.map((brand) => (
-                          <SelectItem key={brand.id} value={brand.name}>
-                            {brand.name}
-                          </SelectItem>
+                          {brands?.map((brand) => (
+                            <SelectItem key={brand.id} value={brand.name}>
+                              {brand.name} ({brand.reference_number})
+                            </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>

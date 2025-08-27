@@ -30,8 +30,8 @@ interface ProductRow {
   garantia_meses?: number;
   codigo_proveedor?: string;
   costo: number;
-  categoria?: string;
-  marca?: string;
+  categoria?: string | number;
+  marca?: string | number;
 }
 
 const SAMPLE_DATA: ProductRow[] = [
@@ -43,8 +43,8 @@ const SAMPLE_DATA: ProductRow[] = [
     garantia_meses: 6,
     codigo_proveedor: 'SAM-A54-128',
     costo: 25000,
-    categoria: 'Electrónicos',
-    marca: 'Samsung'
+    categoria: 1, // Usar número de referencia de categoría
+    marca: 1      // Usar número de referencia de marca
   },
   {
     nombre: 'Auriculares Bluetooth Sony',
@@ -54,8 +54,8 @@ const SAMPLE_DATA: ProductRow[] = [
     garantia_meses: 6,
     codigo_proveedor: 'SONY-BT-001',
     costo: 5500,
-    categoria: 'Electrónicos',
-    marca: 'Sony'
+    categoria: 3, // O usar el nombre: 'Electrónicos'
+    marca: 2      // O usar el nombre: 'Sony'
   }
 ];
 
@@ -90,7 +90,7 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
     
     toast({
       title: "Plantilla descargada",
-      description: "Se descargó la plantilla de ejemplo con el formato correcto"
+      description: "Se descargó la plantilla de ejemplo. Usa el botón 'Referencias' para ver los números de categorías y marcas"
     });
   };
 
@@ -279,23 +279,59 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
     return newCode;
   };
 
-  const getCategoryIdByName = async (categoryName?: string): Promise<string | null> => {
-    if (!categoryName || categoryName.trim() === '') {
+  const getCategoryIdByNameOrNumber = async (categoryInput?: string | number): Promise<string | null> => {
+    if (!categoryInput || categoryInput === '') {
       return null;
     }
     
+    // Si es un número, buscar por reference_number
+    if (typeof categoryInput === 'number' || !isNaN(Number(categoryInput))) {
+      const { data: category, error } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('reference_number', Number(categoryInput))
+        .single();
+        
+      if (!error && category) {
+        return category.id;
+      }
+    }
+    
+    // Si es texto, buscar por nombre
     const { data: category, error } = await supabase
       .from('categories')
       .select('id')
-      .eq('name', categoryName.trim())
+      .eq('name', String(categoryInput).trim())
       .single();
       
     if (error || !category) {
-      console.warn(`Category not found: ${categoryName}`);
+      console.warn(`Category not found: ${categoryInput}`);
       return null;
     }
     
     return category.id;
+  };
+
+  const getBrandNameByNameOrNumber = async (brandInput?: string | number): Promise<string | null> => {
+    if (!brandInput || brandInput === '') {
+      return null;
+    }
+    
+    // Si es un número, buscar por reference_number
+    if (typeof brandInput === 'number' || !isNaN(Number(brandInput))) {
+      const { data: brand, error } = await supabase
+        .from('brands')
+        .select('name')
+        .eq('reference_number', Number(brandInput))
+        .single();
+        
+      if (!error && brand) {
+        return brand.name;
+      }
+    }
+    
+    // Si es texto, retornarlo directamente (ya es un nombre de marca)
+    return String(brandInput).trim();
   };
 
   const importData = async () => {
@@ -320,10 +356,11 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
         
         try {
           // Generar código automáticamente basado en la categoría
-          const productCode = await generateProductCode(row.categoria);
+          const productCode = await generateProductCode(String(row.categoria || ''));
           
-          // Obtener ID de categoría si existe
-          const categoryId = await getCategoryIdByName(row.categoria);
+          // Obtener ID de categoría y nombre de marca
+          const categoryId = await getCategoryIdByNameOrNumber(row.categoria);
+          const brandName = await getBrandNameByNameOrNumber(row.marca);
 
           await supabase.from('products').insert({
             code: productCode,
@@ -333,7 +370,7 @@ export function ProductImportModal({ open, onOpenChange, onImportComplete }: Pro
             price_list_2: row.lista_credito ? Number(row.lista_credito) : Number(row.costo),
             cost: Number(row.costo),
             category_id: categoryId,
-            brand: row.marca || null,
+            brand: brandName,
             warranty_years: row.garantia_anos ? Number(row.garantia_anos) : 0,
             warranty_months: row.garantia_meses ? Number(row.garantia_meses) : 0,
             supplier_code: row.codigo_proveedor || null,
