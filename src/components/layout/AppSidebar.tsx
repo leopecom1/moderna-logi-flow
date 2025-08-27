@@ -38,7 +38,8 @@ import {
   Building2,
   TrendingUp,
   Car,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Calculator
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -105,6 +106,7 @@ export const AppSidebar = () => {
       category: 'Finanzas',
       items: [
         { title: 'Panel Financiero', url: '/finance', icon: TrendingUp },
+        { title: 'Gestión de Cajas', url: '/cash-management', icon: Calculator },
         { title: 'Pagos', url: '/payments', icon: DollarSign },
         { title: 'Cobros', url: '/collections', icon: Receipt },
         { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },

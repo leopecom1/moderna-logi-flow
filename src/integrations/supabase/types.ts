@@ -64,6 +64,39 @@ export type Database = {
           },
         ]
       }
+      branch_cash_registers: {
+        Row: {
+          branch_id: string
+          created_at: string
+          current_balance: number
+          id: string
+          initial_amount: number
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_amount?: number
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_amount?: number
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           address: string | null
@@ -251,6 +284,39 @@ export type Database = {
           notes?: string | null
           payment_id?: string
           status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cash_register_config: {
+        Row: {
+          allow_send_to_central: boolean
+          branch_id: string
+          created_at: string
+          default_opening_amount: number
+          id: string
+          max_petty_cash_expense: number
+          require_manager_approval_for_send: boolean
+          updated_at: string
+        }
+        Insert: {
+          allow_send_to_central?: boolean
+          branch_id: string
+          created_at?: string
+          default_opening_amount?: number
+          id?: string
+          max_petty_cash_expense?: number
+          require_manager_approval_for_send?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allow_send_to_central?: boolean
+          branch_id?: string
+          created_at?: string
+          default_opening_amount?: number
+          id?: string
+          max_petty_cash_expense?: number
+          require_manager_approval_for_send?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -461,6 +527,75 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      daily_cash_closures: {
+        Row: {
+          amount_sent_to_central: number | null
+          card_payments: number
+          cash_register_id: string
+          closed_by: string
+          closure_date: string
+          created_at: string
+          difference: number | null
+          id: string
+          manual_cash_count: number | null
+          notes: string | null
+          opening_balance: number
+          other_payments: number
+          remaining_amount: number | null
+          sent_to_central: boolean
+          sent_to_central_at: string | null
+          sent_to_central_by: string | null
+          system_calculated_balance: number
+          total_expenses: number
+          transfer_payments: number
+          updated_at: string
+        }
+        Insert: {
+          amount_sent_to_central?: number | null
+          card_payments?: number
+          cash_register_id: string
+          closed_by: string
+          closure_date?: string
+          created_at?: string
+          difference?: number | null
+          id?: string
+          manual_cash_count?: number | null
+          notes?: string | null
+          opening_balance?: number
+          other_payments?: number
+          remaining_amount?: number | null
+          sent_to_central?: boolean
+          sent_to_central_at?: string | null
+          sent_to_central_by?: string | null
+          system_calculated_balance?: number
+          total_expenses?: number
+          transfer_payments?: number
+          updated_at?: string
+        }
+        Update: {
+          amount_sent_to_central?: number | null
+          card_payments?: number
+          cash_register_id?: string
+          closed_by?: string
+          closure_date?: string
+          created_at?: string
+          difference?: number | null
+          id?: string
+          manual_cash_count?: number | null
+          notes?: string | null
+          opening_balance?: number
+          other_payments?: number
+          remaining_amount?: number | null
+          sent_to_central?: boolean
+          sent_to_central_at?: string | null
+          sent_to_central_by?: string | null
+          system_calculated_balance?: number
+          total_expenses?: number
+          transfer_payments?: number
           updated_at?: string
         }
         Relationships: []
@@ -1116,6 +1251,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      petty_cash_expenses: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          approved_by: string | null
+          cash_register_id: string
+          category: string
+          created_at: string
+          created_by: string
+          description: string
+          expense_date: string
+          id: string
+          receipt_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          cash_register_id: string
+          category: string
+          created_at?: string
+          created_by: string
+          description: string
+          expense_date?: string
+          id?: string
+          receipt_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          cash_register_id?: string
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          receipt_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       price_lists_config: {
         Row: {
