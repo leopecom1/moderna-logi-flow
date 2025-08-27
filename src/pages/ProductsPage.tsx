@@ -298,6 +298,7 @@ export default function ProductsPage() {
                   <TableHead>Nombre</TableHead>
                   <TableHead>Categoría</TableHead>
                   <TableHead>Marca</TableHead>
+                  <TableHead>Código Proveedor</TableHead>
                   <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-right">Costo</TableHead>
                   <TableHead className="text-right">Margen</TableHead>
@@ -324,6 +325,15 @@ export default function ProductsPage() {
                         <Badge variant="outline" className="text-xs">
                           {product.brand}
                         </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {product.supplier_code ? (
+                        <span className="text-sm font-mono">
+                          {product.supplier_code}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
