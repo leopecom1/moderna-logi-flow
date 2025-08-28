@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Settings, Calendar, DollarSign, Receipt, Send } from 'lucide-react';
@@ -43,12 +44,22 @@ interface PettyCashExpense {
   created_by_name?: string;
 }
 
+interface DayMovement {
+  id: string;
+  type: 'payment' | 'collection' | 'expense';
+  amount: number;
+  payment_method: string;
+  description: string;
+  created_at: string;
+}
+
 export default function CashManagementPage() {
   const { toast } = useToast();
   const [cashRegisters, setCashRegisters] = useState<BranchCashRegister[]>([]);
   const [selectedRegister, setSelectedRegister] = useState<string>('');
   const [dailyClosures, setDailyClosures] = useState<DailyCashClosure[]>([]);
   const [expenses, setExpenses] = useState<PettyCashExpense[]>([]);
+  const [dayMovements, setDayMovements] = useState<DayMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showClosureModal, setShowClosureModal] = useState(false);
@@ -64,6 +75,7 @@ export default function CashManagementPage() {
     if (selectedRegister) {
       fetchDailyClosures();
       fetchExpenses();
+      fetchDayMovements();
     }
   }, [selectedRegister]);
 
@@ -165,6 +177,97 @@ export default function CashManagementPage() {
     } catch (error) {
       console.error('Error fetching expenses:', error);
     }
+  };
+
+  const fetchDayMovements = async () => {
+    if (!selectedRegister) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const movements: DayMovement[] = [];
+
+      // Obtener pagos del día
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from('payments')
+        .select(`
+          id,
+          amount,
+          payment_method,
+          created_at,
+          orders!inner(
+            id,
+            order_number
+          )
+        `)
+        .gte('created_at', `${today}T00:00:00`)
+        .lt('created_at', `${today}T23:59:59`)
+        .eq('status', 'pagado');
+
+      if (paymentsError) throw paymentsError;
+
+      paymentsData?.forEach(payment => {
+        movements.push({
+          id: payment.id,
+          type: 'payment',
+          amount: payment.amount,
+          payment_method: payment.payment_method,
+          description: `Pago orden ${payment.orders?.order_number}`,
+          created_at: payment.created_at
+        });
+      });
+
+      // Obtener cobranzas del día
+      const { data: collectionsData, error: collectionsError } = await supabase
+        .from('collections')
+        .select('*')
+        .eq('collection_date', today)
+        .eq('collection_status', 'confirmado');
+
+      if (collectionsError) throw collectionsError;
+
+      collectionsData?.forEach(collection => {
+        movements.push({
+          id: collection.id,
+          type: 'collection',
+          amount: collection.amount,
+          payment_method: collection.payment_method_type,
+          description: `Cobranza ${collection.receipt_number || 'Sin número'}`,
+          created_at: collection.created_at
+        });
+      });
+
+      // Obtener gastos del día
+      const { data: expensesData, error: expensesError } = await supabase
+        .from('petty_cash_expenses')
+        .select('*')
+        .eq('cash_register_id', selectedRegister)
+        .eq('expense_date', today);
+
+      if (expensesError) throw expensesError;
+
+      expensesData?.forEach(expense => {
+        movements.push({
+          id: expense.id,
+          type: 'expense',
+          amount: -expense.amount,
+          payment_method: 'efectivo',
+          description: expense.description,
+          created_at: expense.created_at
+        });
+      });
+
+      // Ordenar por fecha
+      movements.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setDayMovements(movements);
+    } catch (error) {
+      console.error('Error fetching day movements:', error);
+    }
+  };
+
+  const getPaymentMethodTotal = (method: string) => {
+    return dayMovements
+      .filter(m => m.payment_method === method)
+      .reduce((sum, m) => sum + m.amount, 0);
   };
 
   const currentRegister = cashRegisters.find(r => r.id === selectedRegister);
@@ -330,6 +433,101 @@ export default function CashManagementPage() {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Tabla de Movimientos del Día */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Movimientos del Día</CardTitle>
+                      <CardDescription>
+                        Todos los movimientos registrados hoy
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Descripción</TableHead>
+                              <TableHead>Método</TableHead>
+                              <TableHead className="text-right">Monto</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {dayMovements.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={3} className="text-center text-muted-foreground">
+                                  No hay movimientos registrados hoy
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              dayMovements.map((movement) => (
+                                <TableRow key={`${movement.type}-${movement.id}`}>
+                                  <TableCell>
+                                    <div>
+                                      <p className="font-medium">{movement.description}</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {new Date(movement.created_at).toLocaleTimeString()}
+                                      </p>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline">
+                                      {movement.payment_method}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <span className={movement.amount >= 0 ? "text-green-600" : "text-red-600"}>
+                                      {movement.amount >= 0 ? "+" : ""}${Math.abs(movement.amount).toLocaleString()}
+                                    </span>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Resumen por Medio de Pago</CardTitle>
+                      <CardDescription>
+                        Totales del día por método de pago
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {['efectivo', 'tarjeta_credito', 'tarjeta_debito', 'transferencia'].map((method) => {
+                          const total = getPaymentMethodTotal(method);
+                          const methodName = {
+                            'efectivo': 'Efectivo',
+                            'tarjeta_credito': 'Tarjeta de Crédito',
+                            'tarjeta_debito': 'Tarjeta de Débito',
+                            'transferencia': 'Transferencia'
+                          }[method] || method;
+
+                          if (total === 0) return null;
+
+                          return (
+                            <div key={method} className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
+                              <span className="font-medium">{methodName}</span>
+                              <span className={`font-bold ${total >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                ${Math.abs(total).toLocaleString()}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        {dayMovements.length === 0 && (
+                          <p className="text-center text-muted-foreground">
+                            No hay movimientos para mostrar
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent value="closures" className="space-y-4">
@@ -433,6 +631,7 @@ export default function CashManagementPage() {
             cashRegisterId={selectedRegister}
             onSuccess={() => {
               fetchExpenses();
+              fetchDayMovements();
               setShowExpenseModal(false);
             }}
           />
