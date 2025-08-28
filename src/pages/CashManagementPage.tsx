@@ -734,6 +734,7 @@ export default function CashManagementPage() {
               manual_cash_count: cashBalance,
               system_calculated_balance: cashBalance
             }}
+            cashBalance={cashBalance}
             onSuccess={() => {
               fetchDailyClosures();
               fetchCashRegisters();

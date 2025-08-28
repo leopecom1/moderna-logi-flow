@@ -14,10 +14,11 @@ interface SendToCentralModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   closure: any;
+  cashBalance: number; // Saldo de efectivo disponible
   onSuccess: () => void;
 }
 
-export function SendToCentralModal({ open, onOpenChange, closure, onSuccess }: SendToCentralModalProps) {
+export function SendToCentralModal({ open, onOpenChange, closure, cashBalance, onSuccess }: SendToCentralModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -25,7 +26,7 @@ export function SendToCentralModal({ open, onOpenChange, closure, onSuccess }: S
     notes: ''
   });
 
-  const availableAmount = closure ? (closure.manual_cash_count || closure.system_calculated_balance) : 0;
+  const availableAmount = cashBalance; // Usar solo el saldo de efectivo
   const suggestedAmount = Math.max(0, availableAmount - 1000); // Sugerir dejar 1000 en caja
   
   // Verificar si el monto ingresado incluye el saldo inicial
