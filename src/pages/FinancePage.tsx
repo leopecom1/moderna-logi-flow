@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { DollarSign, CreditCard, ArrowRightLeft, Building, Search, Eye, CheckCircle, Filter } from 'lucide-react';
+import { DollarSign, CreditCard, ArrowRightLeft, Building, Search, Eye, CheckCircle, Filter, Vault } from 'lucide-react';
 import { MovementDetailModal } from '@/components/forms/MovementDetailModal';
 import { CardLiquidationsPanel } from '@/components/forms/CardLiquidationsPanel';
 import { CreditCardConfirmModal } from '@/components/forms/CreditCardConfirmModal';
@@ -193,6 +193,68 @@ const FinancePage = () => {
       return movements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }
   });
+
+  // Query for central cash movements (envíos a central)
+  const { data: centralCashMovements, isLoading: isLoadingCentral } = useQuery({
+    queryKey: ['central-cash-movements'],
+    queryFn: async () => {
+      const { data: closures } = await supabase
+        .from('daily_cash_closures')
+        .select(`
+          id,
+          closure_date,
+          amount_sent_to_central,
+          sent_to_central_at,
+          sent_to_central_by,
+          cash_register_id
+        `)
+        .eq('sent_to_central', true)
+        .not('amount_sent_to_central', 'is', null)
+        .order('sent_to_central_at', { ascending: false });
+
+      if (!closures) return [];
+
+      // Get cash register and branch information separately
+      const cashRegisterIds = [...new Set(closures.map(c => c.cash_register_id))];
+      
+      const { data: cashRegisters } = await supabase
+        .from('branch_cash_registers')
+        .select(`
+          id,
+          name,
+          branch_id
+        `)
+        .in('id', cashRegisterIds);
+
+      // Get branch information  
+      const branchIds = [...new Set(cashRegisters?.map(cr => cr.branch_id) || [])];
+      const { data: branches } = await supabase
+        .from('branches')
+        .select(`
+          id,
+          name
+        `)
+        .in('id', branchIds);
+
+      // Combine the data
+      return closures.map(closure => {
+        const cashRegister = cashRegisters?.find(cr => cr.id === closure.cash_register_id);
+        const branch = branches?.find(b => b.id === cashRegister?.branch_id);
+        
+        return {
+          ...closure,
+          cash_register: cashRegister ? {
+            ...cashRegister,
+            branch: branch
+          } : null
+        };
+      });
+    }
+  });
+
+  // Calculate total central cash amount
+  const totalCentralCash = centralCashMovements?.reduce((sum, movement) => 
+    sum + (movement.amount_sent_to_central || 0), 0) || 0;
 
   const confirmTransferMutation = useMutation({
     mutationFn: async (movementId: string) => {
@@ -432,6 +494,7 @@ const FinancePage = () => {
           <TabsList>
             <TabsTrigger value="movements">Movimientos</TabsTrigger>
             <TabsTrigger value="liquidations">Liquidaciones Tarjetas</TabsTrigger>
+            <TabsTrigger value="central-cash">Caja Central</TabsTrigger>
           </TabsList>
 
           <TabsContent value="movements" className="space-y-6">
@@ -639,6 +702,115 @@ const FinancePage = () => {
 
           <TabsContent value="liquidations">
             <CardLiquidationsPanel />
+          </TabsContent>
+
+          <TabsContent value="central-cash" className="space-y-6">
+            {/* Central Cash Summary */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Caja Central</CardTitle>
+                  <Vault className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{formatCurrency(totalCentralCash)}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Acumulado de envíos
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Movimientos</CardTitle>
+                  <ArrowRightLeft className="h-4 w-4 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{centralCashMovements?.length || 0}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Envíos realizados
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Promedio por Envío</CardTitle>
+                  <DollarSign className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {formatCurrency(centralCashMovements?.length ? totalCentralCash / centralCashMovements.length : 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Monto promedio
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Central Cash Movements Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Movimientos de Caja Central</CardTitle>
+                <CardDescription>
+                  Historial de envíos desde las cajas registradoras a caja central
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingCentral ? (
+                  <div className="flex items-center justify-center py-8">
+                    <MessageLoading />
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha de Envío</TableHead>
+                          <TableHead>Caja Registradora</TableHead>
+                          <TableHead>Sucursal</TableHead>
+                          <TableHead className="text-right">Monto Enviado</TableHead>
+                          <TableHead>Fecha de Cierre</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {centralCashMovements?.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-muted-foreground">
+                              No se encontraron movimientos de caja central
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          centralCashMovements?.map((movement) => (
+                            <TableRow key={movement.id}>
+                              <TableCell>
+                                {movement.sent_to_central_at ? 
+                                  format(new Date(movement.sent_to_central_at), 'dd/MM/yyyy HH:mm', { locale: es }) :
+                                  '-'
+                                }
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {movement.cash_register?.name || 'Caja sin nombre'}
+                              </TableCell>
+                              <TableCell>
+                                {movement.cash_register?.branch?.name || 'Sucursal sin nombre'}
+                              </TableCell>
+                              <TableCell className="text-right font-mono text-green-600">
+                                {formatCurrency(movement.amount_sent_to_central || 0)}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(movement.closure_date), 'dd/MM/yyyy', { locale: es })}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
