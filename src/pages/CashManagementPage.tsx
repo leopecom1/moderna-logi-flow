@@ -186,7 +186,35 @@ export default function CashManagementPage() {
       const today = new Date().toISOString().split('T')[0];
       const movements: DayMovement[] = [];
 
-      // Obtener pagos del día (todos los status)
+      // Obtener órdenes del día (ventas)
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          order_number,
+          total_amount,
+          payment_method,
+          status,
+          created_at
+        `)
+        .gte('created_at', `${today}T00:00:00`)
+        .lt('created_at', `${today}T23:59:59`);
+
+      if (ordersError) throw ordersError;
+
+      // Añadir órdenes a los movimientos
+      ordersData?.forEach((order: any) => {
+        movements.push({
+          id: order.id,
+          type: 'payment',
+          amount: order.total_amount,
+          payment_method: order.payment_method,
+          description: `Venta ${order.order_number} (${order.status})`,
+          created_at: order.created_at
+        });
+      });
+
+      // También obtener pagos del día (todos los status) - por si hay pagos separados
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
         .select(`
@@ -205,7 +233,8 @@ export default function CashManagementPage() {
 
       if (paymentsError) throw paymentsError;
 
-      paymentsData?.forEach(payment => {
+      // Añadir pagos a los movimientos (solo si no están duplicados con las órdenes)
+      paymentsData?.forEach((payment: any) => {
         movements.push({
           id: payment.id,
           type: 'payment',
