@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
@@ -18,7 +20,8 @@ import {
   Mail,
   FileText,
   Clock,
-  DollarSign
+  DollarSign,
+  AlertTriangle
 } from 'lucide-react';
 
 interface OrderDetail {
@@ -50,6 +53,10 @@ interface OrderDetail {
     full_name: string;
     phone?: string;
     role: string;
+  };
+  payment?: {
+    status: string;
+    payment_method: string;
   };
 }
 
@@ -96,11 +103,19 @@ export default function OrderDetailPage() {
 
       if (sellerError) throw sellerError;
 
+      // Obtenemos información del pago si existe
+      const { data: paymentData } = await supabase
+        .from('payments')
+        .select('status, payment_method')
+        .eq('order_id', orderData.id)
+        .single();
+
       // Combinamos los datos
       const combinedData = {
         ...orderData,
         customer: customerData,
-        seller: sellerData
+        seller: sellerData,
+        payment: paymentData
       };
 
       setOrder(combinedData as any);
@@ -183,6 +198,22 @@ export default function OrderDetailPage() {
     });
   };
 
+  const parseProducts = (products: any) => {
+    try {
+      if (typeof products === 'string') {
+        return JSON.parse(products);
+      }
+      return Array.isArray(products) ? products : [products];
+    } catch {
+      return [];
+    }
+  };
+
+  const isTransferNotConfirmed = () => {
+    return order?.payment_method === 'transferencia' && 
+           order?.payment?.status === 'pendiente';
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -231,29 +262,39 @@ export default function OrderDetailPage() {
 
   return (
     <MainLayout>
-      <div className="">
-        <div className="flex items-center space-x-4 mb-6">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate('/orders')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1">
-            <div className="flex items-center space-x-3">
-              <h1 className="text-2xl font-bold">{order.order_number}</h1>
-              <Badge className={getStatusColor(order.status)}>
-                {getStatusLabel(order.status)}
-              </Badge>
+        <div className="">
+          <div className="flex items-center space-x-4 mb-6">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate('/orders')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex-1">
+              <div className="flex items-center space-x-3">
+                <h1 className="text-2xl font-bold">{order.order_number}</h1>
+                <Badge className={getStatusColor(order.status)}>
+                  {getStatusLabel(order.status)}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground">Información detallada del pedido</p>
             </div>
-            <p className="text-muted-foreground">Información detallada del pedido</p>
+            <div className="text-right">
+              <p className="text-2xl font-bold">${order.total_amount}</p>
+              <p className="text-sm text-muted-foreground">{getPaymentMethodLabel(order.payment_method)}</p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold">${order.total_amount}</p>
-            <p className="text-sm text-muted-foreground">{getPaymentMethodLabel(order.payment_method)}</p>
-          </div>
-        </div>
+
+          {/* Alerta para transferencias no confirmadas */}
+          {isTransferNotConfirmed() && (
+            <Alert className="mb-6 border-orange-200 bg-orange-50">
+              <AlertTriangle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800">
+                <strong>Atención:</strong> El pago por transferencia aún no ha sido confirmado por el cliente.
+              </AlertDescription>
+            </Alert>
+          )}
 
         <div className="grid gap-6">
           {/* Información del Pedido */}
@@ -297,9 +338,41 @@ export default function OrderDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-muted p-4 rounded-md">
-                <p className="text-sm whitespace-pre-wrap">{typeof order.products === 'string' ? order.products : JSON.stringify(order.products, null, 2)}</p>
-              </div>
+              {parseProducts(order.products).length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Producto</TableHead>
+                      <TableHead>Cantidad</TableHead>
+                      <TableHead>Precio Unitario</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {parseProducts(order.products).map((product: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{product.product_name || product.name || 'Producto sin nombre'}</p>
+                            {product.warehouse_name && (
+                              <p className="text-sm text-muted-foreground">Depósito: {product.warehouse_name}</p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{product.quantity || 1}</TableCell>
+                        <TableCell>${product.unit_price || 0}</TableCell>
+                        <TableCell className="text-right">
+                          ${((product.quantity || 1) * (product.unit_price || 0)).toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="bg-muted p-4 rounded-md">
+                  <p className="text-sm text-muted-foreground">No hay productos registrados</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
