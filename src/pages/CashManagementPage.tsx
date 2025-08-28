@@ -504,44 +504,56 @@ export default function CashManagementPage() {
                     <CardContent>
                       <div className="space-y-4">
                         <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Descripción</TableHead>
-                              <TableHead>Método</TableHead>
-                              <TableHead className="text-right">Monto</TableHead>
-                            </TableRow>
-                          </TableHeader>
+                           <TableHeader>
+                             <TableRow>
+                               <TableHead>Descripción</TableHead>
+                               <TableHead>Tipo</TableHead>
+                               <TableHead>Método</TableHead>
+                               <TableHead className="text-right">Monto</TableHead>
+                             </TableRow>
+                           </TableHeader>
                           <TableBody>
-                            {dayMovements.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={3} className="text-center text-muted-foreground">
-                                  No hay movimientos registrados hoy
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              dayMovements.map((movement) => (
-                                <TableRow key={`${movement.type}-${movement.id}`}>
-                                  <TableCell>
-                                    <div>
-                                      <p className="font-medium">{movement.description}</p>
-                                      <p className="text-sm text-muted-foreground">
-                                        {new Date(movement.created_at).toLocaleTimeString()}
-                                      </p>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant="outline">
-                                      {movement.payment_method}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <span className={movement.amount >= 0 ? "text-green-600" : "text-red-600"}>
-                                      {movement.amount >= 0 ? "+" : ""}${Math.abs(movement.amount).toLocaleString()}
-                                    </span>
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            )}
+                             {dayMovements.length === 0 ? (
+                               <TableRow>
+                                 <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                   No hay movimientos registrados hoy
+                                 </TableCell>
+                               </TableRow>
+                             ) : (
+                               dayMovements.map((movement) => (
+                                 <TableRow key={`${movement.type}-${movement.id}`}>
+                                   <TableCell>
+                                     <div>
+                                       <p className="font-medium">{movement.description}</p>
+                                       <p className="text-sm text-muted-foreground">
+                                         {new Date(movement.created_at).toLocaleTimeString()}
+                                       </p>
+                                     </div>
+                                   </TableCell>
+                                   <TableCell>
+                                     <Badge variant={
+                                       movement.type === 'payment' ? 'default' : 
+                                       movement.type === 'expense' ? 'destructive' : 
+                                       'secondary'
+                                     }>
+                                       {movement.type === 'payment' ? 'Venta' : 
+                                        movement.type === 'expense' ? 'Gasto' : 
+                                        'Cobro'}
+                                     </Badge>
+                                   </TableCell>
+                                   <TableCell>
+                                     <Badge variant="outline">
+                                       {movement.payment_method}
+                                     </Badge>
+                                   </TableCell>
+                                   <TableCell className="text-right">
+                                     <span className={movement.amount >= 0 ? "text-green-600" : "text-red-600"}>
+                                       {movement.amount >= 0 ? "+" : ""}${Math.abs(movement.amount).toLocaleString()}
+                                     </span>
+                                   </TableCell>
+                                 </TableRow>
+                               ))
+                             )}
                           </TableBody>
                         </Table>
                       </div>
@@ -697,9 +709,15 @@ export default function CashManagementPage() {
           <SendToCentralModal 
             open={showSendToCentralModal} 
             onOpenChange={setShowSendToCentralModal}
-            closure={todaysClosure}
+            closure={todaysClosure || {
+              id: 'temp',
+              manual_cash_count: currentBalance,
+              system_calculated_balance: currentBalance
+            }}
             onSuccess={() => {
               fetchDailyClosures();
+              fetchCashRegisters();
+              fetchDayMovements();
               setShowSendToCentralModal(false);
             }}
           />
