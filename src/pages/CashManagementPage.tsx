@@ -299,10 +299,32 @@ export default function CashManagementPage() {
       .reduce((sum, m) => sum + m.amount, 0);
   };
 
+  // Calcular saldo actual dinámicamente
+  const calculateCurrentBalance = () => {
+    if (!currentRegister) return 0;
+    
+    const totalSales = dayMovements
+      .filter(m => m.type === 'payment' && m.amount > 0)
+      .reduce((sum, m) => sum + m.amount, 0);
+    
+    const totalExpenses = dayMovements
+      .filter(m => m.type === 'expense')
+      .reduce((sum, m) => sum + Math.abs(m.amount), 0);
+    
+    const totalCollections = dayMovements
+      .filter(m => m.type === 'collection')
+      .reduce((sum, m) => sum + m.amount, 0);
+    
+    return currentRegister.initial_amount + totalSales + totalCollections - totalExpenses;
+  };
+
   const currentRegister = cashRegisters.find(r => r.id === selectedRegister);
   const todaysClosure = dailyClosures.find(c => 
     new Date(c.closure_date).toDateString() === new Date().toDateString()
   );
+  
+  const currentBalance = calculateCurrentBalance();
+  const canSendToCentral = currentRegister && currentBalance > currentRegister.initial_amount;
 
   if (loading) {
     return <div className="p-6">Cargando...</div>;
@@ -370,7 +392,7 @@ export default function CashManagementPage() {
                         </Badge>
                       </div>
                       <p className="text-2xl font-bold text-primary">
-                        ${register.current_balance.toLocaleString()}
+                        ${selectedRegister === register.id ? currentBalance.toLocaleString() : register.current_balance.toLocaleString()}
                       </p>
                       <p className="text-sm text-muted-foreground">Saldo actual</p>
                     </CardContent>
@@ -401,7 +423,7 @@ export default function CashManagementPage() {
                     onClick={() => setShowSendToCentralModal(true)} 
                     variant="outline" 
                     size="sm"
-                    disabled={!todaysClosure || todaysClosure.sent_to_central}
+                    disabled={!canSendToCentral}
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Enviar a Central
@@ -438,7 +460,14 @@ export default function CashManagementPage() {
                     </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">
-                        ${currentRegister.current_balance.toLocaleString()}
+                        ${currentBalance.toLocaleString()}
+                      </div>
+                      <div className="text-sm text-muted-foreground mt-1">
+                        {currentBalance > currentRegister.initial_amount && (
+                          <span className="text-green-600">
+                            +${(currentBalance - currentRegister.initial_amount).toLocaleString()} disponible para enviar
+                          </span>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
