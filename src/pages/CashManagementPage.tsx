@@ -186,13 +186,14 @@ export default function CashManagementPage() {
       const today = new Date().toISOString().split('T')[0];
       const movements: DayMovement[] = [];
 
-      // Obtener pagos del día
+      // Obtener pagos del día (todos los status)
       const { data: paymentsData, error: paymentsError } = await supabase
         .from('payments')
         .select(`
           id,
           amount,
           payment_method,
+          status,
           created_at,
           orders!inner(
             id,
@@ -200,8 +201,7 @@ export default function CashManagementPage() {
           )
         `)
         .gte('created_at', `${today}T00:00:00`)
-        .lt('created_at', `${today}T23:59:59`)
-        .eq('status', 'pagado');
+        .lt('created_at', `${today}T23:59:59`);
 
       if (paymentsError) throw paymentsError;
 
@@ -211,7 +211,7 @@ export default function CashManagementPage() {
           type: 'payment',
           amount: payment.amount,
           payment_method: payment.payment_method,
-          description: `Pago orden ${payment.orders?.order_number}`,
+          description: `Pago orden ${payment.orders?.order_number} (${payment.status})`,
           created_at: payment.created_at
         });
       });
