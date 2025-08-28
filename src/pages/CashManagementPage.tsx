@@ -318,13 +318,33 @@ export default function CashManagementPage() {
     return currentRegister.initial_amount + totalSales + totalCollections - totalExpenses;
   };
 
+  // Calcular saldo de efectivo para envío a central
+  const calculateCashBalance = () => {
+    if (!currentRegister) return 0;
+    
+    const totalCashSales = dayMovements
+      .filter(m => m.type === 'payment' && m.amount > 0 && m.payment_method === 'efectivo')
+      .reduce((sum, m) => sum + m.amount, 0);
+    
+    const totalExpenses = dayMovements
+      .filter(m => m.type === 'expense')
+      .reduce((sum, m) => sum + Math.abs(m.amount), 0);
+    
+    const totalCashCollections = dayMovements
+      .filter(m => m.type === 'collection' && m.payment_method === 'efectivo')
+      .reduce((sum, m) => sum + m.amount, 0);
+    
+    return currentRegister.initial_amount + totalCashSales + totalCashCollections - totalExpenses;
+  };
+
   const currentRegister = cashRegisters.find(r => r.id === selectedRegister);
   const todaysClosure = dailyClosures.find(c => 
     new Date(c.closure_date).toDateString() === new Date().toDateString()
   );
   
   const currentBalance = calculateCurrentBalance();
-  const canSendToCentral = currentRegister && currentBalance > currentRegister.initial_amount;
+  const cashBalance = calculateCashBalance();
+  const canSendToCentral = currentRegister && cashBalance > currentRegister.initial_amount;
 
   if (loading) {
     return <div className="p-6">Cargando...</div>;
@@ -463,9 +483,9 @@ export default function CashManagementPage() {
                         ${currentBalance.toLocaleString()}
                       </div>
                       <div className="text-sm text-muted-foreground mt-1">
-                        {currentBalance > currentRegister.initial_amount && (
+                        {cashBalance > currentRegister.initial_amount && (
                           <span className="text-green-600">
-                            +${(currentBalance - currentRegister.initial_amount).toLocaleString()} disponible para enviar
+                            +${(cashBalance - currentRegister.initial_amount).toLocaleString()} en efectivo disponible para enviar
                           </span>
                         )}
                       </div>
@@ -711,8 +731,8 @@ export default function CashManagementPage() {
             onOpenChange={setShowSendToCentralModal}
             closure={todaysClosure || {
               id: 'temp',
-              manual_cash_count: currentBalance,
-              system_calculated_balance: currentBalance
+              manual_cash_count: cashBalance,
+              system_calculated_balance: cashBalance
             }}
             onSuccess={() => {
               fetchDailyClosures();
