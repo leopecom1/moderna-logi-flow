@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { AlertTriangle } from 'lucide-react';
 
 interface SendToCentralModalProps {
   open: boolean;
@@ -25,6 +27,14 @@ export function SendToCentralModal({ open, onOpenChange, closure, onSuccess }: S
 
   const availableAmount = closure ? (closure.manual_cash_count || closure.system_calculated_balance) : 0;
   const suggestedAmount = Math.max(0, availableAmount - 1000); // Sugerir dejar 1000 en caja
+  
+  // Verificar si el monto ingresado incluye el saldo inicial
+  const enteredAmount = parseFloat(formData.amount_to_send) || 0;
+  const isUsingInitialBalance = enteredAmount > suggestedAmount;
+  
+  const handleSendAll = () => {
+    setFormData({ ...formData, amount_to_send: suggestedAmount.toString() });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +139,31 @@ export function SendToCentralModal({ open, onOpenChange, closure, onSuccess }: S
               Máximo: ${availableAmount.toLocaleString()}
             </p>
           </div>
+
+          {/* Botón Enviar Todo */}
+          <div className="flex justify-center">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleSendAll}
+              className="text-sm"
+            >
+              Enviar Todo (${suggestedAmount.toLocaleString()})
+            </Button>
+          </div>
+
+          {/* Advertencia si está usando saldo inicial */}
+          {isUsingInitialBalance && enteredAmount > 0 && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                ⚠️ Advertencia: Está enviando ${enteredAmount.toLocaleString()}, lo que incluye parte del saldo inicial. 
+                Quedará con menos saldo del predeterminado por gerencia ($1,000). 
+                Se recomienda enviar solo ${suggestedAmount.toLocaleString()}.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Observaciones</Label>
