@@ -729,11 +729,7 @@ export default function CashManagementPage() {
           <SendToCentralModal 
             open={showSendToCentralModal} 
             onOpenChange={setShowSendToCentralModal}
-            closure={todaysClosure || {
-              id: 'temp',
-              manual_cash_count: cashBalance,
-              system_calculated_balance: cashBalance
-            }}
+            closure={todaysClosure}
             cashBalance={cashBalance}
             onSuccess={() => {
               fetchDailyClosures();

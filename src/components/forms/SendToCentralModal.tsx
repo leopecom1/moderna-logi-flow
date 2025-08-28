@@ -39,7 +39,18 @@ export function SendToCentralModal({ open, onOpenChange, closure, cashBalance, o
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.amount_to_send || !closure) {
+    
+    // Verificar que existe un cierre válido
+    if (!closure || !closure.id) {
+      toast({
+        title: "Error",
+        description: "Debe realizar el cierre diario antes de enviar dinero a caja central",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.amount_to_send) {
       toast({
         title: "Error",
         description: "El monto a enviar es obligatorio",
@@ -97,7 +108,34 @@ export function SendToCentralModal({ open, onOpenChange, closure, cashBalance, o
     }
   };
 
-  if (!closure) return null;
+  // Si no hay cierre válido, mostrar mensaje informativo
+  if (!closure || !closure.id) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Enviar a Caja Central</DialogTitle>
+            <DialogDescription>
+              No se puede enviar dinero a caja central
+            </DialogDescription>
+          </DialogHeader>
+          
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Debe realizar el cierre diario antes de poder enviar dinero a caja central.
+            </AlertDescription>
+          </Alert>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
