@@ -104,11 +104,23 @@ export function LogisticsModule() {
     try {
       setProcessingId(movement.id);
       
+      // Primero obtener el inventory_item_id correcto
+      const { data: inventoryItem, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .select('id')
+        .eq('product_id', movement.product_id)
+        .eq('warehouse_id', movement.source_warehouse_id)
+        .single();
+
+      if (inventoryError || !inventoryItem) {
+        throw new Error('No se encontró el item de inventario');
+      }
+
       // Crear movimiento interno en la base de datos
       const { error: movementError } = await supabase
         .from('inventory_movements')
         .insert({
-          inventory_item_id: null, // Se manejará después
+          inventory_item_id: inventoryItem.id,
           movement_type: 'movimiento_interno',
           quantity: movement.quantity,
           unit_cost: 0,
@@ -149,11 +161,23 @@ export function LogisticsModule() {
     try {
       setProcessingId(movement.id);
       
+      // Obtener el inventory_item_id del producto
+      const { data: inventoryItem, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .select('id')
+        .eq('product_id', movement.product_id)
+        .eq('warehouse_id', movement.source_warehouse_id)
+        .maybeSingle();
+
+      if (inventoryError) {
+        throw new Error('Error al verificar el inventario');
+      }
+
       // Crear movimiento de entrega
       const { error: movementError } = await supabase
         .from('inventory_movements')
         .insert({
-          inventory_item_id: null, // Se manejará después
+          inventory_item_id: inventoryItem?.id || null,
           movement_type: 'movimiento_interno',
           quantity: movement.quantity,
           unit_cost: 0,
