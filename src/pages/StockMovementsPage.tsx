@@ -30,6 +30,9 @@ interface StockMovement {
   warehouse_id?: string;
   from_warehouse_name?: string;
   to_warehouse_name?: string;
+  from_warehouse_id?: string;
+  to_warehouse_id?: string;
+  status?: string;
 }
 
 interface MovementSummary {
@@ -114,6 +117,7 @@ export default function StockMovementsPage() {
         warehouse_id: (movement as any).inventory_items?.warehouse_id,
         from_warehouse_name: (movement as any).from_warehouse?.name,
         to_warehouse_name: (movement as any).to_warehouse?.name,
+        status: movement.status || 'pendiente',
       }));
 
       // Calculate summary
@@ -340,6 +344,49 @@ interface MovementsTableProps {
 }
 
 function MovementsTable({ movements }: MovementsTableProps) {
+  const [processingIds, setProcessingIds] = useState<string[]>([]);
+
+  const handleUpdateStatus = async (movementId: string, newStatus: string) => {
+    if (processingIds.includes(movementId)) return;
+    
+    setProcessingIds(prev => [...prev, movementId]);
+    
+    try {
+      const { error } = await supabase
+        .from("inventory_movements")
+        .update({ status: newStatus })
+        .eq("id", movementId);
+
+      if (error) throw error;
+
+      // Actualizar el movimiento en el estado local
+      window.location.reload();
+    } catch (error) {
+      console.error("Error updating movement status:", error);
+    } finally {
+      setProcessingIds(prev => prev.filter(id => id !== movementId));
+    }
+  };
+
+  const getStatusBadge = (status?: string) => {
+    switch (status) {
+      case "pendiente": return "secondary";
+      case "en_transito": return "default";
+      case "entregado": return "default";
+      case "completado": return "default";
+      default: return "secondary";
+    }
+  };
+
+  const getStatusText = (status?: string) => {
+    switch (status) {
+      case "pendiente": return "Pendiente";
+      case "en_transito": return "En Tránsito";
+      case "entregado": return "Entregado";
+      case "completado": return "Completado";
+      default: return "Pendiente";
+    }
+  };
   const getMovementTypeText = (type: string) => {
     switch (type) {
       case "entrada": return "Entrada";
@@ -383,8 +430,10 @@ function MovementsTable({ movements }: MovementsTableProps) {
                 <TableHead>Cantidad</TableHead>
                 <TableHead>Costo Unit.</TableHead>
                 <TableHead>Valor Total</TableHead>
-                <TableHead>Depósito</TableHead>
+                <TableHead>Depósito/Ruta</TableHead>
+                <TableHead>Estado</TableHead>
                 <TableHead>Referencia</TableHead>
+                <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -410,17 +459,51 @@ function MovementsTable({ movements }: MovementsTableProps) {
                   <TableCell>${movement.unit_cost}</TableCell>
                   <TableCell className="font-medium">${movement.total_value}</TableCell>
                   <TableCell>
-                    {movement.movement_type === "transferencia" ? (
+                    {movement.movement_type === "transferencia" || movement.movement_type === "movimiento_interno" ? (
                       <div className="text-sm">
-                        <p>{movement.from_warehouse_name} →</p>
-                        <p>{movement.to_warehouse_name}</p>
+                        <p className="text-muted-foreground">De: {movement.from_warehouse_name || "No especificado"}</p>
+                        <p className="text-muted-foreground">A: {movement.to_warehouse_name || "No especificado"}</p>
                       </div>
                     ) : (
                       movement.warehouse_name
                     )}
                   </TableCell>
+                  <TableCell>
+                    <Badge variant={getStatusBadge(movement.status) as any}>
+                      {getStatusText(movement.status)}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {movement.reference_document || movement.notes || "-"}
+                  </TableCell>
+                  <TableCell>
+                    {(movement.movement_type === "transferencia" || movement.movement_type === "movimiento_interno") && (
+                      <div className="flex gap-1">
+                        {movement.status === "pendiente" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleUpdateStatus(movement.id, "en_transito")}
+                            disabled={processingIds.includes(movement.id)}
+                          >
+                            Recolectar
+                          </Button>
+                        )}
+                        {movement.status === "en_transito" && (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleUpdateStatus(movement.id, "entregado")}
+                            disabled={processingIds.includes(movement.id)}
+                          >
+                            Entregar
+                          </Button>
+                        )}
+                        {movement.status === "entregado" && (
+                          <span className="text-sm text-muted-foreground">Completado</span>
+                        )}
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
