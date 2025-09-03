@@ -39,7 +39,8 @@ import {
   TrendingUp,
   Car,
   ArrowRightLeft,
-  Calculator
+  Calculator,
+  ClipboardList
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -91,6 +92,7 @@ export const AppSidebar = () => {
     {
       category: 'Logística',
       items: [
+        { title: 'Módulo Logístico', url: '/logistics', icon: ClipboardList },
         { title: 'Rutas', url: '/routes', icon: Route },
         { title: 'Optimización Rutas', url: '/route-optimization', icon: Navigation },
       ]

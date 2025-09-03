@@ -39,6 +39,7 @@ interface MovementSummary {
   exits: number;
   transfers: number;
   adjustments: number;
+  internals: number;
 }
 
 export default function StockMovementsPage() {
@@ -50,6 +51,7 @@ export default function StockMovementsPage() {
     exits: 0,
     transfers: 0,
     adjustments: 0,
+    internals: 0,
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -121,6 +123,7 @@ export default function StockMovementsPage() {
       const exits = enrichedMovements.filter(m => m.movement_type === "salida").length;
       const transfers = enrichedMovements.filter(m => m.movement_type === "transferencia").length;
       const adjustments = enrichedMovements.filter(m => m.movement_type === "ajuste").length;
+      const internals = enrichedMovements.filter(m => m.movement_type === "movimiento_interno").length;
 
       setMovements(enrichedMovements);
       setSummary({
@@ -130,6 +133,7 @@ export default function StockMovementsPage() {
         exits,
         transfers,
         adjustments,
+        internals,
       });
     } catch (error) {
       console.error("Error fetching movements:", error);
@@ -144,6 +148,7 @@ export default function StockMovementsPage() {
       case "salida": return "Salida";
       case "ajuste": return "Ajuste";
       case "transferencia": return "Transferencia";
+      case "movimiento_interno": return "Movimiento Interno";
       default: return type;
     }
   };
@@ -154,6 +159,7 @@ export default function StockMovementsPage() {
       case "salida": return "destructive";
       case "ajuste": return "secondary";
       case "transferencia": return "outline";
+      case "movimiento_interno": return "default";
       default: return "default";
     }
   };
@@ -171,7 +177,8 @@ export default function StockMovementsPage() {
 
     const matchesTab = activeTab === "all" ||
       (activeTab === "purchases" && movement.movement_type === "entrada") ||
-      (activeTab === "transfers" && movement.movement_type === "transferencia");
+      (activeTab === "transfers" && movement.movement_type === "transferencia") ||
+      (activeTab === "internal" && movement.movement_type === "movimiento_interno");
 
     return matchesSearch && matchesType && matchesWarehouse && matchesTab;
   });
@@ -268,6 +275,7 @@ export default function StockMovementsPage() {
                 <SelectItem value="salida">Salidas</SelectItem>
                 <SelectItem value="transferencia">Transferencias</SelectItem>
                 <SelectItem value="ajuste">Ajustes</SelectItem>
+                <SelectItem value="movimiento_interno">Movimientos Internos</SelectItem>
               </SelectContent>
             </Select>
 
@@ -287,11 +295,12 @@ export default function StockMovementsPage() {
           </div>
 
           {/* Tabs */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="all">Todos los Movimientos</TabsTrigger>
               <TabsTrigger value="purchases">Ingresos por Compra</TabsTrigger>
               <TabsTrigger value="transfers">Transferencias</TabsTrigger>
+              <TabsTrigger value="internal">Movimientos Internos</TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="space-y-4">
@@ -304,6 +313,10 @@ export default function StockMovementsPage() {
 
             <TabsContent value="transfers" className="space-y-4">
               <MovementsTable movements={filteredMovements.filter(m => m.movement_type === "transferencia")} />
+            </TabsContent>
+
+            <TabsContent value="internal" className="space-y-4">
+              <MovementsTable movements={filteredMovements.filter(m => m.movement_type === "movimiento_interno")} />
             </TabsContent>
           </Tabs>
         </div>
@@ -333,6 +346,7 @@ function MovementsTable({ movements }: MovementsTableProps) {
       case "salida": return "Salida";
       case "ajuste": return "Ajuste";
       case "transferencia": return "Transferencia";
+      case "movimiento_interno": return "Movimiento Interno";
       default: return type;
     }
   };
@@ -343,6 +357,7 @@ function MovementsTable({ movements }: MovementsTableProps) {
       case "salida": return "destructive";
       case "ajuste": return "secondary";
       case "transferencia": return "outline";
+      case "movimiento_interno": return "default";
       default: return "default";
     }
   };

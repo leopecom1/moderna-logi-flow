@@ -39,6 +39,7 @@ import SupplierPaymentsPage from "./pages/SupplierPaymentsPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import ReferencesPage from "./pages/ReferencesPage";
 import CashManagementPage from "./pages/CashManagementPage";
+import LogisticsPage from "./pages/LogisticsPage";
 import NotFound from "./pages/NotFound";
 
 // Create a simple QueryClient instance
@@ -95,6 +96,7 @@ function App() {
             <Route path="/stock-movements" element={<StockMovementsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
+            <Route path="/logistics" element={<LogisticsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
