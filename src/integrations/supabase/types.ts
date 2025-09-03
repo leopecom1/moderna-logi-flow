@@ -97,6 +97,33 @@ export type Database = {
         }
         Relationships: []
       }
+      branch_warehouses: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          warehouse_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          warehouse_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          warehouse_id?: string
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           address: string | null

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit3, MapPin } from 'lucide-react';
+import { Plus, Edit3, MapPin, Settings } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { BranchWarehouseAssignments } from './BranchWarehouseAssignments';
 
 interface Branch {
   id: string;
@@ -38,6 +39,7 @@ export function BranchManagementPanel({ onBranchUpdated }: BranchManagementPanel
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showWarehouseModal, setShowWarehouseModal] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -143,6 +145,11 @@ export function BranchManagementPanel({ onBranchUpdated }: BranchManagementPanel
       is_active: branch.is_active,
     });
     setShowEditModal(true);
+  };
+
+  const handleManageWarehouses = (branch: Branch) => {
+    setSelectedBranch(branch);
+    setShowWarehouseModal(true);
   };
 
   const toggleBranchStatus = async (branchId: string, isActive: boolean) => {
@@ -289,6 +296,13 @@ export function BranchManagementPanel({ onBranchUpdated }: BranchManagementPanel
                   >
                     <Edit3 className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleManageWarehouses(branch)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
               {branch.address && (
@@ -384,6 +398,24 @@ export function BranchManagementPanel({ onBranchUpdated }: BranchManagementPanel
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Warehouse Management Modal */}
+      <Dialog open={showWarehouseModal} onOpenChange={setShowWarehouseModal}>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Gestión de Depósitos</DialogTitle>
+            <DialogDescription>
+              Administra los depósitos asignados a {selectedBranch?.name}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedBranch && (
+            <BranchWarehouseAssignments
+              branchId={selectedBranch.id}
+              branchName={selectedBranch.name}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
