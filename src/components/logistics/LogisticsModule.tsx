@@ -6,10 +6,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Package, CheckCircle, Clock, MapPin, Truck } from "lucide-react";
+import { Package, CheckCircle, Clock, MapPin, Truck, AlertTriangle } from "lucide-react";
 import { MessageLoading } from "@/components/ui/message-loading";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface LogisticsMovement {
   id: string;
@@ -34,6 +44,11 @@ export function LogisticsModule() {
   const [movements, setMovements] = useState<LogisticsMovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [showStockAlert, setShowStockAlert] = useState(false);
+  const [stockAlertData, setStockAlertData] = useState<{
+    movement: LogisticsMovement;
+    availableStock: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchLogisticsMovements();
@@ -146,7 +161,18 @@ export function LogisticsModule() {
       }
 
       if (inventoryItem.current_stock < movement.quantity) {
-        throw new Error(`Stock insuficiente. Disponible: ${inventoryItem.current_stock}, Requerido: ${movement.quantity}`);
+        console.log('⚠️ Stock insuficiente, mostrando alerta:', {
+          available: inventoryItem.current_stock,
+          required: movement.quantity
+        });
+        
+        setStockAlertData({
+          movement,
+          availableStock: inventoryItem.current_stock
+        });
+        setShowStockAlert(true);
+        setProcessingId(null);
+        return;
       }
 
       console.log('✅ Found inventory item:', inventoryItem.id);
@@ -254,6 +280,87 @@ export function LogisticsModule() {
     } finally {
       setProcessingId(null);
     }
+  };
+
+  const handleForceCollect = async () => {
+    if (!stockAlertData || !profile?.user_id) return;
+    
+    const { movement } = stockAlertData;
+    
+    try {
+      setProcessingId(movement.id);
+      setShowStockAlert(false);
+      
+      // Obtener el inventory_item_id
+      const { data: inventoryItem, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .select('id')
+        .eq('product_id', movement.product_id)
+        .eq('warehouse_id', movement.source_warehouse_id)
+        .single();
+
+      if (inventoryError || !inventoryItem) {
+        throw new Error(`No se encontró el item de inventario`);
+      }
+
+      // Crear movimiento interno forzado
+      const movementData = {
+        inventory_item_id: inventoryItem.id,
+        movement_type: 'movimiento_interno',
+        quantity: movement.quantity,
+        unit_cost: 0,
+        notes: `Recolección FORZADA para orden ${movement.order_number} - ${movement.product_name} (Stock insuficiente)`,
+        reference_document: movement.order_number,
+        user_id: profile.user_id,
+      };
+
+      const { error: movementError } = await supabase
+        .from('inventory_movements')
+        .insert(movementData);
+
+      if (movementError) throw movementError;
+
+      toast({
+        title: 'Producto recolectado (Forzado)',
+        description: `${movement.product_name} marcado como recolectado a pesar del stock insuficiente`,
+        variant: 'destructive',
+      });
+
+      // Actualizar estado local
+      setMovements(prev => prev.map(m => 
+        m.id === movement.id 
+          ? { ...m, status: 'en_transito' }
+          : m
+      ));
+
+    } catch (error) {
+      console.error('Error forcing product collection:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo forzar la recolección del producto',
+        variant: 'destructive',
+      });
+    } finally {
+      setProcessingId(null);
+      setStockAlertData(null);
+    }
+  };
+
+  const handleSkipMovement = () => {
+    if (!stockAlertData) return;
+    
+    const { movement } = stockAlertData;
+    
+    // Remover el movimiento de la lista local
+    setMovements(prev => prev.filter(m => m.id !== movement.id));
+    
+    setShowStockAlert(false);
+    setStockAlertData(null);
+    
+    toast({
+      title: 'Movimiento omitido',
+      description: `Se omitió el movimiento de ${movement.product_name} por falta de stock`,
+    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -372,6 +479,49 @@ export function LogisticsModule() {
           </CardContent>
         </Card>
       )}
+
+      {/* Stock Alert Dialog */}
+      <AlertDialog open={showStockAlert} onOpenChange={setShowStockAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              Stock Insuficiente
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                <strong>{stockAlertData?.movement.source_warehouse_name}</strong> no tiene stock suficiente 
+                del producto <strong>{stockAlertData?.movement.product_name}</strong>.
+              </p>
+              <div className="bg-yellow-50 p-3 rounded-md border border-yellow-200">
+                <p className="text-sm">
+                  <span className="font-medium">Stock disponible:</span> {stockAlertData?.availableStock} unidades
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">Cantidad requerida:</span> {stockAlertData?.movement.quantity} unidades
+                </p>
+                <p className="text-sm text-red-600 mt-1">
+                  <span className="font-medium">Faltante:</span> {(stockAlertData?.movement.quantity || 0) - (stockAlertData?.availableStock || 0)} unidades
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                ¿Qué deseas hacer con este movimiento?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={handleSkipMovement}>
+              Omitir Movimiento
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleForceCollect}
+              className="bg-yellow-600 hover:bg-yellow-700"
+            >
+              Continuar de Todas Formas
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
