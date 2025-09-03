@@ -43,51 +43,66 @@ export function LogisticsModule() {
     try {
       setLoading(true);
       
-      // Por ahora, crear movimientos de ejemplo basados en las órdenes pendientes
+      console.log('🚚 Fetching logistics movements...');
+      
+      // Obtener órdenes pendientes
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('id, order_number, products, delivery_date, customers(name)')
         .eq('status', 'pendiente')
         .limit(10);
 
+      console.log('📋 Orders fetched:', { orders, ordersError });
+
       if (ordersError) throw ordersError;
+
+      // Obtener datos reales de inventario
+      const { data: inventoryItems, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .select(`
+          id,
+          product_id,
+          warehouse_id,
+          current_stock,
+          products!inner(id, name, code),
+          warehouses!inner(id, name)
+        `);
+
+      console.log('📦 Inventory items fetched:', { inventoryItems, inventoryError });
+
+      if (inventoryError) throw inventoryError;
 
       const mockMovements: LogisticsMovement[] = [];
 
-      orders?.forEach(order => {
-        try {
-          const products = typeof order.products === 'string' 
-            ? JSON.parse(order.products) 
-            : (Array.isArray(order.products) ? order.products : []);
+      // Crear algunos movimientos de prueba basados en inventario real
+      if (inventoryItems && inventoryItems.length > 0) {
+        inventoryItems.slice(0, 3).forEach((item, index) => {
+          const movement = {
+            id: `movement-${index}`,
+            order_id: `order-${index}`,
+            order_number: `PED-${Date.now()}-${index}`,
+            product_id: item.product_id,
+            product_name: (item as any).products?.name || 'Producto',
+            product_code: (item as any).products?.code || 'COD',
+            quantity: 1,
+            source_warehouse_id: item.warehouse_id,
+            source_warehouse_name: (item as any).warehouses?.name || 'Depósito',
+            target_warehouse_name: 'Sucursal Destino',
+            status: 'pendiente' as const,
+            created_at: new Date().toISOString(),
+            customer_name: 'Cliente de Prueba',
+            delivery_date: new Date().toISOString(),
+          };
           
-          products.forEach((product: any, index: number) => {
-            if (product.needs_movement) {
-              mockMovements.push({
-                id: `${order.id}-${index}`,
-                order_id: order.id,
-                order_number: order.order_number,
-                product_id: product.product_id,
-                product_name: product.product_name || `Producto ${index + 1}`,
-                product_code: `P${index + 1}`,
-                quantity: product.quantity || 1,
-                source_warehouse_id: product.warehouse_id || 'warehouse_1',
-                source_warehouse_name: product.warehouse_name || 'Depósito Central',
-                target_warehouse_name: 'Sucursal Destino',
-                status: 'pendiente',
-                created_at: new Date().toISOString(),
-                customer_name: (order as any).customers?.name || 'Cliente',
-                delivery_date: order.delivery_date || '',
-              });
-            }
-          });
-        } catch (parseError) {
-          console.error('Error parsing products:', parseError);
-        }
-      });
+          console.log('🔄 Creating movement for real inventory item:', movement);
+          mockMovements.push(movement);
+        });
+      }
 
+      console.log('📊 Generated movements based on real inventory:', mockMovements);
       setMovements(mockMovements);
     } catch (error) {
-      console.error('Error fetching logistics movements:', error);
+      console.error('❌ Error fetching logistics movements:', error);
       toast({
         title: 'Error',
         description: 'No se pudieron cargar los movimientos logísticos',
@@ -104,32 +119,61 @@ export function LogisticsModule() {
     try {
       setProcessingId(movement.id);
       
+      console.log('🔍 Attempting to collect product:', {
+        productId: movement.product_id,
+        sourceWarehouseId: movement.source_warehouse_id,
+        movement: movement
+      });
+      
       // Primero obtener el inventory_item_id correcto
       const { data: inventoryItem, error: inventoryError } = await supabase
         .from('inventory_items')
-        .select('id')
+        .select('id, current_stock')
         .eq('product_id', movement.product_id)
         .eq('warehouse_id', movement.source_warehouse_id)
         .single();
 
+      console.log('🏪 Inventory item query result:', {
+        inventoryItem,
+        inventoryError,
+        productId: movement.product_id,
+        warehouseId: movement.source_warehouse_id
+      });
+
       if (inventoryError || !inventoryItem) {
-        throw new Error('No se encontró el item de inventario');
+        console.error('❌ Inventory item not found:', inventoryError);
+        throw new Error(`No se encontró el item de inventario para producto ${movement.product_name}`);
       }
 
+      if (inventoryItem.current_stock < movement.quantity) {
+        throw new Error(`Stock insuficiente. Disponible: ${inventoryItem.current_stock}, Requerido: ${movement.quantity}`);
+      }
+
+      console.log('✅ Found inventory item:', inventoryItem.id);
+
       // Crear movimiento interno en la base de datos
+      const movementData = {
+        inventory_item_id: inventoryItem.id,
+        movement_type: 'movimiento_interno',
+        quantity: movement.quantity,
+        unit_cost: 0,
+        notes: `Recolección para orden ${movement.order_number} - ${movement.product_name}`,
+        reference_document: movement.order_number,
+        user_id: profile.user_id,
+      };
+
+      console.log('📦 Creating movement with data:', movementData);
+
       const { error: movementError } = await supabase
         .from('inventory_movements')
-        .insert({
-          inventory_item_id: inventoryItem.id,
-          movement_type: 'movimiento_interno',
-          quantity: movement.quantity,
-          unit_cost: 0,
-          notes: `Recolección para orden ${movement.order_number} - ${movement.product_name}`,
-          reference_document: movement.order_number,
-          user_id: profile.user_id,
-        });
+        .insert(movementData);
 
-      if (movementError) throw movementError;
+      if (movementError) {
+        console.error('❌ Movement creation error:', movementError);
+        throw movementError;
+      }
+
+      console.log('✅ Movement created successfully');
 
       toast({
         title: 'Producto recolectado',
@@ -144,10 +188,10 @@ export function LogisticsModule() {
       ));
 
     } catch (error) {
-      console.error('Error collecting product:', error);
+      console.error('❌ Error collecting product:', error);
       toast({
         title: 'Error',
-        description: 'No se pudo recolectar el producto',
+        description: error.message || 'No se pudo recolectar el producto',
         variant: 'destructive',
       });
     } finally {
