@@ -154,7 +154,7 @@ export function LogisticsModule() {
       // Crear movimiento interno en la base de datos
       const movementData = {
         inventory_item_id: inventoryItem.id,
-        movement_type: 'entrada',
+        movement_type: 'movimiento_interno',
         quantity: movement.quantity,
         unit_cost: 0,
         notes: `Recolección para orden ${movement.order_number} - ${movement.product_name}`,
@@ -222,7 +222,7 @@ export function LogisticsModule() {
         .from('inventory_movements')
         .insert({
           inventory_item_id: inventoryItem?.id || null,
-          movement_type: 'entrada',
+          movement_type: 'movimiento_interno',
           quantity: movement.quantity,
           unit_cost: 0,
           notes: `Entrega para orden ${movement.order_number} - ${movement.product_name}`,
