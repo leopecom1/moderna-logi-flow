@@ -117,7 +117,7 @@ export default function StockMovementsPage() {
         warehouse_id: (movement as any).inventory_items?.warehouse_id,
         from_warehouse_name: (movement as any).from_warehouse?.name,
         to_warehouse_name: (movement as any).to_warehouse?.name,
-        status: movement.status || 'pendiente',
+        status: (movement as any).status || 'pendiente',
       }));
 
       // Calculate summary
@@ -354,7 +354,7 @@ function MovementsTable({ movements }: MovementsTableProps) {
     try {
       const { error } = await supabase
         .from("inventory_movements")
-        .update({ status: newStatus })
+        .update({ status: newStatus } as any)
         .eq("id", movementId);
 
       if (error) throw error;

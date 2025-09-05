@@ -812,6 +812,7 @@ export type Database = {
           notes: string | null
           quantity: number
           reference_document: string | null
+          status: string | null
           to_warehouse_id: string | null
           total_value: number | null
           unit_cost: number
@@ -829,6 +830,7 @@ export type Database = {
           notes?: string | null
           quantity: number
           reference_document?: string | null
+          status?: string | null
           to_warehouse_id?: string | null
           total_value?: number | null
           unit_cost?: number
@@ -846,6 +848,7 @@ export type Database = {
           notes?: string | null
           quantity?: number
           reference_document?: string | null
+          status?: string | null
           to_warehouse_id?: string | null
           total_value?: number | null
           unit_cost?: number
