@@ -3,14 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { LogOut, User, Crown, Users, Truck } from 'lucide-react';
+import { LogOut, User, Crown, Users, Truck, DollarSign } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
+import { useUSDRate } from '@/hooks/useCurrencyRates';
 export const Header = () => {
   const {
     profile,
     signOut
   } = useAuth();
+  
+  const { data: usdRate } = useUSDRate();
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'gerencia':
@@ -41,11 +44,19 @@ export const Header = () => {
         <div className="flex items-center gap-4 animate-element animate-delay-200">
           <SidebarTrigger className="smooth-transition" />
           <div className="flex items-center gap-2">
-            
             <Badge variant="outline" className={`${getRoleColor(profile.role)} smooth-transition`}>
               {getRoleIcon(profile.role)}
               <span className="ml-1 capitalize">{profile.role}</span>
             </Badge>
+            
+            {usdRate && (
+              <Badge variant="secondary" className="flex items-center gap-1 smooth-transition">
+                <DollarSign className="h-3 w-3" />
+                <span className="text-xs">
+                  USD: ${usdRate.sell_rate.toFixed(2)}
+                </span>
+              </Badge>
+            )}
           </div>
         </div>
 

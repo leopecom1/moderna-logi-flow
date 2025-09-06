@@ -7,11 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { Settings, Save, Bell, Shield, Database, Building2 } from 'lucide-react';
+import { Settings, Save, Bell, Shield, Database, Building2, DollarSign } from 'lucide-react';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { ConfigurationModal } from '@/components/forms/ConfigurationModal';
+import { CurrencySyncModal } from '@/components/forms/CurrencySyncModal';
 
 const SettingsPage = () => {
+  const [showCurrencySync, setShowCurrencySync] = useState(false);
   const [settings, setSettings] = useState({
     companyName: 'LeoCommerce',
     email: 'hola@leocommerce.net',
@@ -248,6 +250,34 @@ const SettingsPage = () => {
           </CardContent>
         </Card>
 
+        {/* Sincronización de Cotizaciones */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <DollarSign className="h-5 w-5" />
+              <span>Cotizaciones de Monedas</span>
+            </CardTitle>
+            <CardDescription>
+              Sincroniza las cotizaciones del dólar desde DolarAPI Uruguay
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Mantén actualizada la cotización del dólar para calcular márgenes correctamente cuando las compras sean en USD y las ventas en UYU.
+              </p>
+              <Button 
+                onClick={() => setShowCurrencySync(true)}
+                className="w-fit"
+                variant="outline"
+              >
+                <DollarSign className="h-4 w-4 mr-2" />
+                Gestionar Cotizaciones
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Configuración de Datos Maestros */}
         <Card>
           <CardHeader>
@@ -297,6 +327,12 @@ const SettingsPage = () => {
             <span>Guardar Configuración</span>
           </Button>
         </div>
+
+        {/* Modal de Sincronización de Cotizaciones */}
+        <CurrencySyncModal 
+          open={showCurrencySync}
+          onOpenChange={setShowCurrencySync}
+        />
       </div>
     </MainLayout>
   );

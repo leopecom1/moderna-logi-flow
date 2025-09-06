@@ -477,6 +477,42 @@ export type Database = {
           },
         ]
       }
+      currency_rates: {
+        Row: {
+          buy_rate: number
+          created_at: string
+          currency_code: string
+          currency_name: string
+          id: string
+          is_active: boolean
+          last_updated: string
+          sell_rate: number
+          updated_at: string
+        }
+        Insert: {
+          buy_rate?: number
+          created_at?: string
+          currency_code: string
+          currency_name: string
+          id?: string
+          is_active?: boolean
+          last_updated?: string
+          sell_rate?: number
+          updated_at?: string
+        }
+        Update: {
+          buy_rate?: number
+          created_at?: string
+          currency_code?: string
+          currency_name?: string
+          id?: string
+          is_active?: boolean
+          last_updated?: string
+          sell_rate?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customer_movements: {
         Row: {
           balance_amount: number
