@@ -87,6 +87,7 @@ function App() {
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/user-management" element={<UserManagementPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
             <Route path="/references" element={<ReferencesPage />} />
             <Route path="/cash-management" element={<CashManagementPage />} />
             <Route path="/route-optimization" element={<RouteOptimizationPage />} />

@@ -7,9 +7,11 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import { useCurrencyRates, syncCurrencyRates } from "@/hooks/useCurrencyRates";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { RefreshCw, DollarSign, TrendingUp, Clock, Plus, History } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import { ManualCurrencyRateModal } from "./ManualCurrencyRateModal";
+import { CurrencyRateHistoryTable } from "./CurrencyRateHistoryTable";
 
 interface CurrencySyncModalProps {
   open: boolean;
@@ -18,6 +20,8 @@ interface CurrencySyncModalProps {
 
 export const CurrencySyncModal = ({ open, onOpenChange }: CurrencySyncModalProps) => {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: currencyRates, isLoading } = useCurrencyRates();
@@ -47,16 +51,18 @@ export const CurrencySyncModal = ({ open, onOpenChange }: CurrencySyncModalProps
   const usdRate = currencyRates?.find(rate => rate.currency_code === 'USD');
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <DollarSign className="h-5 w-5" />
-            Sincronización de Cotizaciones
+            Gestión de Cotizaciones de Monedas
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-6">
+          {/* Cotización Actual */}
           {isLoading ? (
             <Card>
               <CardContent className="p-4">
@@ -69,7 +75,7 @@ export const CurrencySyncModal = ({ open, onOpenChange }: CurrencySyncModalProps
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium flex items-center justify-between">
-                  {usdRate.currency_name}
+                  Cotización Actual - {usdRate.currency_name}
                   <Badge variant="outline">
                     {usdRate.currency_code}
                   </Badge>
@@ -109,15 +115,48 @@ export const CurrencySyncModal = ({ open, onOpenChange }: CurrencySyncModalProps
             </Card>
           )}
 
-          <div className="flex gap-2 pt-2">
+          {/* Acciones */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Button
               onClick={handleSync}
               disabled={isSyncing}
-              className="flex-1"
+              className="flex items-center gap-2"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-              {isSyncing ? 'Sincronizando...' : 'Sincronizar ahora'}
+              <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Sincronizando...' : 'Sincronizar API'}
             </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => setShowManualModal(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Ingresar Manual
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => setShowHistory(!showHistory)}
+              className="flex items-center gap-2"
+            >
+              <History className="h-4 w-4" />
+              {showHistory ? 'Ocultar' : 'Ver'} Historial
+            </Button>
+          </div>
+
+          {/* Historial */}
+          {showHistory && (
+            <div className="mt-6">
+              <CurrencyRateHistoryTable />
+            </div>
+          )}
+
+          <div className="text-xs text-muted-foreground text-center">
+            Las cotizaciones se actualizan automáticamente cada 10 minutos desde DolarAPI Uruguay
+          </div>
+
+          <div className="flex justify-end">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
@@ -125,12 +164,15 @@ export const CurrencySyncModal = ({ open, onOpenChange }: CurrencySyncModalProps
               Cerrar
             </Button>
           </div>
-
-          <div className="text-xs text-muted-foreground text-center">
-            Las cotizaciones se actualizan automáticamente cada 10 minutos
-          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Ingreso Manual */}
+      <ManualCurrencyRateModal 
+        open={showManualModal}
+        onOpenChange={setShowManualModal}
+      />
+    </>
   );
 };
