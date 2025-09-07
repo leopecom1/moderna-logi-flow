@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Calendar, DollarSign, AlertTriangle, CheckCircle } from "lucide-react";
+import { Calendar, DollarSign, AlertTriangle, CheckCircle, User, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
+import { CustomerCreditModal } from "@/components/forms/CustomerCreditModal";
 
 interface CreditInstallment {
   id: string;
@@ -29,6 +30,16 @@ interface CreditInstallment {
   };
 }
 
+interface CustomerSummary {
+  id: string;
+  name: string;
+  phone?: string;
+  totalPending: number;
+  totalOverdue: number;
+  installmentCount: number;
+  nextDueDate?: string;
+}
+
 interface CreditMetrics {
   totalPendingAmount: number;
   todayDueAmount: number;
@@ -39,6 +50,9 @@ interface CreditMetrics {
 
 function CreditoModernaPage() {
   const [installments, setInstallments] = useState<CreditInstallment[]>([]);
+  const [customerSummaries, setCustomerSummaries] = useState<CustomerSummary[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerSummary | null>(null);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [metrics, setMetrics] = useState<CreditMetrics>({
     totalPendingAmount: 0,
     todayDueAmount: 0,
@@ -49,6 +63,7 @@ function CreditoModernaPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = useState<'customers' | 'installments'>('customers');
 
   const fetchInstallments = async () => {
     console.log("Fetching installments...");
@@ -68,14 +83,58 @@ function CreditoModernaPage() {
 
       if (error) throw error;
 
-      setInstallments((data || []) as unknown as CreditInstallment[]);
-      calculateMetrics((data || []) as unknown as CreditInstallment[]);
+      const installmentsData = (data || []) as unknown as CreditInstallment[];
+      setInstallments(installmentsData);
+      calculateMetrics(installmentsData);
+      calculateCustomerSummaries(installmentsData);
     } catch (error) {
       console.error("Error fetching installments:", error);
       toast.error("Error al cargar las cuotas");
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateCustomerSummaries = (data: CreditInstallment[]) => {
+    const customerMap = new Map<string, CustomerSummary>();
+    const today = new Date().toISOString().split('T')[0];
+
+    data.forEach(installment => {
+      const customerId = installment.customer_id;
+      const customerName = installment.customers.name;
+      const customerPhone = installment.customers.phone;
+
+      if (!customerMap.has(customerId)) {
+        customerMap.set(customerId, {
+          id: customerId,
+          name: customerName,
+          phone: customerPhone,
+          totalPending: 0,
+          totalOverdue: 0,
+          installmentCount: 0,
+          nextDueDate: undefined
+        });
+      }
+
+      const customer = customerMap.get(customerId)!;
+
+      if (installment.status === 'pendiente') {
+        customer.totalPending += installment.amount;
+        customer.installmentCount += 1;
+
+        if (installment.due_date < today) {
+          customer.totalOverdue += installment.amount;
+        }
+
+        if (!customer.nextDueDate || installment.due_date < customer.nextDueDate) {
+          customer.nextDueDate = installment.due_date;
+        }
+      }
+    });
+
+    setCustomerSummaries(Array.from(customerMap.values())
+      .filter(customer => customer.installmentCount > 0)
+      .sort((a, b) => b.totalPending - a.totalPending));
   };
 
   const calculateMetrics = (data: CreditInstallment[]) => {
@@ -142,6 +201,13 @@ function CreditoModernaPage() {
     return 'Pendiente';
   };
 
+  const filteredCustomers = customerSummaries.filter(customer => {
+    const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (customer.phone && customer.phone.includes(searchTerm));
+    
+    return matchesSearch;
+  });
+
   const filteredInstallments = installments.filter(item => {
     const matchesSearch = item.customers.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (item.customers.phone && item.customers.phone.includes(searchTerm));
@@ -153,6 +219,11 @@ function CreditoModernaPage() {
 
     return matchesSearch && matchesStatus;
   });
+
+  const handleCustomerClick = (customer: CustomerSummary) => {
+    setSelectedCustomer(customer);
+    setShowCustomerModal(true);
+  };
 
   useEffect(() => {
     fetchInstallments();
@@ -180,6 +251,24 @@ function CreditoModernaPage() {
             <p className="text-muted-foreground">
               Gestión de cuotas y pagos a crédito
             </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant={viewMode === 'customers' ? 'default' : 'outline'}
+              onClick={() => setViewMode('customers')}
+              className="flex items-center gap-2"
+            >
+              <User className="h-4 w-4" />
+              Por Cliente
+            </Button>
+            <Button
+              variant={viewMode === 'installments' ? 'default' : 'outline'}
+              onClick={() => setViewMode('installments')}
+              className="flex items-center gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              Todas las Cuotas
+            </Button>
           </div>
         </div>
 
@@ -262,78 +351,169 @@ function CreditoModernaPage() {
           </CardContent>
         </Card>
 
-        {/* Installments Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Cuotas de Crédito Moderna</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Cuota</TableHead>
-                    <TableHead>Monto</TableHead>
-                    <TableHead>Vencimiento</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredInstallments.map((installment) => (
-                    <TableRow key={installment.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{installment.customers.name}</p>
-                          {installment.customers.phone && (
-                            <p className="text-sm text-muted-foreground">
-                              {installment.customers.phone}
-                            </p>
+        {/* Main Content */}
+        {viewMode === 'customers' ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Clientes con Crédito Moderna</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Cuotas Pendientes</TableHead>
+                      <TableHead>Total Pendiente</TableHead>
+                      <TableHead>Total Vencido</TableHead>
+                      <TableHead>Próximo Vencimiento</TableHead>
+                      <TableHead>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCustomers.map((customer) => (
+                      <TableRow 
+                        key={customer.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleCustomerClick(customer)}
+                      >
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{customer.name}</p>
+                            {customer.phone && (
+                              <p className="text-sm text-muted-foreground">
+                                {customer.phone}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{customer.installmentCount}</TableCell>
+                        <TableCell>${customer.totalPending.toLocaleString()}</TableCell>
+                        <TableCell>
+                          {customer.totalOverdue > 0 ? (
+                            <span className="font-medium text-red-600">
+                              ${customer.totalOverdue.toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">$0</span>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {installment.installment_number}/{installment.total_installments}
-                      </TableCell>
-                      <TableCell>${installment.amount.toLocaleString()}</TableCell>
-                      <TableCell>
-                        {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(installment.status, installment.due_date)}>
-                          {getStatusText(installment.status, installment.due_date)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {installment.status === 'pendiente' && (
+                        </TableCell>
+                        <TableCell>
+                          {customer.nextDueDate && (
+                            <div className="flex items-center gap-1">
+                              {format(new Date(customer.nextDueDate), "dd/MM/yyyy", { locale: es })}
+                              {customer.nextDueDate < new Date().toISOString().split('T')[0] && (
+                                <AlertTriangle className="h-4 w-4 text-red-500" />
+                              )}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
                           <Button
                             size="sm"
-                            onClick={() => markAsPaid(installment.id, installment.amount)}
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCustomerClick(customer);
+                            }}
                           >
-                            Marcar Pagado
+                            <Eye className="h-4 w-4 mr-1" />
+                            Ver Cuotas
                           </Button>
-                        )}
-                        {installment.status === 'pagado' && installment.paid_at && (
-                          <p className="text-sm text-muted-foreground">
-                            Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
-                          </p>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
 
-              {filteredInstallments.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  No se encontraron cuotas con los filtros aplicados
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                {filteredCustomers.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No se encontraron clientes con los filtros aplicados
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Todas las Cuotas de Crédito Moderna</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Cuota</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Vencimiento</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredInstallments.map((installment) => (
+                      <TableRow key={installment.id}>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{installment.customers.name}</p>
+                            {installment.customers.phone && (
+                              <p className="text-sm text-muted-foreground">
+                                {installment.customers.phone}
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {installment.installment_number}/{installment.total_installments}
+                        </TableCell>
+                        <TableCell>${installment.amount.toLocaleString()}</TableCell>
+                        <TableCell>
+                          {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(installment.status, installment.due_date)}>
+                            {getStatusText(installment.status, installment.due_date)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {installment.status === 'pendiente' && (
+                            <Button
+                              size="sm"
+                              onClick={() => markAsPaid(installment.id, installment.amount)}
+                            >
+                              Marcar Pagado
+                            </Button>
+                          )}
+                          {installment.status === 'pagado' && installment.paid_at && (
+                            <p className="text-sm text-muted-foreground">
+                              Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
+                            </p>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {filteredInstallments.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No se encontraron cuotas con los filtros aplicados
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      <CustomerCreditModal
+        open={showCustomerModal}
+        onOpenChange={setShowCustomerModal}
+        customer={selectedCustomer}
+        onRefresh={fetchInstallments}
+      />
     </MainLayout>
   );
 }
