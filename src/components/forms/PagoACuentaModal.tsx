@@ -127,6 +127,7 @@ export function PagoACuentaModal({
             });
 
             // Crear nueva cuota con el saldo restante
+            const { data: userData } = await supabase.auth.getUser();
             const { error: insertError } = await supabase
               .from("credit_moderna_installments")
               .insert({
@@ -137,7 +138,7 @@ export function PagoACuentaModal({
                 amount: newAmount,
                 due_date: installment.due_date,
                 status: 'pendiente',
-                created_by: installment.id, // Para referencia
+                created_by: userData.user?.id || null,
                 notes: `Saldo restante de cuota ${installment.installment_number}`
               });
 
@@ -195,7 +196,11 @@ export function PagoACuentaModal({
 
     } catch (error) {
       console.error("Error processing payment:", error);
-      toast.error("Error al procesar el pago");
+      if (error instanceof Error) {
+        toast.error(`Error al procesar el pago: ${error.message}`);
+      } else {
+        toast.error("Error al procesar el pago");
+      }
     } finally {
       setProcessing(false);
     }
