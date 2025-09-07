@@ -61,10 +61,13 @@ export function CustomerCreditModal({
         .order("due_date", { ascending: true });
 
       console.log("Customer installments result:", { data, error });
+      console.log("Installments count:", data?.length || 0);
 
       if (error) throw error;
 
-      setInstallments((data || []) as CreditInstallment[]);
+      const installmentsData = (data || []) as CreditInstallment[];
+      console.log("Setting installments:", installmentsData);
+      setInstallments(installmentsData);
     } catch (error) {
       console.error("Error fetching customer credit installments:", error);
       toast.error("Error al cargar las cuotas de crédito");
@@ -125,10 +128,33 @@ export function CustomerCreditModal({
       .filter(item => item.status === 'pagado')
       .reduce((sum, item) => sum + (item.paid_amount || item.amount), 0);
 
-    return { totalPending, totalOverdue, totalPaid };
+    const uniqueOrders = new Set(installments.map(item => item.order_id).filter(Boolean));
+    const totalOrders = uniqueOrders.size;
+    
+    const totalInstallments = installments.length;
+    const pendingInstallments = installments.filter(item => item.status === 'pendiente').length;
+    const paidInstallments = installments.filter(item => item.status === 'pagado').length;
+
+    return { 
+      totalPending, 
+      totalOverdue, 
+      totalPaid, 
+      totalOrders, 
+      totalInstallments, 
+      pendingInstallments, 
+      paidInstallments 
+    };
   };
 
-  const { totalPending, totalOverdue, totalPaid } = calculateSummary();
+  const { 
+    totalPending, 
+    totalOverdue, 
+    totalPaid, 
+    totalOrders, 
+    totalInstallments, 
+    pendingInstallments, 
+    paidInstallments 
+  } = calculateSummary();
 
   useEffect(() => {
     if (open && customer?.id) {
@@ -157,7 +183,29 @@ export function CustomerCreditModal({
           ) : (
             <div className="space-y-6">
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Compras</CardTitle>
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{totalOrders}</div>
+                    <p className="text-xs text-muted-foreground">órdenes con crédito</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Cuotas</CardTitle>
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{totalInstallments}</div>
+                    <p className="text-xs text-muted-foreground">{pendingInstallments} pendientes, {paidInstallments} pagadas</p>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Pendiente</CardTitle>
@@ -210,74 +258,79 @@ export function CustomerCreditModal({
               </div>
 
               {/* Unified credit view */}
-              {installments.length > 0 ? (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Crédito Unificado - Todas las Cuotas</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Cuota</TableHead>
-                          <TableHead>Origen</TableHead>
-                          <TableHead>Monto</TableHead>
-                          <TableHead>Vencimiento</TableHead>
-                          <TableHead>Estado</TableHead>
-                          <TableHead>Acciones</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {installments
-                          .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-                          .map((installment) => (
-                          <TableRow key={installment.id}>
-                            <TableCell>
-                              {installment.installment_number}/{installment.total_installments}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {installment.order_id ? `${installment.order_id.slice(0, 8)}...` : 'Manual'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              ${installment.amount.toLocaleString()}
-                            </TableCell>
-                            <TableCell>
-                              {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={getStatusColor(installment.status, installment.due_date)}>
-                                {getStatusText(installment.status, installment.due_date)}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              {installment.status === 'pendiente' && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => markAsPaid(installment.id, installment.amount)}
-                                >
-                                  Marcar Pagado
-                                </Button>
-                              )}
-                              {installment.status === 'pagado' && installment.paid_at && (
-                                <p className="text-xs text-muted-foreground">
-                                  Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
-                                </p>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Este cliente no tiene cuotas de Crédito Moderna</p>
-                  <p className="text-sm">Haga clic en "Nuevo Crédito" para comenzar</p>
+              <div className="space-y-4">
+                <div className="text-sm text-muted-foreground">
+                  Total de cuotas encontradas: {installments.length}
                 </div>
-              )}
+                {installments.length > 0 ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Crédito Unificado - Todas las Cuotas</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Cuota</TableHead>
+                            <TableHead>Origen</TableHead>
+                            <TableHead>Monto</TableHead>
+                            <TableHead>Vencimiento</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead>Acciones</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {installments
+                            .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+                            .map((installment) => (
+                            <TableRow key={installment.id}>
+                              <TableCell>
+                                {installment.installment_number}/{installment.total_installments}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs">
+                                  {installment.order_id ? `${installment.order_id.slice(0, 8)}...` : 'Manual'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                ${installment.amount.toLocaleString()}
+                              </TableCell>
+                              <TableCell>
+                                {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
+                              </TableCell>
+                              <TableCell>
+                                <Badge className={getStatusColor(installment.status, installment.due_date)}>
+                                  {getStatusText(installment.status, installment.due_date)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {installment.status === 'pendiente' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => markAsPaid(installment.id, installment.amount)}
+                                  >
+                                    Marcar Pagado
+                                  </Button>
+                                )}
+                                {installment.status === 'pagado' && installment.paid_at && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
+                                  </p>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Este cliente no tiene cuotas de Crédito Moderna</p>
+                    <p className="text-sm">Haga clic en "Nuevo Crédito" para comenzar</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
