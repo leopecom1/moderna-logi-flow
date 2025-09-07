@@ -88,37 +88,57 @@ export default function StockMovementsPage() {
     try {
       setLoading(true);
 
-      // Fetch movements with related data
+      // Fetch movements with related data - using left join to include all movements
       const { data: movementsData, error: movementsError } = await supabase
         .from("inventory_movements")
         .select(`
           *,
-          inventory_items!inner (
+          inventory_items (
             id,
             product_id,
             warehouse_id,
-            warehouses!inner (name),
-            products!inner (name, code)
+            warehouses (name),
+            products (name, code)
           ),
           from_warehouse:warehouses!inventory_movements_from_warehouse_id_fkey (name),
           to_warehouse:warehouses!inventory_movements_to_warehouse_id_fkey (name)
         `)
         .order("movement_date", { ascending: false })
-        .limit(500);
+        .limit(1000);
 
       if (movementsError) throw movementsError;
 
       // Transform and enrich data
-      const enrichedMovements = (movementsData || []).map(movement => ({
-        ...movement,
-        product_name: (movement as any).inventory_items?.products?.name || "Producto no encontrado",
-        product_code: (movement as any).inventory_items?.products?.code || "N/A",
-        warehouse_name: (movement as any).inventory_items?.warehouses?.name || "Depósito no encontrado",
-        warehouse_id: (movement as any).inventory_items?.warehouse_id,
-        from_warehouse_name: (movement as any).from_warehouse?.name,
-        to_warehouse_name: (movement as any).to_warehouse?.name,
-        status: (movement as any).status || 'pendiente',
-      }));
+      const enrichedMovements = (movementsData || []).map(movement => {
+        let productName = "Producto no encontrado";
+        let productCode = "N/A";
+        let warehouseName = "Depósito no encontrado";
+        let warehouseId = null;
+
+        // Handle movements with inventory items
+        if ((movement as any).inventory_items) {
+          productName = (movement as any).inventory_items?.products?.name || "Producto no encontrado";
+          productCode = (movement as any).inventory_items?.products?.code || "N/A";
+          warehouseName = (movement as any).inventory_items?.warehouses?.name || "Depósito no encontrado";
+          warehouseId = (movement as any).inventory_items?.warehouse_id;
+        }
+        
+        // Handle movements without inventory items (like order movements)
+        if (movement.reference_document && movement.reference_document.includes('ORDEN')) {
+          productName = movement.notes || "Movimiento de orden";
+        }
+
+        return {
+          ...movement,
+          product_name: productName,
+          product_code: productCode,
+          warehouse_name: warehouseName,
+          warehouse_id: warehouseId,
+          from_warehouse_name: (movement as any).from_warehouse?.name,
+          to_warehouse_name: (movement as any).to_warehouse?.name,
+          status: (movement as any).status || 'pendiente',
+        };
+      });
 
       // Calculate summary
       const total_movements = enrichedMovements.length;
@@ -153,6 +173,8 @@ export default function StockMovementsPage() {
       case "ajuste": return "Ajuste";
       case "transferencia": return "Transferencia";
       case "movimiento_interno": return "Movimiento Interno";
+      case "orden_movimiento": return "Orden de Venta";
+      case "orden_salida": return "Salida por Orden";
       default: return type;
     }
   };
@@ -164,6 +186,8 @@ export default function StockMovementsPage() {
       case "ajuste": return "secondary";
       case "transferencia": return "outline";
       case "movimiento_interno": return "default";
+      case "orden_movimiento": return "default";
+      case "orden_salida": return "destructive";
       default: return "default";
     }
   };
@@ -181,6 +205,7 @@ export default function StockMovementsPage() {
 
     const matchesTab = activeTab === "all" ||
       (activeTab === "purchases" && movement.movement_type === "entrada") ||
+      (activeTab === "orders" && (movement.movement_type === "orden_movimiento" || movement.movement_type === "orden_salida")) ||
       (activeTab === "transfers" && movement.movement_type === "transferencia") ||
       (activeTab === "internal" && movement.movement_type === "movimiento_interno");
 
@@ -280,6 +305,8 @@ export default function StockMovementsPage() {
                 <SelectItem value="transferencia">Transferencias</SelectItem>
                 <SelectItem value="ajuste">Ajustes</SelectItem>
                 <SelectItem value="movimiento_interno">Movimientos Internos</SelectItem>
+                <SelectItem value="orden_movimiento">Órdenes de Venta</SelectItem>
+                <SelectItem value="orden_salida">Salidas por Orden</SelectItem>
               </SelectContent>
             </Select>
 
@@ -300,11 +327,12 @@ export default function StockMovementsPage() {
 
           {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="all">Todos los Movimientos</TabsTrigger>
-              <TabsTrigger value="purchases">Ingresos por Compra</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="all">Todos</TabsTrigger>
+              <TabsTrigger value="purchases">Compras</TabsTrigger>
+              <TabsTrigger value="orders">Órdenes</TabsTrigger>
               <TabsTrigger value="transfers">Transferencias</TabsTrigger>
-              <TabsTrigger value="internal">Movimientos Internos</TabsTrigger>
+              <TabsTrigger value="internal">Internos</TabsTrigger>
             </TabsList>
 
             <TabsContent value="all" className="space-y-4">
@@ -313,6 +341,10 @@ export default function StockMovementsPage() {
 
             <TabsContent value="purchases" className="space-y-4">
               <MovementsTable movements={filteredMovements.filter(m => m.movement_type === "entrada")} />
+            </TabsContent>
+
+            <TabsContent value="orders" className="space-y-4">
+              <MovementsTable movements={filteredMovements.filter(m => m.movement_type === "orden_movimiento" || m.movement_type === "orden_salida")} />
             </TabsContent>
 
             <TabsContent value="transfers" className="space-y-4">

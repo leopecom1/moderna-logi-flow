@@ -289,11 +289,8 @@ export function InventoryProducts() {
       product.categories?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.brand?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    if (selectedWarehouse === "all") {
-      return matchesSearch;
-    } else {
-      return matchesSearch && product.warehouses[selectedWarehouse];
-    }
+    // Always show products that match search, even if they don't have stock
+    return matchesSearch;
   });
 
   if (loading) {
@@ -485,46 +482,77 @@ export function InventoryProducts() {
                             <p className="font-semibold">{product.total_stock}</p>
                           </div>
                         </TableCell>
-                        {warehouses.map((warehouse) => {
-                          const warehouseStock = product.warehouses[warehouse.id];
-                          return (
-                            <TableCell key={warehouse.id} className="text-center">
-                              {warehouseStock ? (
-                                <div>
-                                  <p className="font-medium">{warehouseStock.current_stock}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Min: {warehouseStock.minimum_stock}
-                                  </p>
-                                  {warehouseStock.status === "low" && (
-                                    <Badge variant="destructive" className="text-xs">Bajo</Badge>
-                                  )}
-                                  {warehouseStock.status === "out" && (
-                                    <Badge variant="destructive" className="text-xs">Sin Stock</Badge>
-                                  )}
-                                  {warehouseStock.status === "high" && (
-                                    <Badge variant="secondary" className="text-xs">Alto</Badge>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </TableCell>
-                          );
-                        })}
-                        <TableCell>
-                          {hasStock && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                const firstWarehouse = Object.keys(product.warehouses)[0];
-                                setSelectedProduct({productId: product.id, warehouseId: firstWarehouse});
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </TableCell>
+                         {warehouses.map((warehouse) => {
+                           const warehouseStock = product.warehouses[warehouse.id];
+                           return (
+                             <TableCell key={warehouse.id} className="text-center">
+                               {warehouseStock ? (
+                                 <div>
+                                   <p className="font-medium">{warehouseStock.current_stock}</p>
+                                   <p className="text-xs text-muted-foreground">
+                                     Min: {warehouseStock.minimum_stock}
+                                   </p>
+                                   {warehouseStock.status === "low" && (
+                                     <Badge variant="destructive" className="text-xs">Bajo</Badge>
+                                   )}
+                                   {warehouseStock.status === "out" && (
+                                     <Badge variant="destructive" className="text-xs">Sin Stock</Badge>
+                                   )}
+                                   {warehouseStock.status === "high" && (
+                                     <Badge variant="secondary" className="text-xs">Alto</Badge>
+                                   )}
+                                 </div>
+                               ) : (
+                                 <div className="space-y-1">
+                                   <span className="text-muted-foreground text-xs">Sin Stock</span>
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     className="h-6 text-xs"
+                                     onClick={() => {
+                                       form.setValue('product_id', product.id);
+                                       form.setValue('warehouse_id', warehouse.id);
+                                       setShowCreateModal(true);
+                                     }}
+                                   >
+                                     <Plus className="h-3 w-3 mr-1" />
+                                     Cargar
+                                   </Button>
+                                 </div>
+                               )}
+                             </TableCell>
+                           );
+                         })}
+                         <TableCell>
+                           <div className="flex gap-1">
+                             {hasStock && (
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={() => {
+                                   const firstWarehouse = Object.keys(product.warehouses)[0];
+                                   setSelectedProduct({productId: product.id, warehouseId: firstWarehouse});
+                                 }}
+                               >
+                                 <Eye className="h-4 w-4" />
+                               </Button>
+                             )}
+                             {!hasStock && (
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => {
+                                   form.setValue('product_id', product.id);
+                                   form.setValue('warehouse_id', warehouses[0]?.id || '');
+                                   setShowCreateModal(true);
+                                 }}
+                               >
+                                 <Plus className="h-4 w-4 mr-1" />
+                                 Cargar Stock
+                               </Button>
+                             )}
+                           </div>
+                         </TableCell>
                       </TableRow>
                     );
                   })}
