@@ -15,6 +15,7 @@ import { CreateCustomerOrderModal } from '@/components/forms/CreateCustomerOrder
 import { CreateCustomerPaymentModal } from '@/components/forms/CreateCustomerPaymentModal';
 import { CreateCustomerMovementModal } from '@/components/forms/CreateCustomerMovementModal';
 import { CreateCollectionModal } from '@/components/forms/CreateCollectionModal';
+import { CreditModernaTab } from '@/components/forms/CreditModernaTab';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Customer {
@@ -312,6 +313,10 @@ export default function CustomerDetailPage() {
             <Truck className="h-4 w-4 mr-2" />
             Entregas ({deliveries.length})
           </TabsTrigger>
+          <TabsTrigger value="credito-moderna">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Crédito Moderna
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="summary">
@@ -551,6 +556,10 @@ export default function CustomerDetailPage() {
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="credito-moderna">
+          <CreditModernaTab customerId={id!} />
         </TabsContent>
       </Tabs>
 

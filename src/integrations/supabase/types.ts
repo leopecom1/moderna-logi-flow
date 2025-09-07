@@ -477,6 +477,60 @@ export type Database = {
           },
         ]
       }
+      credit_moderna_installments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string
+          customer_id: string
+          due_date: string
+          id: string
+          installment_number: number
+          notes: string | null
+          order_id: string | null
+          paid_amount: number | null
+          paid_at: string | null
+          payment_id: string | null
+          status: string
+          total_installments: number
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          created_by: string
+          customer_id: string
+          due_date: string
+          id?: string
+          installment_number: number
+          notes?: string | null
+          order_id?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          payment_id?: string | null
+          status?: string
+          total_installments: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          due_date?: string
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          order_id?: string | null
+          paid_amount?: number | null
+          paid_at?: string | null
+          payment_id?: string | null
+          status?: string
+          total_installments?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       currency_rates: {
         Row: {
           buy_rate: number
@@ -2216,6 +2270,7 @@ export type Database = {
         | "tarjeta"
         | "transferencia"
         | "cuenta_corriente"
+        | "credito_moderna"
       payment_status: "pendiente" | "pagado" | "liquidado"
       user_role: "gerencia" | "vendedor" | "cadete"
     }
@@ -2383,6 +2438,7 @@ export const Constants = {
         "tarjeta",
         "transferencia",
         "cuenta_corriente",
+        "credito_moderna",
       ],
       payment_status: ["pendiente", "pagado", "liquidado"],
       user_role: ["gerencia", "vendedor", "cadete"],

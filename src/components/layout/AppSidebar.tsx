@@ -33,6 +33,7 @@ import {
   Upload,
   Bell,
   User,
+  Banknote,
   Navigation,
   Brain,
   Building2,
@@ -112,6 +113,7 @@ export const AppSidebar = () => {
         { title: 'Pagos', url: '/payments', icon: DollarSign },
         { title: 'Cobros', url: '/collections', icon: Receipt },
         { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
+        { title: 'Crédito Moderna', url: '/credito-moderna', icon: Banknote },
       ]
     },
     {
