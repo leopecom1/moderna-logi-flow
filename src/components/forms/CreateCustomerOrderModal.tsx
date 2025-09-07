@@ -39,6 +39,8 @@ export const CreateCustomerOrderModal = ({
     delivery_departamento: '',
     delivery_time_slot: '',
     notes: '',
+    cantidad_cuotas: '12',
+    dia_pago_cuota: '15',
   });
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export const CreateCustomerOrderModal = ({
       // Generate order number
       const orderNumber = `ORD-${Date.now()}`;
 
-      const { error } = await supabase
+      const { data: order, error } = await supabase
         .from('orders')
         .insert({
           customer_id: customerId,
@@ -83,9 +85,51 @@ export const CreateCustomerOrderModal = ({
           delivery_departamento: formData.delivery_departamento || null,
           delivery_time_slot: formData.delivery_time_slot || null,
           notes: formData.notes || null,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Si es Crédito Moderna, crear las cuotas
+      if (formData.payment_method === 'credito_moderna' && formData.cantidad_cuotas && formData.dia_pago_cuota) {
+        const installmentsNum = parseInt(formData.cantidad_cuotas);
+        const installmentAmount = parseFloat(formData.total_amount) / installmentsNum;
+        const firstDueDay = parseInt(formData.dia_pago_cuota);
+        
+        const creditInstallments = [];
+        
+        for (let i = 0; i < installmentsNum; i++) {
+          // Calcular la fecha de vencimiento basada en el día seleccionado
+          const dueDate = new Date();
+          dueDate.setMonth(dueDate.getMonth() + i + 1); // Próximo mes + índice
+          dueDate.setDate(firstDueDay);
+          
+          creditInstallments.push({
+            customer_id: customerId,
+            order_id: order.id, // Usar el ID de la orden creada
+            installment_number: i + 1,
+            total_installments: installmentsNum,
+            amount: installmentAmount,
+            due_date: dueDate.toISOString().split('T')[0],
+            status: 'pendiente',
+            created_by: profile.user_id,
+          });
+        }
+
+        const { error: creditError } = await supabase
+          .from('credit_moderna_installments')
+          .insert(creditInstallments);
+
+        if (creditError) {
+          console.error('Error creating credit installments:', creditError);
+          toast({
+            title: 'Orden creada con advertencia',
+            description: 'La orden se creó pero hubo un problema al generar las cuotas de crédito. Puede crearlas manualmente.',
+            variant: 'default',
+          });
+        }
+      }
 
       toast({
         title: 'Éxito',
@@ -102,6 +146,8 @@ export const CreateCustomerOrderModal = ({
         delivery_departamento: '',
         delivery_time_slot: '',
         notes: '',
+        cantidad_cuotas: '12',
+        dia_pago_cuota: '15',
       });
       
       onOrderCreated();
@@ -174,9 +220,48 @@ export const CreateCustomerOrderModal = ({
                 <SelectItem value="tarjeta">Tarjeta</SelectItem>
                 <SelectItem value="transferencia">Transferencia</SelectItem>
                 <SelectItem value="credito">Crédito</SelectItem>
+                <SelectItem value="credito_moderna">Crédito Moderna</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {/* Campos adicionales para Crédito Moderna */}
+          {formData.payment_method === 'credito_moderna' && (
+            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div className="space-y-2">
+                <Label htmlFor="cantidad_cuotas">Cantidad de Cuotas</Label>
+                <Select value={formData.cantidad_cuotas} onValueChange={(value) => handleInputChange('cantidad_cuotas', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar cuotas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="3">3 cuotas</SelectItem>
+                    <SelectItem value="6">6 cuotas</SelectItem>
+                    <SelectItem value="12">12 cuotas</SelectItem>
+                    <SelectItem value="18">18 cuotas</SelectItem>
+                    <SelectItem value="24">24 cuotas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dia_pago_cuota">Día de Pago</Label>
+                <Select value={formData.dia_pago_cuota} onValueChange={(value) => handleInputChange('dia_pago_cuota', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Día del mes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">Día 5</SelectItem>
+                    <SelectItem value="10">Día 10</SelectItem>
+                    <SelectItem value="15">Día 15</SelectItem>
+                    <SelectItem value="20">Día 20</SelectItem>
+                    <SelectItem value="25">Día 25</SelectItem>
+                    <SelectItem value="30">Día 30</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="delivery_date">Fecha de Entrega</Label>
