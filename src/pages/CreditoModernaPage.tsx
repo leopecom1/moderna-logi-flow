@@ -37,7 +37,7 @@ interface CreditMetrics {
   paidInstallments: number;
 }
 
-export default function CreditoModernaPage() {
+function CreditoModernaPage() {
   const [installments, setInstallments] = useState<CreditInstallment[]>([]);
   const [metrics, setMetrics] = useState<CreditMetrics>({
     totalPendingAmount: 0,
@@ -334,3 +334,5 @@ export default function CreditoModernaPage() {
     </MainLayout>
   );
 }
+
+export default CreditoModernaPage;

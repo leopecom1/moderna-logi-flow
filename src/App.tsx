@@ -41,6 +41,7 @@ import ReferencesPage from "./pages/ReferencesPage";
 import CashManagementPage from "./pages/CashManagementPage";
 import LogisticsPage from "./pages/LogisticsPage";
 import CreditoModernaPage from "./pages/CreditoModernaPage";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
 // Create a simple QueryClient instance
@@ -97,7 +98,7 @@ function App() {
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/stock-movements" element={<StockMovementsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/credito-moderna" element={<CreditoModernaPage />} />
+            <Route path="/credito-moderna" element={<ProtectedRoute><CreditoModernaPage /></ProtectedRoute>} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="/logistics" element={<LogisticsPage />} />
             <Route path="*" element={<NotFound />} />
