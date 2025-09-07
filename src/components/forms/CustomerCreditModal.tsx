@@ -257,73 +257,109 @@ export function CustomerCreditModal({
                 </div>
               </div>
 
-              {/* Unified credit view */}
+              {/* Credits grouped by order */}
               <div className="space-y-4">
                 <div className="text-sm text-muted-foreground">
                   Total de cuotas encontradas: {installments.length}
                 </div>
                 {installments.length > 0 ? (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Crédito Unificado - Todas las Cuotas</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Cuota</TableHead>
-                            <TableHead>Origen</TableHead>
-                            <TableHead>Monto</TableHead>
-                            <TableHead>Vencimiento</TableHead>
-                            <TableHead>Estado</TableHead>
-                            <TableHead>Acciones</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {installments
-                            .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
-                            .map((installment) => (
-                            <TableRow key={installment.id}>
-                              <TableCell>
-                                {installment.installment_number}/{installment.total_installments}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="text-xs">
-                                  {installment.order_id ? `${installment.order_id.slice(0, 8)}...` : 'Manual'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                ${installment.amount.toLocaleString()}
-                              </TableCell>
-                              <TableCell>
-                                {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
-                              </TableCell>
-                              <TableCell>
-                                <Badge className={getStatusColor(installment.status, installment.due_date)}>
-                                  {getStatusText(installment.status, installment.due_date)}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {installment.status === 'pendiente' && (
-                                  <Button
-                                    size="sm"
-                                    onClick={() => markAsPaid(installment.id, installment.amount)}
-                                  >
-                                    Marcar Pagado
-                                  </Button>
-                                )}
-                                {installment.status === 'pagado' && installment.paid_at && (
-                                  <p className="text-xs text-muted-foreground">
-                                    Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
-                                  </p>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
+                  <div className="space-y-6">
+                    {/* Group installments by order_id */}
+                    {Object.entries(
+                      installments.reduce((groups, installment) => {
+                        const orderId = installment.order_id || 'manual';
+                        if (!groups[orderId]) {
+                          groups[orderId] = [];
+                        }
+                        groups[orderId].push(installment);
+                        return groups;
+                      }, {} as Record<string, CreditInstallment[]>)
+                    ).map(([orderId, creditInstallments]) => {
+                      const sortedInstallments = creditInstallments.sort((a, b) => a.installment_number - b.installment_number);
+                      const firstInstallment = sortedInstallments[0];
+                      const creditTotal = creditInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+                      const paidAmount = creditInstallments
+                        .filter(inst => inst.status === 'pagado')
+                        .reduce((sum, inst) => sum + (inst.paid_amount || inst.amount), 0);
+                      const pendingAmount = creditInstallments
+                        .filter(inst => inst.status === 'pendiente')
+                        .reduce((sum, inst) => sum + inst.amount, 0);
+
+                      return (
+                        <Card key={orderId}>
+                          <CardHeader>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                  <CreditCard className="h-4 w-4" />
+                                  {orderId === 'manual' ? 'Crédito Manual' : `Orden: ${orderId.slice(0, 8)}...`}
+                                </CardTitle>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {firstInstallment.total_installments} cuotas • Total: ${creditTotal.toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm">
+                                  <span className="text-green-600 font-medium">${paidAmount.toLocaleString()}</span>
+                                  <span className="text-muted-foreground"> / </span>
+                                  <span className="text-orange-600 font-medium">${pendingAmount.toLocaleString()}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground">Pagado / Pendiente</p>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Cuota</TableHead>
+                                  <TableHead>Monto</TableHead>
+                                  <TableHead>Vencimiento</TableHead>
+                                  <TableHead>Estado</TableHead>
+                                  <TableHead>Acciones</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {sortedInstallments.map((installment) => (
+                                  <TableRow key={installment.id}>
+                                    <TableCell>
+                                      {installment.installment_number}/{installment.total_installments}
+                                    </TableCell>
+                                    <TableCell className="font-medium">
+                                      ${installment.amount.toLocaleString()}
+                                    </TableCell>
+                                    <TableCell>
+                                      {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge className={getStatusColor(installment.status, installment.due_date)}>
+                                        {getStatusText(installment.status, installment.due_date)}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                      {installment.status === 'pendiente' && (
+                                        <Button
+                                          size="sm"
+                                          onClick={() => markAsPaid(installment.id, installment.amount)}
+                                        >
+                                          Marcar Pagado
+                                        </Button>
+                                      )}
+                                      {installment.status === 'pagado' && installment.paid_at && (
+                                        <p className="text-xs text-muted-foreground">
+                                          Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
+                                        </p>
+                                      )}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Este cliente no tiene cuotas de Crédito Moderna</p>
