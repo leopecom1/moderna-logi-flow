@@ -329,7 +329,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         branch_id: formData.branch_id,
         products: JSON.stringify(orderProducts),
         total_amount: getTotalAmount(),
-        payment_method: formData.payment_method as 'efectivo' | 'tarjeta' | 'transferencia' | 'cuenta_corriente',
+        payment_method: formData.payment_method as any,
         delivery_date: formData.delivery_date,
         delivery_address: formData.delivery_address,
         delivery_neighborhood: formData.delivery_neighborhood,
@@ -340,11 +340,54 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         status: 'pendiente' as const,
       };
 
-      const { error } = await supabase
+      const { data: order, error } = await supabase
         .from('orders')
-        .insert([orderData]);
+        .insert([orderData])
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Si es Crédito Moderna, crear las cuotas
+      if (formData.payment_method === 'credito_moderna' && formData.cantidad_cuotas && formData.dia_pago_cuota) {
+        const installmentsNum = parseInt(formData.cantidad_cuotas);
+        const installmentAmount = getTotalAmount() / installmentsNum;
+        const firstDueDay = parseInt(formData.dia_pago_cuota);
+        
+        const creditInstallments = [];
+        
+        for (let i = 0; i < installmentsNum; i++) {
+          // Calcular la fecha de vencimiento basada en el día seleccionado
+          const dueDate = new Date();
+          dueDate.setMonth(dueDate.getMonth() + i + 1); // Próximo mes + índice
+          dueDate.setDate(firstDueDay);
+          
+          creditInstallments.push({
+            customer_id: customerId,
+            order_id: order.id,
+            installment_number: i + 1,
+            total_installments: installmentsNum,
+            amount: installmentAmount,
+            due_date: dueDate.toISOString().split('T')[0],
+            status: 'pendiente',
+            created_by: profile.user_id,
+          });
+        }
+
+        const { error: creditError } = await supabase
+          .from('credit_moderna_installments')
+          .insert(creditInstallments);
+
+        if (creditError) {
+          console.error('Error creating credit installments:', creditError);
+          // No falla el pedido, pero muestra advertencia
+          toast({
+            title: 'Pedido creado con advertencia',
+            description: 'El pedido se creó pero hubo un problema al generar las cuotas de crédito. Puede crearlas manualmente desde el cliente.',
+            variant: 'default',
+          });
+        }
+      }
 
       // Crear órdenes de movimiento para productos sin stock
       const movementPromises = orderProducts

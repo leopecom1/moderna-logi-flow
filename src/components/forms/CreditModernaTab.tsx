@@ -32,12 +32,15 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchInstallments = async () => {
+    console.log("Fetching customer installments for:", customerId);
     try {
       const { data, error } = await supabase
         .from("credit_moderna_installments")
         .select("*")
         .eq("customer_id", customerId)
         .order("due_date", { ascending: true });
+
+      console.log("Customer installments result:", { data, error });
 
       if (error) throw error;
 

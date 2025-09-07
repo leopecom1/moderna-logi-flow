@@ -51,17 +51,20 @@ function CreditoModernaPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const fetchInstallments = async () => {
+    console.log("Fetching installments...");
     try {
       const { data, error } = await supabase
         .from("credit_moderna_installments")
         .select(`
           *,
-          customers (
+          customers!customer_id (
             name,
             phone
           )
         `)
         .order("due_date", { ascending: true });
+
+      console.log("Query result:", { data, error });
 
       if (error) throw error;
 
