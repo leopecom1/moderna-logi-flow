@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, Calendar, AlertTriangle, CreditCard } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { DollarSign, Calendar, AlertTriangle, CreditCard, ChevronDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -23,6 +24,14 @@ interface CreditInstallment {
   paid_amount?: number;
   notes?: string;
   order_id?: string;
+}
+
+interface OrderInfo {
+  id: string;
+  order_number: string;
+  created_at: string;
+  total_amount: number;
+  products: any;
 }
 
 interface CustomerInfo {
@@ -45,9 +54,11 @@ export function CustomerCreditModal({
   onRefresh 
 }: CustomerCreditModalProps) {
   const [installments, setInstallments] = useState<CreditInstallment[]>([]);
+  const [orders, setOrders] = useState<Record<string, OrderInfo>>({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
 
   const fetchInstallments = async () => {
     if (!customer?.id) return;
@@ -68,6 +79,25 @@ export function CustomerCreditModal({
       const installmentsData = (data || []) as CreditInstallment[];
       console.log("Setting installments:", installmentsData);
       setInstallments(installmentsData);
+
+      // Fetch order details for each unique order_id
+      const orderIds = [...new Set(installmentsData.map(i => i.order_id).filter(Boolean))] as string[];
+      if (orderIds.length > 0) {
+        const { data: ordersData, error: ordersError } = await supabase
+          .from("orders")
+          .select("id, order_number, created_at, total_amount, products")
+          .in("id", orderIds);
+
+        if (ordersError) {
+          console.error("Error fetching orders:", ordersError);
+        } else {
+          const ordersMap: Record<string, OrderInfo> = {};
+          ordersData?.forEach(order => {
+            ordersMap[order.id] = order;
+          });
+          setOrders(ordersMap);
+        }
+      }
     } catch (error) {
       console.error("Error fetching customer credit installments:", error);
       toast.error("Error al cargar las cuotas de crédito");
@@ -285,77 +315,112 @@ export function CustomerCreditModal({
                         .filter(inst => inst.status === 'pendiente')
                         .reduce((sum, inst) => sum + inst.amount, 0);
 
+                      const orderInfo = orders[orderId];
+                      const isExpanded = expandedOrders[orderId] || false;
+
                       return (
                         <Card key={orderId}>
-                          <CardHeader>
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <CardTitle className="text-base flex items-center gap-2">
-                                  <CreditCard className="h-4 w-4" />
-                                  {orderId === 'manual' ? 'Crédito Manual' : `Orden: ${orderId.slice(0, 8)}...`}
-                                </CardTitle>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {firstInstallment.total_installments} cuotas • Total: ${creditTotal.toLocaleString()}
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm">
-                                  <span className="text-green-600 font-medium">${paidAmount.toLocaleString()}</span>
-                                  <span className="text-muted-foreground"> / </span>
-                                  <span className="text-orange-600 font-medium">${pendingAmount.toLocaleString()}</span>
+                          <Collapsible 
+                            open={isExpanded} 
+                            onOpenChange={(open) => setExpandedOrders(prev => ({ ...prev, [orderId]: open }))}
+                          >
+                            <CollapsibleTrigger asChild>
+                              <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                      <CreditCard className="h-4 w-4" />
+                                      <CardTitle className="text-base">
+                                        {orderId === 'manual' ? 'Crédito Manual' : (orderInfo ? `Orden: ${orderInfo.order_number}` : `Orden: ${orderId.slice(0, 8)}...`)}
+                                      </CardTitle>
+                                    </div>
+                                    
+                                    {orderInfo && (
+                                      <div className="text-sm text-muted-foreground space-y-1">
+                                        <p>Fecha: {format(new Date(orderInfo.created_at), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+                                        <p>Total de la orden: ${orderInfo.total_amount.toLocaleString()}</p>
+                                        <div>
+                                          <p className="font-medium">Productos:</p>
+                                          <div className="ml-2">
+                                            {Array.isArray(orderInfo.products) && orderInfo.products?.map((product: any, index: number) => (
+                                              <p key={index} className="text-xs">
+                                                • {product.name} (Cant: {product.quantity}) - ${(product.price * product.quantity).toLocaleString()}
+                                              </p>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
+                                    
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                      {firstInstallment.total_installments} cuotas • Total crédito: ${creditTotal.toLocaleString()}
+                                    </p>
+                                  </div>
+                                  
+                                  <div className="text-right">
+                                    <div className="text-sm">
+                                      <span className="text-green-600 font-medium">${paidAmount.toLocaleString()}</span>
+                                      <span className="text-muted-foreground"> / </span>
+                                      <span className="text-orange-600 font-medium">${pendingAmount.toLocaleString()}</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Pagado / Pendiente</p>
+                                  </div>
                                 </div>
-                                <p className="text-xs text-muted-foreground">Pagado / Pendiente</p>
-                              </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Cuota</TableHead>
-                                  <TableHead>Monto</TableHead>
-                                  <TableHead>Vencimiento</TableHead>
-                                  <TableHead>Estado</TableHead>
-                                  <TableHead>Acciones</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {sortedInstallments.map((installment) => (
-                                  <TableRow key={installment.id}>
-                                    <TableCell>
-                                      {installment.installment_number}/{installment.total_installments}
-                                    </TableCell>
-                                    <TableCell className="font-medium">
-                                      ${installment.amount.toLocaleString()}
-                                    </TableCell>
-                                    <TableCell>
-                                      {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge className={getStatusColor(installment.status, installment.due_date)}>
-                                        {getStatusText(installment.status, installment.due_date)}
-                                      </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                      {installment.status === 'pendiente' && (
-                                        <Button
-                                          size="sm"
-                                          onClick={() => markAsPaid(installment.id, installment.amount)}
-                                        >
-                                          Marcar Pagado
-                                        </Button>
-                                      )}
-                                      {installment.status === 'pagado' && installment.paid_at && (
-                                        <p className="text-xs text-muted-foreground">
-                                          Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
-                                        </p>
-                                      )}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </CardContent>
+                              </CardHeader>
+                            </CollapsibleTrigger>
+                            
+                            <CollapsibleContent>
+                              <CardContent className="pt-0">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Cuota</TableHead>
+                                      <TableHead>Monto</TableHead>
+                                      <TableHead>Vencimiento</TableHead>
+                                      <TableHead>Estado</TableHead>
+                                      <TableHead>Acciones</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {sortedInstallments.map((installment) => (
+                                      <TableRow key={installment.id}>
+                                        <TableCell>
+                                          {installment.installment_number}/{installment.total_installments}
+                                        </TableCell>
+                                        <TableCell className="font-medium">
+                                          ${installment.amount.toLocaleString()}
+                                        </TableCell>
+                                        <TableCell>
+                                          {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge className={getStatusColor(installment.status, installment.due_date)}>
+                                            {getStatusText(installment.status, installment.due_date)}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          {installment.status === 'pendiente' && (
+                                            <Button
+                                              size="sm"
+                                              onClick={() => markAsPaid(installment.id, installment.amount)}
+                                            >
+                                              Marcar Pagado
+                                            </Button>
+                                          )}
+                                          {installment.status === 'pagado' && installment.paid_at && (
+                                            <p className="text-xs text-muted-foreground">
+                                              Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
+                                            </p>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </CardContent>
+                            </CollapsibleContent>
+                          </Collapsible>
                         </Card>
                       );
                     })}
