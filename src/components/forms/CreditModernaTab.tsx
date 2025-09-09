@@ -9,6 +9,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { CreateCreditModernaModal } from "./CreateCreditModernaModal";
+import { UnifyCreditInstallmentsModal } from "./UnifyCreditInstallmentsModal";
 
 interface CreditInstallment {
   id: string;
@@ -30,6 +31,7 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
   const [installments, setInstallments] = useState<CreditInstallment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showUnifyModal, setShowUnifyModal] = useState(false);
 
   const fetchInstallments = async () => {
     console.log("Fetching customer installments for:", customerId);
@@ -159,10 +161,19 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
       {/* Actions */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Cuotas de Crédito Moderna</h3>
-        <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Crear Nuevo Crédito
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setShowUnifyModal(true)}
+            disabled={installments.filter(i => i.status === 'pendiente').length === 0}
+          >
+            Unificar Cuotas
+          </Button>
+          <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Crear Nuevo Crédito
+          </Button>
+        </div>
       </div>
 
       {/* Installments Table */}
@@ -227,6 +238,13 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
         onOpenChange={setShowCreateModal}
         customerId={customerId}
         onCreditCreated={fetchInstallments}
+      />
+
+      <UnifyCreditInstallmentsModal
+        open={showUnifyModal}
+        onOpenChange={setShowUnifyModal}
+        customerId={customerId}
+        onUnificationComplete={fetchInstallments}
       />
     </div>
   );
