@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, addMonths, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CreditOrder {
   id: string;
@@ -44,6 +45,7 @@ export function UnifyCreditInstallmentsModal({
   customerId,
   onUnificationComplete,
 }: UnifyCreditInstallmentsModalProps) {
+  const { profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [creditOrders, setCreditOrders] = useState<CreditOrder[]>([]);
@@ -160,6 +162,11 @@ export function UnifyCreditInstallmentsModal({
       return;
     }
 
+    if (!profile?.id) {
+      toast.error("Usuario no autenticado");
+      return;
+    }
+
     try {
       setProcessing(true);
       
@@ -199,7 +206,7 @@ export function UnifyCreditInstallmentsModal({
             amount: summary.installmentAmount / summary.selectedOrdersData.length,
             due_date: format(dueDate, "yyyy-MM-dd"),
             status: "pendiente",
-            created_by: customerId, // This should be the user ID in a real app
+            created_by: profile.id, // Use authenticated user ID
             notes: `Cuota unificada - ${i}/${newInstallmentCount}`
           });
         });
