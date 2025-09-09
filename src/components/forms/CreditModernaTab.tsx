@@ -114,101 +114,6 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
     return { totalPending, totalOverdue, totalPaid };
   };
 
-  const generateMissingInstallments = async () => {
-    try {
-      // Get orders with credito_moderna that don't have installments
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('customer_id', customerId)
-        .eq('payment_method', 'credito_moderna');
-
-      if (ordersError) throw ordersError;
-
-      if (!orders || orders.length === 0) {
-        toast.error('No se encontraron órdenes con crédito moderna');
-        return;
-      }
-
-      // Get existing installments to check which orders already have them
-      const { data: existingInstallments, error: installmentsError } = await supabase
-        .from('credit_moderna_installments')
-        .select('order_id')
-        .eq('customer_id', customerId);
-
-      if (installmentsError) throw installmentsError;
-
-      const existingOrderIds = existingInstallments?.map(inst => inst.order_id) || [];
-      const ordersWithoutInstallments = orders.filter(order => !existingOrderIds.includes(order.id));
-
-      console.log('Orders without installments:', ordersWithoutInstallments);
-
-      if (ordersWithoutInstallments.length === 0) {
-        toast.success('Todas las órdenes ya tienen sus cuotas generadas');
-        return;
-      }
-
-      // Get current user profile
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Usuario no autenticado');
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!profile) {
-        toast.error('Perfil de usuario no encontrado');
-        return;
-      }
-
-      // Generate installments for each order without them
-      const allNewInstallments = [];
-
-      for (const order of ordersWithoutInstallments) {
-        const installmentsNum = 12; // Default 12 installments
-        const installmentAmount = order.total_amount / installmentsNum;
-        const firstDueDay = 15; // Default day 15
-
-        for (let i = 0; i < installmentsNum; i++) {
-          const dueDate = new Date();
-          dueDate.setMonth(dueDate.getMonth() + i + 1);
-          dueDate.setDate(firstDueDay);
-
-          allNewInstallments.push({
-            customer_id: customerId,
-            order_id: order.id,
-            installment_number: i + 1,
-            total_installments: installmentsNum,
-            amount: installmentAmount,
-            due_date: dueDate.toISOString().split('T')[0],
-            status: 'pendiente',
-            created_by: profile.user_id,
-            notes: 'Cuotas generadas automáticamente'
-          });
-        }
-      }
-
-      console.log('Creating installments:', allNewInstallments);
-
-      const { error: insertError } = await supabase
-        .from('credit_moderna_installments')
-        .insert(allNewInstallments);
-
-      if (insertError) throw insertError;
-
-      toast.success(`Se generaron cuotas para ${ordersWithoutInstallments.length} órdenes`);
-      fetchInstallments();
-    } catch (error) {
-      console.error('Error generating missing installments:', error);
-      toast.error('Error al generar las cuotas faltantes');
-    }
-  };
-
   useEffect(() => {
     fetchInstallments();
   }, [customerId]);
@@ -269,13 +174,6 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
             className="flex items-center gap-2"
           >
             🔄 Unificar Cuotas
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={generateMissingInstallments}
-            className="flex items-center gap-2"
-          >
-            ⚡ Generar Cuotas Faltantes
           </Button>
           <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
