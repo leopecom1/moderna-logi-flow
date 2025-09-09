@@ -567,24 +567,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             )}
           </div>
 
-          {/* Lista de Precio y Productos */}
+          {/* Productos */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-base font-semibold">Lista de Precio</Label>
-            </div>
-            
-            <div className="space-y-2">
-              <Select value={formData.price_list} onValueChange={(value) => setFormData(prev => ({ ...prev, price_list: value }))}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar lista de precio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="price_list_1">{priceListConfig.price_list_1_name}</SelectItem>
-                  <SelectItem value="price_list_2">{priceListConfig.price_list_2_name}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="flex items-center justify-between">
               <Label className="text-base font-semibold">Productos *</Label>
               <Button type="button" onClick={addProduct} variant="outline" size="sm">
@@ -734,10 +718,18 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             )}
           </div>
 
+          {/* Método de Pago */}
+
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="payment_method">Método de Pago *</Label>
-              <Select value={formData.payment_method} onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value }))} required>
+          <div className="space-y-2">
+            <Label htmlFor="payment_method">Método de Pago *</Label>
+            <Select value={formData.payment_method} onValueChange={(value) => {
+              setFormData(prev => ({ 
+                ...prev, 
+                payment_method: value,
+                price_list: value === 'credito_moderna' ? 'price_list_2' : prev.price_list
+              }));
+            }} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar método" />
                 </SelectTrigger>
@@ -832,6 +824,25 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Lista de Precio */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Lista de Precio</Label>
+            </div>
+            
+            <div className="space-y-2">
+              <Select value={formData.price_list} onValueChange={(value) => setFormData(prev => ({ ...prev, price_list: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar lista de precio" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="price_list_1">{priceListConfig.price_list_1_name}</SelectItem>
+                  <SelectItem value="price_list_2">{formData.payment_method === 'credito_moderna' ? 'Lista Crédito Moderna' : priceListConfig.price_list_2_name}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
