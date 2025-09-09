@@ -209,10 +209,14 @@ export const CreateCustomerModal = ({ open, onOpenChange, onCustomerCreated }: C
               <Label htmlFor="customer_number">Número de Cliente</Label>
               <Input
                 id="customer_number"
-                placeholder="CLI-001"
+                placeholder="Se generará automáticamente"
                 value={formData.customer_number}
                 onChange={(e) => setFormData(prev => ({ ...prev, customer_number: e.target.value }))}
+                disabled
               />
+              <p className="text-xs text-muted-foreground">
+                El número se asignará automáticamente al crear el cliente
+              </p>
             </div>
           </div>
 

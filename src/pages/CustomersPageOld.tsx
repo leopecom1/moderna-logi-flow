@@ -5,16 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Users, Upload, Table, Grid3X3 } from 'lucide-react';
+import { Plus, Search, Users, Phone, Mail, MapPin, Eye, Upload, Trash2, Edit } from 'lucide-react';
 import { CreateCustomerModal } from '@/components/forms/CreateCustomerModal';
 import { EditCustomerModal } from '@/components/forms/EditCustomerModal';
 import { ImportMovementsModal } from '@/components/forms/ImportMovementsModal';
 import { DeleteCustomerModal } from '@/components/forms/DeleteCustomerModal';
-import { CustomersTable } from '@/components/customers/CustomersTable';
 import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Customer {
   id: string;
@@ -29,11 +26,9 @@ interface Customer {
   cedula_identidad: string | null;
   margen: number | null;
   created_at: string;
-  customer_number: string | null;
-  orders_count?: number;
-  has_active_credit?: boolean;
-  last_branch?: string;
 }
+
+import { MainLayout } from '@/components/layout/MainLayout';
 
 export const CustomersPage = () => {
   const navigate = useNavigate();
@@ -41,7 +36,6 @@ export const CustomersPage = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -59,52 +53,13 @@ export const CustomersPage = () => {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      
-      // Fetch customers with additional data
-      const { data: customersData, error: customersError } = await supabase
+      const { data, error } = await supabase
         .from('customers')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (customersError) throw customersError;
-
-      // Enhance customers with orders count and credit info
-      const enhancedCustomers = await Promise.all(
-        (customersData || []).map(async (customer) => {
-          // Get orders count
-          const { count: ordersCount } = await supabase
-            .from('orders')
-            .select('*', { count: 'exact', head: true })
-            .eq('customer_id', customer.id);
-
-          // Check for active credit moderna
-          const { data: creditData } = await supabase
-            .from('credit_moderna_installments')
-            .select('id')
-            .eq('customer_id', customer.id)
-            .eq('status', 'pendiente')
-            .limit(1);
-
-          // Get last branch from most recent order
-          const { data: lastOrderData } = await supabase
-            .from('orders')
-            .select(`
-              branches(name)
-            `)
-            .eq('customer_id', customer.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          return {
-            ...customer,
-            orders_count: ordersCount || 0,
-            has_active_credit: creditData && creditData.length > 0,
-            last_branch: lastOrderData?.[0]?.branches?.name || null
-          };
-        })
-      );
-
-      setCustomers(enhancedCustomers);
+      if (error) throw error;
+      setCustomers(data || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
       toast({
@@ -121,8 +76,7 @@ export const CustomersPage = () => {
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone?.includes(searchTerm) ||
-    customer.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.customer_number?.includes(searchTerm)
+    customer.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDeleteCustomer = (customer: Customer) => {
@@ -169,94 +123,101 @@ export const CustomersPage = () => {
         )}
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="relative flex-1 max-w-md">
+      <div className="mb-6">
+        <div className="relative">
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar clientes por nombre, email, teléfono, dirección o número..."
+            placeholder="Buscar clientes por nombre, email, teléfono o dirección..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
           />
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant={viewMode === 'table' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-          >
-            <Table className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'cards' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('cards')}
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
-      {viewMode === 'table' ? (
-        <CustomersTable 
-          customers={filteredCustomers}
-          canManageCustomers={canManageCustomers}
-          canDeleteCustomers={canDeleteCustomers}
-          onEditCustomer={handleEditCustomer}
-          onDeleteCustomer={handleDeleteCustomer}
-        />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCustomers.map((customer) => (
-            <Card key={customer.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{customer.name}</span>
-                  <Badge variant="secondary">{customer.customer_number}</Badge>
-                </CardTitle>
-                <CardDescription>{customer.city} - {customer.departamento}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span>Órdenes: {customer.orders_count}</span>
-                  <Badge variant={customer.has_active_credit ? 'default' : 'secondary'}>
-                    {customer.has_active_credit ? 'Crédito Activo' : 'Sin Crédito'}
-                  </Badge>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredCustomers.map((customer) => (
+          <Card key={customer.id} className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>{customer.name}</span>
+                <Badge variant="secondary">{customer.departamento || 'Sin depto'}</Badge>
+              </CardTitle>
+              <CardDescription>{customer.city}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center space-x-2 text-sm">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <span>{customer.address}</span>
+              </div>
+              {customer.neighborhood && (
+                <div className="text-sm text-muted-foreground">
+                  Barrio: {customer.neighborhood}
                 </div>
-                {customer.phone && (
-                  <div className="text-sm text-muted-foreground">
-                    Tel: {customer.phone}
-                  </div>
-                )}
-                {customer.last_branch && (
-                  <div className="text-sm text-muted-foreground">
-                    Última sucursal: {customer.last_branch}
-                  </div>
-                )}
-                <div className="flex space-x-2 pt-2">
+              )}
+              {customer.phone && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{customer.phone}</span>
+                </div>
+              )}
+              {customer.email && (
+                <div className="flex items-center space-x-2 text-sm">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  <span>{customer.email}</span>
+                </div>
+              )}
+              {customer.cedula_identidad && (
+                <div className="text-sm text-muted-foreground">
+                  <strong>CI:</strong> {customer.cedula_identidad}
+                </div>
+              )}
+              {customer.margen && (
+                <div className="text-sm text-muted-foreground">
+                  <strong>Margen:</strong> {customer.margen}%
+                </div>
+              )}
+              {customer.notes && (
+                <div className="text-sm text-muted-foreground">
+                  <strong>Notas:</strong> {customer.notes}
+                </div>
+              )}
+            </CardContent>
+            <div className="p-4 pt-0">
+              <div className="flex space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => navigate(`/customers/${customer.id}`)}
+                  className="flex-1"
+                >
+                  <Eye className="h-4 w-4 mr-2" />
+                  Ver Historial
+                </Button>
+                {canManageCustomers && (
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={() => navigate(`/customers/${customer.id}`)}
-                    className="flex-1"
+                    onClick={() => handleEditCustomer(customer)}
                   >
-                    Ver Historial
+                    <Edit className="h-4 w-4" />
                   </Button>
-                  {canManageCustomers && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleEditCustomer(customer)}
-                    >
-                      Editar
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                )}
+                {canDeleteCustomers && (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => handleDeleteCustomer(customer)}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
 
       {filteredCustomers.length === 0 && (
         <div className="text-center py-12">

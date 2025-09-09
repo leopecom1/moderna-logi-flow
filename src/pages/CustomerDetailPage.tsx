@@ -16,6 +16,7 @@ import { CreateCustomerPaymentModal } from '@/components/forms/CreateCustomerPay
 import { CreateCustomerMovementModal } from '@/components/forms/CreateCustomerMovementModal';
 import { CreateCollectionModal } from '@/components/forms/CreateCollectionModal';
 import { CreditModernaTab } from '@/components/forms/CreditModernaTab';
+import { AllPaymentsTable } from '@/components/customers/AllPaymentsTable';
 import { MainLayout } from '@/components/layout/MainLayout';
 
 interface Customer {
@@ -320,55 +321,54 @@ export default function CustomerDetailPage() {
         </TabsList>
 
         <TabsContent value="summary">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Órdenes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">${orders.reduce((sum, order) => sum + Number(order.total_amount), 0).toFixed(2)}</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Total Pagado</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  ${payments.filter(p => p.status === 'completado').reduce((sum, payment) => sum + Number(payment.amount), 0).toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Saldo Pendiente</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className={`text-2xl font-bold ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  ${balance.toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Saldo desde Movimientos</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  ${movements.reduce((sum, movement) => sum + Number(movement.balance_amount), 0).toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">Órdenes Completadas</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {orders.filter(o => o.status === 'entregado').length}/{orders.length}
-                </div>
-              </CardContent>
-            </Card>
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Total Órdenes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">${orders.reduce((sum, order) => sum + Number(order.total_amount), 0).toFixed(2)}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Total Pagado</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">
+                    ${payments.filter(p => p.status === 'completado').reduce((sum, payment) => sum + Number(payment.amount), 0).toFixed(2)}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Saldo Pendiente</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                    ${balance.toFixed(2)}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setShowCreateOrderModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Crear Orden
+              </Button>
+              <Button onClick={() => setShowCreatePaymentModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Crear Pago
+              </Button>
+              <Button onClick={() => setShowCreateCollectionModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Registrar Cobro
+              </Button>
+            </div>
           </div>
         </TabsContent>
 
@@ -440,24 +440,6 @@ export default function CustomerDetailPage() {
            <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">Órdenes del Cliente</h3>
-              <div className="flex flex-wrap gap-2">
-                <Button onClick={() => setShowCreateOrderModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Orden
-                </Button>
-                <Button onClick={() => setShowCreatePaymentModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Pago
-                </Button>
-                <Button onClick={() => setShowCreateCollectionModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Registrar Cobro
-                </Button>
-                <Button onClick={() => setShowCreateMovementModal(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crear Movimiento
-                </Button>
-              </div>
             </div>
             {orders.map((order) => (
               <Card key={order.id}>
@@ -492,38 +474,17 @@ export default function CustomerDetailPage() {
         </TabsContent>
 
         <TabsContent value="payments">
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Pagos del Cliente</h3>
-              <Button onClick={() => setShowCreatePaymentModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Pago
-              </Button>
-            </div>
-            {payments.map((payment) => (
-              <Card key={payment.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{payment.payment_method}</span>
-                    <div className="flex items-center space-x-2">
-                      {getStatusBadge(payment.status, 'payment')}
-                      <span className="text-lg font-bold">${Number(payment.amount).toFixed(2)}</span>
-                    </div>
-                  </CardTitle>
-                  <CardDescription>
-                    Creado: {new Date(payment.created_at).toLocaleDateString()}
-                    {payment.paid_at && ` • Pagado: ${new Date(payment.paid_at).toLocaleDateString()}`}
-                    {payment.reference_number && ` • Ref: ${payment.reference_number}`}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            ))}
-            {payments.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                No hay pagos registrados
-              </div>
-            )}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Historial de Pagos</CardTitle>
+              <CardDescription>
+                Todos los pagos realizados por el cliente (órdenes, crédito moderna, efectivo, transferencias)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AllPaymentsTable customerId={id!} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="deliveries">
