@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, DollarSign, Calendar, AlertTriangle } from "lucide-react";
+import { Plus, DollarSign, Calendar, AlertTriangle, Merge } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
 import { CreateCreditModernaModal } from "./CreateCreditModernaModal";
+import { UnifyCreditInstallmentsModal } from "./UnifyCreditInstallmentsModal";
 
 interface CreditInstallment {
   id: string;
@@ -30,6 +31,7 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
   const [installments, setInstallments] = useState<CreditInstallment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showUnifyModal, setShowUnifyModal] = useState(false);
 
   const fetchInstallments = async () => {
     console.log("Fetching customer installments for:", customerId);
@@ -159,10 +161,22 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
       {/* Actions */}
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Cuotas de Crédito Moderna</h3>
-        <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Crear Nuevo Crédito
-        </Button>
+        <div className="flex items-center gap-2">
+          {installments.filter(i => i.status === 'pendiente' || i.status === 'vencido').length > 1 && (
+            <Button 
+              variant="outline" 
+              onClick={() => setShowUnifyModal(true)} 
+              className="flex items-center gap-2"
+            >
+              <Merge className="h-4 w-4" />
+              Unificar Cuotas
+            </Button>
+          )}
+          <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Crear Nuevo Crédito
+          </Button>
+        </div>
       </div>
 
       {/* Installments Table */}
@@ -227,6 +241,13 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
         onOpenChange={setShowCreateModal}
         customerId={customerId}
         onCreditCreated={fetchInstallments}
+      />
+
+      <UnifyCreditInstallmentsModal
+        open={showUnifyModal}
+        onOpenChange={setShowUnifyModal}
+        customerId={customerId}
+        onUnificationComplete={fetchInstallments}
       />
     </div>
   );
