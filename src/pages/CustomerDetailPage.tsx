@@ -63,6 +63,7 @@ interface Delivery {
   order_id: string;
 }
 
+
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -129,6 +130,7 @@ export default function CustomerDetailPage() {
         setDeliveries(deliveriesData || []);
       }
 
+
     } catch (error) {
       console.error('Error fetching customer data:', error);
       toast({
@@ -149,6 +151,7 @@ export default function CustomerDetailPage() {
     
     return totalOrders - totalPaid;
   };
+
 
   const getStatusBadge = (status: string, type: 'order' | 'payment' | 'delivery') => {
     const statusConfig = {
@@ -329,6 +332,7 @@ export default function CustomerDetailPage() {
           </div>
         </TabsContent>
 
+
         <TabsContent value="orders">
            <div className="space-y-4">
             <div className="flex justify-between items-center">
@@ -417,6 +421,7 @@ export default function CustomerDetailPage() {
         </TabsContent>
       </Tabs>
 
+
       <CreateCustomerOrderModal
         open={showCreateOrderModal}
         onOpenChange={setShowCreateOrderModal}
@@ -434,11 +439,9 @@ export default function CustomerDetailPage() {
         onPaymentCreated={fetchCustomerData}
       />
 
+
       {showCreateCollectionModal && (
-        <CreateCollectionModal 
-          customerId={id!} 
-          onCollectionCreated={fetchCustomerData}
-        />
+        <CreateCollectionModal customerId={id} onCollectionCreated={fetchCustomerData} />
       )}
 
     </MainLayout>

@@ -6,7 +6,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Search, Edit3, Building2 } from 'lucide-react';
+import { Package, Plus, Search, Edit3, Building2, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
 import { EditOrderModal } from '@/components/forms/EditOrderModal';
@@ -92,6 +92,31 @@ const OrdersPage = () => {
       setBranches(data || []);
     } catch (error) {
       console.error('Error fetching branches:', error);
+    }
+  };
+
+  const deleteOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Éxito',
+        description: 'Orden eliminada correctamente',
+      });
+      
+      fetchOrders();
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo eliminar la orden',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -224,6 +249,19 @@ const OrdersPage = () => {
                       >
                         Ver
                       </Button>
+                      {profile?.role === 'gerencia' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm('¿Estás seguro de que quieres eliminar esta orden?')) {
+                              deleteOrder(order.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
