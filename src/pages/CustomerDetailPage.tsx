@@ -7,10 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator, Plus } from 'lucide-react';
+import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator, Upload, Edit, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { ImportMovementsModal } from '@/components/forms/ImportMovementsModal';
+import { EditMovementModal } from '@/components/forms/EditMovementModal';
 import { CreateCustomerOrderModal } from '@/components/forms/CreateCustomerOrderModal';
 import { CreateCustomerPaymentModal } from '@/components/forms/CreateCustomerPaymentModal';
+import { CreateCustomerMovementModal } from '@/components/forms/CreateCustomerMovementModal';
 import { CreateCollectionModal } from '@/components/forms/CreateCollectionModal';
 import { CreditModernaTab } from '@/components/forms/CreditModernaTab';
 import { AllPaymentsTable } from '@/components/customers/AllPaymentsTable';
@@ -63,6 +66,14 @@ interface Delivery {
   order_id: string;
 }
 
+interface Movement {
+  id: string;
+  movement_date: string;
+  payment_info: string | null;
+  balance_amount: number;
+  created_at: string;
+}
+
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -71,10 +82,16 @@ export default function CustomerDetailPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
+  const [showCreateMovementModal, setShowCreateMovementModal] = useState(false);
+  
   const [showCreateCollectionModal, setShowCreateCollectionModal] = useState(false);
+  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -129,6 +146,16 @@ export default function CustomerDetailPage() {
         setDeliveries(deliveriesData || []);
       }
 
+      // Fetch customer movements
+      const { data: movementsData, error: movementsError } = await supabase
+        .from('customer_movements')
+        .select('*')
+        .eq('customer_id', id)
+        .order('movement_date', { ascending: false });
+
+      if (movementsError) throw movementsError;
+      setMovements(movementsData || []);
+
     } catch (error) {
       console.error('Error fetching customer data:', error);
       toast({
@@ -147,7 +174,15 @@ export default function CustomerDetailPage() {
       .filter(payment => payment.status === 'completado')
       .reduce((sum, payment) => sum + Number(payment.amount), 0);
     
-    return totalOrders - totalPaid;
+    // Include movements in balance calculation
+    const movementsBalance = movements.reduce((sum, movement) => sum + Number(movement.balance_amount), 0);
+    
+    return totalOrders - totalPaid + movementsBalance;
+  };
+
+  const handleEditMovement = (movement: Movement) => {
+    setSelectedMovement(movement);
+    setShowEditModal(true);
   };
 
   const getStatusBadge = (status: string, type: 'order' | 'payment' | 'delivery') => {
@@ -202,6 +237,10 @@ export default function CustomerDetailPage() {
           <ArrowLeft className="h-4 w-4 mr-2" />
           Volver a Clientes
         </Button>
+        <Button onClick={() => setShowImportModal(true)}>
+          <Upload className="h-4 w-4 mr-2" />
+          Importar Movimientos
+        </Button>
       </div>
 
       {/* Customer Info Header */}
@@ -254,10 +293,14 @@ export default function CustomerDetailPage() {
 
       {/* Tabs for History */}
       <Tabs defaultValue="summary" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="summary">
             <Calculator className="h-4 w-4 mr-2" />
             Resumen
+          </TabsTrigger>
+          <TabsTrigger value="movements">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Movimientos ({movements.length})
           </TabsTrigger>
           <TabsTrigger value="orders">
             <ShoppingCart className="h-4 w-4 mr-2" />
@@ -327,6 +370,70 @@ export default function CustomerDetailPage() {
               </Button>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="movements">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Historial de Movimientos</CardTitle>
+                  <CardDescription>
+                    Gestiona los movimientos del cliente
+                  </CardDescription>
+                </div>
+                <Button onClick={() => setShowCreateMovementModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Movimiento
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {movements.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Información de Pago</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {movements.map((movement) => (
+                      <TableRow key={movement.id}>
+                        <TableCell>
+                          {new Date(movement.movement_date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`font-medium ${Number(movement.balance_amount) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            ${Number(movement.balance_amount).toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          {movement.payment_info || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditMovement(movement)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  No hay movimientos registrados
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="orders">
@@ -417,6 +524,28 @@ export default function CustomerDetailPage() {
         </TabsContent>
       </Tabs>
 
+      <ImportMovementsModal
+        open={showImportModal}
+        onOpenChange={setShowImportModal}
+        customerId={id}
+        onImportComplete={fetchCustomerData}
+      />
+
+      <EditMovementModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        movement={selectedMovement}
+        onMovementUpdated={fetchCustomerData}
+      />
+
+      <CreateCustomerMovementModal
+        open={showCreateMovementModal}
+        onOpenChange={setShowCreateMovementModal}
+        customerId={id!}
+        customerName={customer.name}
+        onMovementCreated={fetchCustomerData}
+      />
+
       <CreateCustomerOrderModal
         open={showCreateOrderModal}
         onOpenChange={setShowCreateOrderModal}
@@ -434,11 +563,9 @@ export default function CustomerDetailPage() {
         onPaymentCreated={fetchCustomerData}
       />
 
+
       {showCreateCollectionModal && (
-        <CreateCollectionModal 
-          customerId={id!} 
-          onCollectionCreated={fetchCustomerData}
-        />
+        <CreateCollectionModal customerId={id} onCollectionCreated={fetchCustomerData} />
       )}
 
     </MainLayout>
