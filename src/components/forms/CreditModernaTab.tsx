@@ -43,6 +43,11 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
         .order("due_date", { ascending: true });
 
       console.log("Customer installments result:", { data, error });
+      console.log("Total installments found:", data?.length || 0);
+      console.log("Status breakdown:", data?.reduce((acc, item) => {
+        acc[item.status] = (acc[item.status] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>));
 
       if (error) throw error;
 

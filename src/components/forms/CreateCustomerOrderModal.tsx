@@ -93,6 +93,18 @@ export const CreateCustomerOrderModal = ({
 
       // Si es Crédito Moderna, crear las cuotas
       if (formData.payment_method === 'credito_moderna' && formData.cantidad_cuotas && formData.dia_pago_cuota) {
+        console.log('Creating credit moderna installments for order:', order.id);
+        
+        if (!profile?.user_id) {
+          console.error('No user profile found for creating installments');
+          toast({
+            title: 'Error',
+            description: 'Error de autenticación al crear cuotas',
+            variant: 'destructive',
+          });
+          return;
+        }
+
         const installmentsNum = parseInt(formData.cantidad_cuotas);
         const installmentAmount = parseFloat(formData.total_amount) / installmentsNum;
         const firstDueDay = parseInt(formData.dia_pago_cuota);
@@ -117,6 +129,8 @@ export const CreateCustomerOrderModal = ({
           });
         }
 
+        console.log('Inserting credit installments:', creditInstallments);
+
         const { error: creditError } = await supabase
           .from('credit_moderna_installments')
           .insert(creditInstallments);
@@ -128,6 +142,8 @@ export const CreateCustomerOrderModal = ({
             description: 'La orden se creó pero hubo un problema al generar las cuotas de crédito. Puede crearlas manualmente.',
             variant: 'default',
           });
+        } else {
+          console.log('Credit installments created successfully');
         }
       }
 
