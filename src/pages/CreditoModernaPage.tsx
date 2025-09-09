@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { toast } from "sonner";
-import { CustomerCreditModal } from "@/components/forms/CustomerCreditModal";
 
 interface CreditInstallment {
   id: string;
@@ -49,10 +49,9 @@ interface CreditMetrics {
 }
 
 function CreditoModernaPage() {
+  const navigate = useNavigate();
   const [installments, setInstallments] = useState<CreditInstallment[]>([]);
   const [customerSummaries, setCustomerSummaries] = useState<CustomerSummary[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerSummary | null>(null);
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [metrics, setMetrics] = useState<CreditMetrics>({
     totalPendingAmount: 0,
     todayDueAmount: 0,
@@ -221,8 +220,7 @@ function CreditoModernaPage() {
   });
 
   const handleCustomerClick = (customer: CustomerSummary) => {
-    setSelectedCustomer(customer);
-    setShowCustomerModal(true);
+    navigate(`/customers/${customer.id}`, { state: { from: '/credito-moderna' } });
   };
 
   useEffect(() => {
@@ -417,8 +415,8 @@ function CreditoModernaPage() {
                               handleCustomerClick(customer);
                             }}
                           >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver Cuotas
+                           <Eye className="h-4 w-4 mr-1" />
+                           Ver Detalles
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -507,13 +505,6 @@ function CreditoModernaPage() {
           </Card>
         )}
       </div>
-
-      <CustomerCreditModal
-        open={showCustomerModal}
-        onOpenChange={setShowCustomerModal}
-        customer={selectedCustomer}
-        onRefresh={fetchInstallments}
-      />
     </MainLayout>
   );
 }

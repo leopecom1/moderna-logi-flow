@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -67,6 +67,7 @@ interface Delivery {
 export default function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { profile } = useAuth();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -201,9 +202,12 @@ export default function CustomerDetailPage() {
   return (
     <MainLayout>
       <div className="flex items-center justify-between mb-6">
-        <Button variant="ghost" onClick={() => navigate('/customers')}>
+        <Button variant="ghost" onClick={() => {
+          const fromPath = location.state?.from;
+          navigate(fromPath || '/customers');
+        }}>
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Volver a Clientes
+          {location.state?.from === '/credito-moderna' ? 'Volver a Crédito Moderna' : 'Volver a Clientes'}
         </Button>
       </div>
 
