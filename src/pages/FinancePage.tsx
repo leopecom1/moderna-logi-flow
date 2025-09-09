@@ -262,15 +262,120 @@ const FinancePage = () => {
       const movement = movements?.find(m => m.id === movementId);
       
       if (movement?.type === 'transferencia' && movement.reference?.startsWith('PED-')) {
-        // This is an order, update the order status
+        // This is an order, first update payment status, then determine next order status
         const { error } = await supabase
-          .from('orders')
-          .update({ status: 'pago_ingresado' as any })
-          .eq('id', movementId);
+          .from('payments')
+          .update({ status: 'pagado' })
+          .eq('order_id', movementId);
 
         if (error) throw error;
+
+        // Get order details to check stock availability
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            products,
+            branch_id,
+            branches (
+              name,
+              branch_warehouses (
+                warehouse_id,
+                warehouses (
+                  id,
+                  name,
+                  inventory_items (
+                    id,
+                    product_id,
+                    variant_id,
+                    current_stock
+                  )
+                )
+              )
+            )
+          `)
+          .eq('id', movementId)
+          .single();
+
+        if (orderError || !order) throw orderError || new Error('Order not found');
+
+        const orderProducts = order.products as any[];
+        let needsInternalMovement = false;
+        
+        // Check stock availability for each product in the order
+        for (const orderProduct of orderProducts) {
+          const branchWarehouses = order.branches?.branch_warehouses || [];
+          let hasStockInBranch = false;
+          
+          // Check if product has stock in branch warehouses
+          for (const bw of branchWarehouses) {
+            const inventoryItems = bw.warehouses?.inventory_items || [];
+            const item = inventoryItems.find((item: any) => 
+              item.product_id === orderProduct.product_id && 
+              (orderProduct.variant_id ? item.variant_id === orderProduct.variant_id : !item.variant_id)
+            );
+            
+            if (item && item.current_stock >= orderProduct.quantity) {
+              hasStockInBranch = true;
+              break;
+            }
+          }
+          
+          if (!hasStockInBranch) {
+            // Check if there's stock in other warehouses
+            const { data: otherStock, error: stockError } = await supabase
+              .from('inventory_items')
+              .select('id, current_stock, warehouses!inner(id, name)')
+              .eq('product_id', orderProduct.product_id)
+              .eq('variant_id', orderProduct.variant_id || null)
+              .gt('current_stock', 0);
+
+            if (stockError) continue;
+
+            if (otherStock && otherStock.length > 0) {
+              // There's stock in other warehouses, needs internal movement
+              needsInternalMovement = true;
+              
+              // Create internal movement entry
+              for (const stockItem of otherStock) {
+                if (stockItem.current_stock >= orderProduct.quantity) {
+                  const targetWarehouse = branchWarehouses[0]?.warehouses?.id;
+                  if (targetWarehouse && stockItem.warehouses.id !== targetWarehouse) {
+                    await supabase
+                      .from('inventory_movements')
+                      .insert({
+                        inventory_item_id: stockItem.id,
+                        movement_type: 'movimiento_interno',
+                        quantity: orderProduct.quantity,
+                        unit_cost: orderProduct.price || 0,
+                        from_warehouse_id: stockItem.warehouses.id,
+                        to_warehouse_id: targetWarehouse,
+                        notes: `Movimiento interno para pedido ${movement.reference}`,
+                        user_id: (await supabase.auth.getUser()).data.user?.id,
+                        reference_document: movement.reference,
+                        status: 'pendiente'
+                      });
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // Determine next status based on stock situation
+        const nextStatus = needsInternalMovement ? 'movimiento_interno_pendiente' : 'pendiente_envio';
+        
+        // Update order status
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ status: nextStatus as any })
+          .eq('id', movementId);
+
+        if (updateError) throw updateError;
+        
       } else {
-        // This is a payment, update the payment status
+        // This is a regular payment, just update the payment status
         const { error } = await supabase
           .from('payments')
           .update({ status: 'pagado' })

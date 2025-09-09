@@ -270,20 +270,54 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
   const checkStock = async (index: number, productId: string, warehouseId: string, products: OrderProduct[]) => {
     try {
-      const { data, error } = await supabase
+      // Verificar stock en el depósito específico (de la sucursal)
+      const { data: branchStock, error: branchError } = await supabase
         .from('inventory_items')
         .select('current_stock')
         .eq('product_id', productId)
         .eq('warehouse_id', warehouseId)
         .single();
 
-      if (error || !data) {
-        // No hay stock registrado
-        products[index].available_stock = 0;
-        products[index].needs_movement = true;
+      const requiredQuantity = products[index].quantity;
+      let hasStockInBranch = false;
+      
+      if (!branchError && branchStock) {
+        hasStockInBranch = branchStock.current_stock >= requiredQuantity;
+        products[index].available_stock = branchStock.current_stock;
       } else {
-        products[index].available_stock = data.current_stock;
-        products[index].needs_movement = data.current_stock < products[index].quantity;
+        products[index].available_stock = 0;
+      }
+
+      if (hasStockInBranch) {
+        // Hay stock suficiente en la sucursal
+        products[index].needs_movement = false;
+      } else {
+        // No hay stock suficiente en la sucursal, verificar otros depósitos
+        const { data: otherStock, error: otherError } = await supabase
+          .from('inventory_items')
+          .select('current_stock, warehouse_id')
+          .eq('product_id', productId)
+          .neq('warehouse_id', warehouseId)
+          .gt('current_stock', 0);
+
+        if (!otherError && otherStock && otherStock.length > 0) {
+          // Verificar si hay stock suficiente en otros depósitos
+          const totalOtherStock = otherStock.reduce((sum, item) => sum + item.current_stock, 0);
+          
+          if (totalOtherStock >= requiredQuantity) {
+            // Hay stock en otros depósitos, necesita movimiento interno
+            products[index].needs_movement = true;
+            products[index].available_stock = totalOtherStock;
+          } else {
+            // No hay stock suficiente en ningún lado, necesita compra
+            products[index].needs_movement = true;
+            products[index].available_stock = 0;
+          }
+        } else {
+          // No hay stock en ningún depósito, necesita compra
+          products[index].needs_movement = true;
+          products[index].available_stock = 0;
+        }
       }
     } catch (error) {
       console.error('Error checking stock:', error);
@@ -335,8 +369,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       // Determinar el estado inicial del pedido basado en stock y método de pago
       let initialStatus: 'pendiente' | 'pendiente_compra' | 'movimiento_interno_pendiente' | 'pendiente_confirmacion_transferencia' | 'pendiente_envio' = 'pendiente';
       
-      const hasOutOfStockProducts = orderProducts.some(p => p.needs_movement && !p.available_stock);
-      const hasMovementNeeded = orderProducts.some(p => p.needs_movement && p.available_stock);
+      const hasOutOfStockProducts = orderProducts.some(p => p.needs_movement && p.available_stock === 0);
+      const hasMovementNeeded = orderProducts.some(p => p.needs_movement && p.available_stock > 0);
       const isTransfer = formData.payment_method === 'transferencia';
       
       if (hasOutOfStockProducts) {
@@ -418,7 +452,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       }
 
       // Crear compras solicitadas para productos sin stock
-      const outOfStockProducts = orderProducts.filter(p => p.needs_movement && !p.available_stock);
+      const outOfStockProducts = orderProducts.filter(p => p.needs_movement && p.available_stock === 0);
       if (outOfStockProducts.length > 0) {
         const requestedPurchasesData = outOfStockProducts.map(product => ({
           order_id: order.id,
@@ -440,20 +474,20 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       }
 
       // Crear movimientos internos para productos que necesitan movimiento entre sucursales
-      const movementProducts = orderProducts.filter(p => p.needs_movement && p.available_stock);
+      const movementProducts = orderProducts.filter(p => p.needs_movement && p.available_stock > 0);
       if (movementProducts.length > 0) {
         const movementPromises = movementProducts.map(product => {
           return supabase
             .from('inventory_movements')
             .insert([{
               inventory_item_id: null, // Se manejará después
-              movement_type: 'transferencia_interna',
+              movement_type: 'movimiento_interno',
               quantity: product.quantity,
-              unit_cost: 0,
-              notes: `Transferencia interna para pedido ${orderData.order_number} - ${product.product_name} desde ${product.warehouse_name}`,
+              unit_cost: product.unit_price || 0,
+              notes: `Movimiento interno para pedido ${orderData.order_number} - ${product.product_name}`,
               user_id: profile.user_id,
               reference_document: orderData.order_number,
-              status: 'pendiente',
+              status: 'pendiente'
             }]);
         });
 

@@ -58,7 +58,7 @@ export function RequestedPurchasesTab() {
         .from("requested_purchases")
         .select(`
           *,
-          orders!inner (
+          orders (
             order_number,
             customers (
               name
