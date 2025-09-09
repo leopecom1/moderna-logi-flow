@@ -68,6 +68,7 @@ interface OrderProduct {
   unit_price: number;
   available_stock: number;
   needs_movement: boolean;
+  variant_id?: string;
 }
 
 interface Branch {
@@ -331,6 +332,23 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         customerId = newCustomer.id;
       }
 
+      // Determinar el estado inicial del pedido basado en stock y método de pago
+      let initialStatus: 'pendiente' | 'pendiente_compra' | 'movimiento_interno_pendiente' | 'pendiente_confirmacion_transferencia' | 'pendiente_envio' = 'pendiente';
+      
+      const hasOutOfStockProducts = orderProducts.some(p => p.needs_movement && !p.available_stock);
+      const hasMovementNeeded = orderProducts.some(p => p.needs_movement && p.available_stock);
+      const isTransfer = formData.payment_method === 'transferencia';
+      
+      if (hasOutOfStockProducts) {
+        initialStatus = 'pendiente_compra';
+      } else if (hasMovementNeeded) {
+        initialStatus = 'movimiento_interno_pendiente';
+      } else if (isTransfer) {
+        initialStatus = 'pendiente_confirmacion_transferencia';
+      } else {
+        initialStatus = 'pendiente_envio';
+      }
+
       const orderData = {
         customer_id: customerId,
         seller_id: profile.user_id,
@@ -345,7 +363,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         delivery_time_slot: formData.delivery_time_slot,
         notes: formData.notes,
         order_number: generateOrderNumber(),
-        status: 'pendiente' as const,
+        status: initialStatus,
       };
 
       const { data: order, error } = await supabase
@@ -399,34 +417,61 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         }
       }
 
-      // Crear órdenes de movimiento para productos sin stock
-      const movementPromises = orderProducts
-        .filter(product => product.needs_movement)
-        .map(product => {
+      // Crear compras solicitadas para productos sin stock
+      const outOfStockProducts = orderProducts.filter(p => p.needs_movement && !p.available_stock);
+      if (outOfStockProducts.length > 0) {
+        const requestedPurchasesData = outOfStockProducts.map(product => ({
+          order_id: order.id,
+          product_id: product.product_id,
+          variant_id: product.variant_id || null,
+          quantity: product.quantity,
+          unit_cost: product.unit_price,
+          notes: `Solicitado para pedido ${orderData.order_number}`,
+          requested_by: profile.user_id,
+        }));
+
+        const { error: purchaseRequestError } = await supabase
+          .from('requested_purchases')
+          .insert(requestedPurchasesData);
+
+        if (purchaseRequestError) {
+          console.error('Error creating purchase requests:', purchaseRequestError);
+        }
+      }
+
+      // Crear movimientos internos para productos que necesitan movimiento entre sucursales
+      const movementProducts = orderProducts.filter(p => p.needs_movement && p.available_stock);
+      if (movementProducts.length > 0) {
+        const movementPromises = movementProducts.map(product => {
           return supabase
             .from('inventory_movements')
             .insert([{
               inventory_item_id: null, // Se manejará después
-              movement_type: 'orden_movimiento',
+              movement_type: 'transferencia_interna',
               quantity: product.quantity,
               unit_cost: 0,
-              notes: `Orden de movimiento para pedido - ${product.product_name} desde ${product.warehouse_name}`,
+              notes: `Transferencia interna para pedido ${orderData.order_number} - ${product.product_name} desde ${product.warehouse_name}`,
               user_id: profile.user_id,
               reference_document: orderData.order_number,
+              status: 'pendiente',
             }]);
         });
 
-      if (movementPromises.length > 0) {
         await Promise.all(movementPromises);
       }
 
-      const needsMovement = orderProducts.some(p => p.needs_movement);
+      let toastMessage = 'El pedido ha sido creado exitosamente';
+      if (hasOutOfStockProducts) {
+        toastMessage = 'El pedido ha sido creado. Se generaron solicitudes de compra para productos sin stock.';
+      } else if (hasMovementNeeded) {
+        toastMessage = 'El pedido ha sido creado. Se generaron movimientos internos para productos de otras sucursales.';
+      } else if (isTransfer) {
+        toastMessage = 'El pedido ha sido creado. Pendiente de confirmación de transferencia.';
+      }
+
       toast({
         title: 'Pedido creado',
-        description: needsMovement 
-          ? 'El pedido ha sido creado. Se generaron órdenes de movimiento para productos sin stock.'
-          : 'El pedido ha sido creado exitosamente',
-        variant: needsMovement ? 'default' : 'default',
+        description: toastMessage,
       });
 
       onOrderCreated();

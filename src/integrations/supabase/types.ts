@@ -1841,6 +1841,89 @@ export type Database = {
         }
         Relationships: []
       }
+      requested_purchases: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          product_id: string
+          quantity: number
+          received_at: string | null
+          received_by: string | null
+          requested_at: string | null
+          requested_by: string
+          status: string | null
+          supplier_id: string | null
+          unit_cost: number | null
+          updated_at: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          product_id: string
+          quantity: number
+          received_at?: string | null
+          received_by?: string | null
+          requested_at?: string | null
+          requested_by?: string
+          status?: string | null
+          supplier_id?: string | null
+          unit_cost?: number | null
+          updated_at?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          received_at?: string | null
+          received_by?: string | null
+          requested_at?: string | null
+          requested_by?: string
+          status?: string | null
+          supplier_id?: string | null
+          unit_cost?: number | null
+          updated_at?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requested_purchases_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requested_purchases_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requested_purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "requested_purchases_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           created_at: string
@@ -2304,6 +2387,10 @@ export type Database = {
         | "entregado"
         | "cancelado"
         | "pago_ingresado"
+        | "pendiente_compra"
+        | "movimiento_interno_pendiente"
+        | "pendiente_confirmacion_transferencia"
+        | "pendiente_envio"
       payment_method:
         | "efectivo"
         | "tarjeta"
@@ -2471,6 +2558,10 @@ export const Constants = {
         "entregado",
         "cancelado",
         "pago_ingresado",
+        "pendiente_compra",
+        "movimiento_interno_pendiente",
+        "pendiente_confirmacion_transferencia",
+        "pendiente_envio",
       ],
       payment_method: [
         "efectivo",

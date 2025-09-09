@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, Filter, Truck, DollarSign, Package, FileText, PackageCheck } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Plus, Search, Filter, Truck, DollarSign, Package, FileText, PackageCheck, ShoppingCart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,6 +21,7 @@ import { CreatePurchaseModal } from "@/components/forms/CreatePurchaseModal";
 import { PurchasesConfigurationModal } from "@/components/forms/PurchasesConfigurationModal";
 import { ViewPurchaseModal } from "@/components/forms/ViewPurchaseModal";
 import { StockEntryModal } from "@/components/forms/StockEntryModal";
+import { RequestedPurchasesTab } from "@/components/forms/RequestedPurchasesTab";
 
 interface Purchase {
   id: string;
@@ -115,7 +117,7 @@ export default function PurchasesPage() {
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Compras</h2>
             <p className="text-muted-foreground">
-              Gestiona las órdenes de compra a proveedores
+              Gestiona las órdenes de compra a proveedores y productos solicitados
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -123,6 +125,20 @@ export default function PurchasesPage() {
             <CreatePurchaseModal onPurchaseCreated={refetch} />
           </div>
         </div>
+
+        <Tabs defaultValue="purchases" className="w-full">
+          <TabsList>
+            <TabsTrigger value="purchases" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Órdenes de Compra
+            </TabsTrigger>
+            <TabsTrigger value="requested" className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Compras Solicitadas
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="purchases" className="space-y-6">
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -282,6 +298,13 @@ export default function PurchasesPage() {
             </div>
           </CardContent>
         </Card>
+
+          </TabsContent>
+
+          <TabsContent value="requested">
+            <RequestedPurchasesTab />
+          </TabsContent>
+        </Tabs>
 
         {/* View Purchase Modal */}
         <ViewPurchaseModal
