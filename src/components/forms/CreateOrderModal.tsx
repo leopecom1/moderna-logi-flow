@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { GooglePlacesAutocomplete } from '@/components/ui/google-places-autocomplete';
 import { GoogleMap } from '@/components/ui/google-map';
 import { Plus, Package, MapPin, Search, Minus } from 'lucide-react';
+import { CreditModernaOrderForm, CreditModernaData } from './CreditModernaOrderForm';
 
 const DEPARTAMENTOS_URUGUAY = [
   'Artigas', 'Canelones', 'Cerro Largo', 'Colonia', 'Durazno', 'Flores',
@@ -85,6 +86,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const [isManualInput, setIsManualInput] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [orderProducts, setOrderProducts] = useState<OrderProduct[]>([]);
+  const [showCreditModernaForm, setShowCreditModernaForm] = useState(false);
+  const [creditModernaData, setCreditModernaData] = useState<CreditModernaData | null>(null);
   const [formData, setFormData] = useState({
     customer_id: '',
     branch_id: '',
@@ -102,11 +105,10 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     new_customer_email: '',
     new_customer_phone: '',
     new_customer_departamento: '',
-    // Campos adicionales para métodos de pago
-    tarjeta_credito_tipo: '',
-    numero_comprobante: '',
-    cantidad_cuotas: '',
-    dia_pago_cuota: '',
+      // Campos adicionales para métodos de pago
+      tarjeta_credito_tipo: '',
+      numero_comprobante: '',
+      cantidad_cuotas: '',
   });
   const [priceListConfig, setPriceListConfig] = useState({
     price_list_1_name: 'Lista 1',
@@ -299,6 +301,12 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     e.preventDefault();
     if (!profile?.user_id) return;
 
+    // Si es crédito moderna y no tenemos los datos, abrir el formulario
+    if (formData.payment_method === 'credito_moderna' && !creditModernaData) {
+      setShowCreditModernaForm(true);
+      return;
+    }
+
     try {
       setLoading(true);
       let customerId = formData.customer_id;
@@ -349,30 +357,17 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       if (error) throw error;
 
       // Si es Crédito Moderna, crear las cuotas
-      if (formData.payment_method === 'credito_moderna' && formData.cantidad_cuotas && formData.dia_pago_cuota) {
-        const installmentsNum = parseInt(formData.cantidad_cuotas);
-        const installmentAmount = getTotalAmount() / installmentsNum;
-        const firstDueDay = parseInt(formData.dia_pago_cuota);
-        
-        const creditInstallments = [];
-        
-        for (let i = 0; i < installmentsNum; i++) {
-          // Calcular la fecha de vencimiento basada en el día seleccionado
-          const dueDate = new Date();
-          dueDate.setMonth(dueDate.getMonth() + i + 1); // Próximo mes + índice
-          dueDate.setDate(firstDueDay);
-          
-          creditInstallments.push({
-            customer_id: customerId,
-            order_id: order.id,
-            installment_number: i + 1,
-            total_installments: installmentsNum,
-            amount: installmentAmount,
-            due_date: dueDate.toISOString().split('T')[0],
-            status: 'pendiente',
-            created_by: profile.user_id,
-          });
-        }
+      if (formData.payment_method === 'credito_moderna' && creditModernaData) {
+        const creditInstallments = creditModernaData.installments.map(installment => ({
+          customer_id: customerId,
+          order_id: order.id,
+          installment_number: installment.number,
+          total_installments: creditModernaData.installment_count,
+          amount: installment.amount,
+          due_date: installment.due_date,
+          status: 'pendiente',
+          created_by: profile.user_id,
+        }));
 
         const { error: creditError } = await supabase
           .from('credit_moderna_installments')
@@ -380,12 +375,27 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
         if (creditError) {
           console.error('Error creating credit installments:', creditError);
-          // No falla el pedido, pero muestra advertencia
           toast({
             title: 'Pedido creado con advertencia',
             description: 'El pedido se creó pero hubo un problema al generar las cuotas de crédito. Puede crearlas manualmente desde el cliente.',
             variant: 'default',
           });
+        }
+
+        // Si hay pago inicial, registrarlo
+        if (creditModernaData.advance_payment > 0) {
+          const { error: paymentError } = await supabase
+            .from('payments')
+            .insert([{
+              order_id: order.id,
+              amount: creditModernaData.advance_payment,
+              payment_method: 'efectivo' as const,
+              status: 'pagado' as const,
+            }]);
+
+          if (paymentError) {
+            console.error('Error creating advance payment:', paymentError);
+          }
         }
       }
 
@@ -455,12 +465,13 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       tarjeta_credito_tipo: '',
       numero_comprobante: '',
       cantidad_cuotas: '',
-      dia_pago_cuota: '',
     });
     setOrderProducts([]);
     setSelectedPlaceDetails(null);
     setIsManualInput(false);
     setShowMap(false);
+    setCreditModernaData(null);
+    setShowCreditModernaForm(false);
   };
 
   return (
@@ -789,39 +800,37 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
               </div>
             )}
 
-            {/* Campos adicionales para Crédito Moderna */}
-            {formData.payment_method === 'credito_moderna' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                <div className="space-y-2">
-                  <Label htmlFor="cantidad_cuotas_moderna">Cantidad de Cuotas *</Label>
-                  <Select value={formData.cantidad_cuotas} onValueChange={(value) => setFormData(prev => ({ ...prev, cantidad_cuotas: value }))} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Cuotas" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[1, 2, 3, 4, 5, 6, 12, 18, 24, 30, 36].map((cuotas) => (
-                        <SelectItem key={cuotas} value={cuotas.toString()}>
-                          {cuotas} {cuotas === 1 ? 'cuota' : 'cuotas'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {/* Resumen de Crédito Moderna */}
+            {formData.payment_method === 'credito_moderna' && creditModernaData && (
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-semibold mb-2">Resumen Crédito Moderna</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Pago inicial:</span>
+                    <p className="font-semibold">${creditModernaData.advance_payment.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Saldo en cuotas:</span>
+                    <p className="font-semibold">${(getTotalAmount() - creditModernaData.advance_payment).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Cantidad de cuotas:</span>
+                    <p className="font-semibold">{creditModernaData.installment_count}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Día de pago:</span>
+                    <p className="font-semibold">{creditModernaData.payment_day}</p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dia_pago_cuota">Día de Pago de Cuota *</Label>
-                  <Select value={formData.dia_pago_cuota} onValueChange={(value) => setFormData(prev => ({ ...prev, dia_pago_cuota: value }))} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Día del mes" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map((dia) => (
-                        <SelectItem key={dia} value={dia.toString()}>
-                          {dia}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2"
+                  onClick={() => setShowCreditModernaForm(true)}
+                >
+                  Modificar Crédito
+                </Button>
               </div>
             )}
           </div>
@@ -1007,10 +1016,23 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
               type="submit" 
               disabled={loading || orderProducts.length === 0 || !formData.customer_id}
             >
-              {loading ? 'Creando...' : 'Crear Pedido'}
+              {loading ? 'Creando...' : 
+               formData.payment_method === 'credito_moderna' && !creditModernaData ? 'Configurar Crédito' : 
+               'Crear Pedido'}
             </Button>
           </div>
         </form>
+
+        {/* Modal de configuración de Crédito Moderna */}
+        <CreditModernaOrderForm
+          open={showCreditModernaForm}
+          onOpenChange={setShowCreditModernaForm}
+          totalAmount={getTotalAmount()}
+          onConfirm={(data) => {
+            setCreditModernaData(data);
+            setShowCreditModernaForm(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
