@@ -670,13 +670,17 @@ const FinancePage = () => {
                                 >
                                   <Eye className="h-3 w-3" />
                                 </Button>
-                                {(movement.type === 'transferencia' && movement.status === 'pendiente') && (
+                                {(movement.type === 'transferencia' && 
+                                  (movement.status === 'pendiente' || movement.status === 'pendiente_confirmacion_transferencia')) && (
                                   <Button
                                     size="sm"
+                                    variant="default"
                                     onClick={() => handleConfirmTransfer(movement.id)}
                                     disabled={confirmTransferMutation.isPending}
+                                    className="bg-green-600 hover:bg-green-700"
                                   >
-                                    <CheckCircle className="h-3 w-3" />
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Confirmar
                                   </Button>
                                 )}
                                 {(movement.type === 'tarjeta_credito' && movement.status === 'pendiente') && (
