@@ -57,7 +57,7 @@ export function UnifyCreditInstallmentsModal({
     try {
       setLoading(true);
       
-      // Get all pending installments for this customer grouped by order
+      // Get all installments for this customer grouped by order (not just pending)
       const { data: installments, error } = await supabase
         .from("credit_moderna_installments")
         .select(`
@@ -65,7 +65,7 @@ export function UnifyCreditInstallmentsModal({
           orders!inner(id, order_number, total_amount, created_at)
         `)
         .eq("customer_id", customerId)
-        .eq("status", "pendiente")
+        .in("status", ["pendiente", "vencido"]) // Include both pending and overdue
         .order("due_date", { ascending: true });
 
       if (error) throw error;
@@ -162,7 +162,7 @@ export function UnifyCreditInstallmentsModal({
       return;
     }
 
-    if (!profile?.id) {
+    if (!profile?.user_id) {
       toast.error("Usuario no autenticado");
       return;
     }
@@ -170,7 +170,10 @@ export function UnifyCreditInstallmentsModal({
     try {
       setProcessing(true);
       
+      console.log("Starting unification process with user ID:", profile.user_id);
+      
       const summary = getUnificationSummary();
+      console.log("Unification summary:", summary);
       
       // Get all installment IDs to delete
       const installmentIds: string[] = [];
@@ -206,11 +209,13 @@ export function UnifyCreditInstallmentsModal({
             amount: summary.installmentAmount / summary.selectedOrdersData.length,
             due_date: format(dueDate, "yyyy-MM-dd"),
             status: "pendiente",
-            created_by: profile.id, // Use authenticated user ID
+            created_by: profile.user_id, // Use user_id from profile
             notes: `Cuota unificada - ${i}/${newInstallmentCount}`
           });
         });
       }
+
+      console.log("New installments to create:", newInstallments);
 
       const { error: insertError } = await supabase
         .from("credit_moderna_installments")

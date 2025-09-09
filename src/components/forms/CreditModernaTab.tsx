@@ -165,9 +165,10 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
           <Button 
             variant="outline"
             onClick={() => setShowUnifyModal(true)}
-            disabled={installments.filter(i => i.status === 'pendiente').length === 0}
+            disabled={installments.filter(i => i.status === 'pendiente' || i.status === 'vencido').length === 0}
+            className="flex items-center gap-2"
           >
-            Unificar Cuotas
+            🔄 Unificar Cuotas
           </Button>
           <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
