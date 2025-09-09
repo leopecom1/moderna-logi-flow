@@ -24,6 +24,8 @@ interface CreditInstallment {
   paid_amount?: number;
   notes?: string;
   order_id?: string;
+  unified_installment_id?: string;
+  is_unified_source?: boolean;
 }
 
 interface OrderInfo {
@@ -54,34 +56,55 @@ export function CustomerCreditModal({
   onRefresh 
 }: CustomerCreditModalProps) {
   const [installments, setInstallments] = useState<CreditInstallment[]>([]);
+  const [unifiedInstallments, setUnifiedInstallments] = useState<CreditInstallment[]>([]);
   const [orders, setOrders] = useState<Record<string, OrderInfo>>({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+  const [expandedUnified, setExpandedUnified] = useState<Record<string, boolean>>({});
 
   const fetchInstallments = async () => {
     if (!customer?.id) return;
     
     console.log("Fetching customer installments for:", customer.id);
     try {
-      const { data, error } = await supabase
+      // Fetch regular installments (not unified or source)
+      const { data: regularData, error: regularError } = await supabase
         .from("credit_moderna_installments")
         .select("*")
         .eq("customer_id", customer.id)
+        .or("is_unified_source.is.null,is_unified_source.eq.false")
+        .not("order_id", "is", null)
         .order("due_date", { ascending: true });
 
-      console.log("Customer installments result:", { data, error });
-      console.log("Installments count:", data?.length || 0);
+      // Fetch unified installments (order_id is null)
+      const { data: unifiedData, error: unifiedError } = await supabase
+        .from("credit_moderna_installments")
+        .select("*")
+        .eq("customer_id", customer.id)
+        .is("order_id", null)
+        .eq("is_unified_source", false)
+        .order("due_date", { ascending: true });
 
-      if (error) throw error;
+      if (regularError) throw regularError;
+      if (unifiedError) throw unifiedError;
 
-      const installmentsData = (data || []) as CreditInstallment[];
-      console.log("Setting installments:", installmentsData);
-      setInstallments(installmentsData);
+      console.log("Customer installments result:", { data: regularData, error: regularError });
+      console.log("Unified installments result:", { data: unifiedData, error: unifiedError });
+      console.log("Installments count:", (regularData?.length || 0) + (unifiedData?.length || 0));
 
-      // Fetch order details for each unique order_id
-      const orderIds = [...new Set(installmentsData.map(i => i.order_id).filter(Boolean))] as string[];
+      const regularInstallments = (regularData || []) as CreditInstallment[];
+      const unifiedInstallmentsData = (unifiedData || []) as CreditInstallment[];
+      
+      console.log("Setting installments:", regularInstallments);
+      console.log("Setting unified installments:", unifiedInstallmentsData);
+      
+      setInstallments(regularInstallments);
+      setUnifiedInstallments(unifiedInstallmentsData);
+
+      // Fetch order details for regular installments
+      const orderIds = [...new Set(regularInstallments.map(i => i.order_id).filter(Boolean))] as string[];
       if (orderIds.length > 0) {
         const { data: ordersData, error: ordersError } = await supabase
           .from("orders")
@@ -145,25 +168,28 @@ export function CustomerCreditModal({
   };
 
   const calculateSummary = () => {
-    const totalPending = installments
+    const allInstallments = [...installments, ...unifiedInstallments];
+    
+    const totalPending = allInstallments
       .filter(item => item.status === 'pendiente')
       .reduce((sum, item) => sum + item.amount, 0);
 
-    const totalOverdue = installments
+    const totalOverdue = allInstallments
       .filter(item => item.status === 'vencido' || 
         (item.status === 'pendiente' && item.due_date < new Date().toISOString().split('T')[0]))
       .reduce((sum, item) => sum + item.amount, 0);
 
-    const totalPaid = installments
+    const totalPaid = allInstallments
       .filter(item => item.status === 'pagado')
       .reduce((sum, item) => sum + (item.paid_amount || item.amount), 0);
 
-    const uniqueOrders = new Set(installments.map(item => item.order_id).filter(Boolean));
-    const totalOrders = uniqueOrders.size;
+    const uniqueRegularOrders = new Set(installments.map(item => item.order_id).filter(Boolean));
+    const uniqueUnifiedGroups = new Set(unifiedInstallments.map(item => item.notes).filter(Boolean));
+    const totalOrders = uniqueRegularOrders.size + uniqueUnifiedGroups.size;
     
-    const totalInstallments = installments.length;
-    const pendingInstallments = installments.filter(item => item.status === 'pendiente').length;
-    const paidInstallments = installments.filter(item => item.status === 'pagado').length;
+    const totalInstallments = allInstallments.length;
+    const pendingInstallments = allInstallments.filter(item => item.status === 'pendiente').length;
+    const paidInstallments = allInstallments.filter(item => item.status === 'pagado').length;
 
     return { 
       totalPending, 

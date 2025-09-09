@@ -486,6 +486,7 @@ export type Database = {
           due_date: string
           id: string
           installment_number: number
+          is_unified_source: boolean | null
           notes: string | null
           order_id: string | null
           paid_amount: number | null
@@ -493,6 +494,7 @@ export type Database = {
           payment_id: string | null
           status: string
           total_installments: number
+          unified_installment_id: string | null
           updated_at: string
         }
         Insert: {
@@ -503,6 +505,7 @@ export type Database = {
           due_date: string
           id?: string
           installment_number: number
+          is_unified_source?: boolean | null
           notes?: string | null
           order_id?: string | null
           paid_amount?: number | null
@@ -510,6 +513,7 @@ export type Database = {
           payment_id?: string | null
           status?: string
           total_installments: number
+          unified_installment_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -520,6 +524,7 @@ export type Database = {
           due_date?: string
           id?: string
           installment_number?: number
+          is_unified_source?: boolean | null
           notes?: string | null
           order_id?: string | null
           paid_amount?: number | null
@@ -527,9 +532,17 @@ export type Database = {
           payment_id?: string | null
           status?: string
           total_installments?: number
+          unified_installment_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "credit_moderna_installments_unified_installment_id_fkey"
+            columns: ["unified_installment_id"]
+            isOneToOne: false
+            referencedRelation: "credit_moderna_installments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_credit_moderna_customer"
             columns: ["customer_id"]

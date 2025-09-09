@@ -23,6 +23,8 @@ interface CreditInstallment {
   paid_amount?: number;
   notes?: string;
   order_id?: string;
+  unified_installment_id?: string;
+  is_unified_source?: boolean;
 }
 
 interface OrderInfo {
@@ -39,30 +41,49 @@ interface CreditModernaTabProps {
 
 export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
   const [installments, setInstallments] = useState<CreditInstallment[]>([]);
+  const [unifiedInstallments, setUnifiedInstallments] = useState<CreditInstallment[]>([]);
   const [orders, setOrders] = useState<Record<string, OrderInfo>>({});
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUnifyModal, setShowUnifyModal] = useState(false);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+  const [expandedUnified, setExpandedUnified] = useState<Record<string, boolean>>({});
 
   const fetchInstallments = async () => {
     console.log("Fetching customer installments for:", customerId);
     try {
-      const { data, error } = await supabase
+      // Fetch regular installments (not unified or source)
+      const { data: regularData, error: regularError } = await supabase
         .from("credit_moderna_installments")
         .select("*")
         .eq("customer_id", customerId)
+        .or("is_unified_source.is.null,is_unified_source.eq.false")
+        .not("order_id", "is", null)
         .order("due_date", { ascending: true });
 
-      console.log("Customer installments result:", { data, error });
+      // Fetch unified installments (order_id is null)
+      const { data: unifiedData, error: unifiedError } = await supabase
+        .from("credit_moderna_installments")
+        .select("*")
+        .eq("customer_id", customerId)
+        .is("order_id", null)
+        .eq("is_unified_source", false)
+        .order("due_date", { ascending: true });
 
-      if (error) throw error;
+      if (regularError) throw regularError;
+      if (unifiedError) throw unifiedError;
 
-      const installmentsData = (data || []) as CreditInstallment[];
-      setInstallments(installmentsData);
+      console.log("Regular installments result:", { data: regularData, error: regularError });
+      console.log("Unified installments result:", { data: unifiedData, error: unifiedError });
 
-      // Fetch order details for each unique order_id
-      const orderIds = [...new Set(installmentsData.map(i => i.order_id).filter(Boolean))] as string[];
+      const regularInstallments = (regularData || []) as CreditInstallment[];
+      const unifiedInstallmentsData = (unifiedData || []) as CreditInstallment[];
+      
+      setInstallments(regularInstallments);
+      setUnifiedInstallments(unifiedInstallmentsData);
+
+      // Fetch order details for regular installments
+      const orderIds = [...new Set(regularInstallments.map(i => i.order_id).filter(Boolean))] as string[];
       if (orderIds.length > 0) {
         const { data: ordersData, error: ordersError } = await supabase
           .from("orders")
@@ -125,16 +146,18 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
   };
 
   const calculateSummary = () => {
-    const totalPending = installments
+    const allInstallments = [...installments, ...unifiedInstallments];
+    
+    const totalPending = allInstallments
       .filter(item => item.status === 'pendiente')
       .reduce((sum, item) => sum + item.amount, 0);
 
-    const totalOverdue = installments
+    const totalOverdue = allInstallments
       .filter(item => item.status === 'vencido' || 
         (item.status === 'pendiente' && item.due_date < new Date().toISOString().split('T')[0]))
       .reduce((sum, item) => sum + item.amount, 0);
 
-    const totalPaid = installments
+    const totalPaid = allInstallments
       .filter(item => item.status === 'pagado')
       .reduce((sum, item) => sum + (item.paid_amount || item.amount), 0);
 
@@ -191,91 +214,83 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
       </div>
 
       {/* Actions */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Cuotas de Crédito Moderna</h3>
-        <div className="flex items-center gap-2">
-          {installments.filter(i => i.status === 'pendiente' || i.status === 'vencido').length > 1 && (
-            <Button 
-              variant="outline" 
-              onClick={() => setShowUnifyModal(true)} 
-              className="flex items-center gap-2"
-            >
-              <Merge className="h-4 w-4" />
-              Unificar Cuotas
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Cuotas de Crédito Moderna</h3>
+          <div className="flex items-center gap-2">
+            {(installments.filter(i => i.status === 'pendiente' || i.status === 'vencido').length > 1 ||
+              unifiedInstallments.filter(i => i.status === 'pendiente' || i.status === 'vencido').length > 0) && (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowUnifyModal(true)} 
+                className="flex items-center gap-2"
+              >
+                <Merge className="h-4 w-4" />
+                Unificar Cuotas
+              </Button>
+            )}
+            <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Crear Nuevo Crédito
             </Button>
-          )}
-          <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Crear Nuevo Crédito
-          </Button>
+          </div>
         </div>
-      </div>
 
       {/* Credits grouped by order */}
-      <div className="space-y-4">
-        {installments.length > 0 ? (
-          <div className="space-y-6">
-            {/* Group installments by order_id */}
+      <div className="space-y-6">
+        {/* Unified Installments Section */}
+        {unifiedInstallments.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Merge className="h-5 w-5 text-primary" />
+              <h4 className="text-lg font-semibold text-primary">Cuotas Unificadas</h4>
+            </div>
+            
+            {/* Group unified installments by notes (which contains the original orders info) */}
             {Object.entries(
-              installments.reduce((groups, installment) => {
-                const orderId = installment.order_id || 'manual';
-                if (!groups[orderId]) {
-                  groups[orderId] = [];
+              unifiedInstallments.reduce((groups, installment) => {
+                const groupKey = installment.notes || 'sin-grupo';
+                if (!groups[groupKey]) {
+                  groups[groupKey] = [];
                 }
-                groups[orderId].push(installment);
+                groups[groupKey].push(installment);
                 return groups;
               }, {} as Record<string, CreditInstallment[]>)
-            ).map(([orderId, creditInstallments]) => {
-              const sortedInstallments = creditInstallments.sort((a, b) => a.installment_number - b.installment_number);
-              const firstInstallment = sortedInstallments[0];
-              const creditTotal = creditInstallments.reduce((sum, inst) => sum + inst.amount, 0);
-              const paidAmount = creditInstallments
+            ).map(([groupKey, groupInstallments]) => {
+              const sortedInstallments = groupInstallments.sort((a, b) => a.installment_number - b.installment_number);
+              const creditTotal = groupInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+              const paidAmount = groupInstallments
                 .filter(inst => inst.status === 'pagado')
                 .reduce((sum, inst) => sum + (inst.paid_amount || inst.amount), 0);
-              const pendingAmount = creditInstallments
+              const pendingAmount = groupInstallments
                 .filter(inst => inst.status === 'pendiente')
                 .reduce((sum, inst) => sum + inst.amount, 0);
 
-              const orderInfo = orders[orderId];
-              const isExpanded = expandedOrders[orderId] || false;
+              const isExpanded = expandedUnified[groupKey] || false;
 
               return (
-                <Card key={orderId}>
+                <Card key={groupKey} className="border-primary/20 bg-primary/5">
                   <Collapsible 
                     open={isExpanded} 
-                    onOpenChange={(open) => setExpandedOrders(prev => ({ ...prev, [orderId]: open }))}
+                    onOpenChange={(open) => setExpandedUnified(prev => ({ ...prev, [groupKey]: open }))}
                   >
                     <CollapsibleTrigger asChild>
-                      <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                      <CardHeader className="cursor-pointer hover:bg-primary/10 transition-colors">
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                              <CreditCard className="h-4 w-4" />
-                              <CardTitle className="text-base">
-                                {orderId === 'manual' ? 'Crédito Manual' : (orderInfo ? `Orden: ${orderInfo.order_number}` : `Orden: ${orderId.slice(0, 8)}...`)}
+                              <Merge className="h-4 w-4 text-primary" />
+                              <CardTitle className="text-base text-primary">
+                                Crédito Unificado
                               </CardTitle>
                             </div>
                             
-                            {orderInfo && (
-                              <div className="text-sm text-muted-foreground space-y-1">
-                                <p>Fecha: {format(new Date(orderInfo.created_at), "dd/MM/yyyy HH:mm", { locale: es })}</p>
-                                <p>Total de la orden: ${orderInfo.total_amount.toLocaleString()}</p>
-                                <div>
-                                  <p className="font-medium">Productos:</p>
-                                  <div className="ml-2">
-                                    {Array.isArray(orderInfo.products) && orderInfo.products?.map((product: any, index: number) => (
-                                      <p key={index} className="text-xs">
-                                        • {product.name} (Cant: {product.quantity}) - ${(product.price * product.quantity).toLocaleString()}
-                                      </p>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <p>{groupInstallments[0]?.notes || 'Sin información'}</p>
+                            </div>
                             
                             <p className="text-sm text-muted-foreground mt-2">
-                              {firstInstallment.total_installments} cuotas • Total crédito: ${creditTotal.toLocaleString()}
+                              {groupInstallments.length} cuotas • Total: ${creditTotal.toLocaleString()}
                             </p>
                           </div>
                           
@@ -346,7 +361,161 @@ export function CreditModernaTab({ customerId }: CreditModernaTabProps) {
               );
             })}
           </div>
-        ) : (
+        )}
+
+        {/* Regular Orders Section */}
+        {installments.length > 0 ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              <h4 className="text-lg font-semibold">Órdenes Individuales</h4>
+            </div>
+            
+            {/* Group installments by order_id */}
+            {Object.entries(
+              installments.reduce((groups, installment) => {
+                const orderId = installment.order_id || 'manual';
+                if (!groups[orderId]) {
+                  groups[orderId] = [];
+                }
+                groups[orderId].push(installment);
+                return groups;
+              }, {} as Record<string, CreditInstallment[]>)
+            ).map(([orderId, creditInstallments]) => {
+              const sortedInstallments = creditInstallments.sort((a, b) => a.installment_number - b.installment_number);
+              const firstInstallment = sortedInstallments[0];
+              const creditTotal = creditInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+              const paidAmount = creditInstallments
+                .filter(inst => inst.status === 'pagado')
+                .reduce((sum, inst) => sum + (inst.paid_amount || inst.amount), 0);
+              const pendingAmount = creditInstallments
+                .filter(inst => inst.status === 'pendiente')
+                .reduce((sum, inst) => sum + inst.amount, 0);
+
+              const orderInfo = orders[orderId];
+              const isExpanded = expandedOrders[orderId] || false;
+              const isUnified = firstInstallment.is_unified_source;
+
+              return (
+                <Card key={orderId} className={isUnified ? "border-orange-200 bg-orange-50" : ""}>
+                  <Collapsible 
+                    open={isExpanded} 
+                    onOpenChange={(open) => setExpandedOrders(prev => ({ ...prev, [orderId]: open }))}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              <CreditCard className="h-4 w-4" />
+                              <CardTitle className="text-base">
+                                {orderId === 'manual' ? 'Crédito Manual' : (orderInfo ? `Orden: ${orderInfo.order_number}` : `Orden: ${orderId.slice(0, 8)}...`)}
+                              </CardTitle>
+                              {isUnified && (
+                                <Badge variant="outline" className="text-orange-600 border-orange-600">
+                                  Unificado
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            {orderInfo && (
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <p>Fecha: {format(new Date(orderInfo.created_at), "dd/MM/yyyy HH:mm", { locale: es })}</p>
+                                <p>Total de la orden: ${orderInfo.total_amount.toLocaleString()}</p>
+                                <div>
+                                  <p className="font-medium">Productos:</p>
+                                  <div className="ml-2">
+                                    {Array.isArray(orderInfo.products) && orderInfo.products?.map((product: any, index: number) => (
+                                      <p key={index} className="text-xs">
+                                        • {product.name} (Cant: {product.quantity}) - ${(product.price * product.quantity).toLocaleString()}
+                                      </p>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {firstInstallment.total_installments} cuotas • Total crédito: ${creditTotal.toLocaleString()}
+                              {isUnified && <span className="text-orange-600 ml-2">(Estas cuotas fueron unificadas)</span>}
+                            </p>
+                          </div>
+                          
+                          <div className="text-right">
+                            <div className="text-sm">
+                              <span className="text-green-600 font-medium">${paidAmount.toLocaleString()}</span>
+                              <span className="text-muted-foreground"> / </span>
+                              <span className="text-orange-600 font-medium">${pendingAmount.toLocaleString()}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Pagado / Pendiente</p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    
+                    <CollapsibleContent>
+                      <CardContent className="pt-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Cuota</TableHead>
+                              <TableHead>Monto</TableHead>
+                              <TableHead>Vencimiento</TableHead>
+                              <TableHead>Estado</TableHead>
+                              <TableHead>Acciones</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {sortedInstallments.map((installment) => (
+                              <TableRow key={installment.id}>
+                                <TableCell>
+                                  {installment.installment_number}/{installment.total_installments}
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  ${installment.amount.toLocaleString()}
+                                </TableCell>
+                                <TableCell>
+                                  {format(new Date(installment.due_date), "dd/MM/yyyy", { locale: es })}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge className={getStatusColor(installment.status, installment.due_date)}>
+                                    {getStatusText(installment.status, installment.due_date)}
+                                    {isUnified && " (Unificado)"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {installment.status === 'pendiente' && !isUnified && (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => markAsPaid(installment.id, installment.amount)}
+                                    >
+                                      Marcar Pagado
+                                    </Button>
+                                  )}
+                                  {installment.status === 'pagado' && installment.paid_at && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Pagado el {format(new Date(installment.paid_at), "dd/MM/yyyy", { locale: es })}
+                                    </p>
+                                  )}
+                                  {isUnified && installment.status === 'pendiente' && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Parte de cuotas unificadas
+                                    </p>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              );
+            })}
+          </div>
+        ) : !loading && unifiedInstallments.length === 0 && (
           <Card>
             <CardContent className="text-center py-8 text-muted-foreground">
               <p>Este cliente no tiene cuotas de Crédito Moderna</p>

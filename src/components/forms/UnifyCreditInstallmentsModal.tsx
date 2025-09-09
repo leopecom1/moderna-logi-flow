@@ -46,6 +46,7 @@ export function UnifyCreditInstallmentsModal({
   const [orderGroups, setOrderGroups] = useState<OrderGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [newDueDate, setNewDueDate] = useState('');
+  const [newInstallmentCount, setNewInstallmentCount] = useState(1);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
@@ -129,11 +130,13 @@ export function UnifyCreditInstallmentsModal({
     const selectedGroups = orderGroups.filter(group => group.selected);
     const totalInstallments = selectedGroups.reduce((sum, group) => sum + group.installments.length, 0);
     const totalAmount = selectedGroups.reduce((sum, group) => sum + group.totalAmount, 0);
+    const monthlyAmount = newInstallmentCount > 0 ? totalAmount / newInstallmentCount : 0;
     
     return { 
       selectedOrders: selectedGroups.length,
       totalInstallments,
-      totalAmount
+      totalAmount,
+      monthlyAmount
     };
   };
 
@@ -150,41 +153,66 @@ export function UnifyCreditInstallmentsModal({
       return;
     }
 
+    if (newInstallmentCount < 1) {
+      toast.error('El número de cuotas debe ser mayor a 0');
+      return;
+    }
+
     setProcessing(true);
     try {
-      const { totalAmount } = getSelectedSummary();
-      const installmentsToDelete = selectedGroups.flatMap(group => group.installments.map(inst => inst.id));
+      const { totalAmount, monthlyAmount } = getSelectedSummary();
+      const installmentsToUnify = selectedGroups.flatMap(group => group.installments.map(inst => inst.id));
 
       // Get current user for created_by field
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
-      // Delete existing installments
-      const { error: deleteError } = await supabase
-        .from('credit_moderna_installments')
-        .delete()
-        .in('id', installmentsToDelete);
-
-      if (deleteError) throw deleteError;
-
-      // Create new unified installment
-      const { error: createError } = await supabase
-        .from('credit_moderna_installments')
-        .insert({
+      // First, create the unified installments
+      const unifiedInstallments = [];
+      const startDate = new Date(newDueDate);
+      
+      for (let i = 1; i <= newInstallmentCount; i++) {
+        const dueDate = new Date(startDate);
+        dueDate.setMonth(dueDate.getMonth() + (i - 1));
+        
+        unifiedInstallments.push({
           customer_id: customerId,
-          order_id: selectedGroups[0].order_id, // Use first selected order as reference
-          installment_number: 1,
-          total_installments: 1,
-          amount: totalAmount,
-          due_date: newDueDate,
+          order_id: null, // Unified installments don't belong to a specific order
+          installment_number: i,
+          total_installments: newInstallmentCount,
+          amount: i === newInstallmentCount ? totalAmount - (monthlyAmount * (newInstallmentCount - 1)) : monthlyAmount, // Adjust last installment for rounding
+          due_date: dueDate.toISOString().split('T')[0],
           status: 'pendiente',
           notes: `Unificación de ${selectedGroups.length} órdenes: ${selectedGroups.map(g => g.order_number).join(', ')}`,
-          created_by: user.id
+          created_by: user.id,
+          is_unified_source: false
         });
+      }
+
+      // Insert unified installments
+      const { data: newInstallments, error: createError } = await supabase
+        .from('credit_moderna_installments')
+        .insert(unifiedInstallments)
+        .select('id');
 
       if (createError) throw createError;
 
-      toast.success(`Se unificaron ${installmentsToDelete.length} cuotas en una sola cuota de $${totalAmount.toLocaleString()}`);
+      // Mark original installments as unified and link them to the first unified installment
+      const firstUnifiedId = newInstallments?.[0]?.id;
+      if (firstUnifiedId) {
+        const { error: updateError } = await supabase
+          .from('credit_moderna_installments')
+          .update({
+            unified_installment_id: firstUnifiedId,
+            is_unified_source: true,
+            status: 'pagado' // Mark as paid since they're now part of the unified installments
+          })
+          .in('id', installmentsToUnify);
+
+        if (updateError) throw updateError;
+      }
+
+      toast.success(`Se unificaron ${installmentsToUnify.length} cuotas en ${newInstallmentCount} cuotas de $${monthlyAmount.toLocaleString()} cada una`);
       onUnificationComplete();
       onOpenChange(false);
       
@@ -232,6 +260,14 @@ export function UnifyCreditInstallmentsModal({
                   <div className="flex justify-between text-lg">
                     <span>Monto total:</span>
                     <span className="font-bold">${summary.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Nuevas cuotas:</span>
+                    <span className="font-semibold">{newInstallmentCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Monto por cuota:</span>
+                    <span className="font-semibold">${summary.monthlyAmount.toLocaleString()}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -300,19 +336,34 @@ export function UnifyCreditInstallmentsModal({
               </div>
             )}
 
-            {/* New Due Date */}
+            {/* Configuration */}
             {summary.selectedOrders > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Nueva fecha de vencimiento</Label>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="dueDate"
-                    type="date"
-                    value={newDueDate}
-                    onChange={(e) => setNewDueDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="installmentCount">Cantidad de cuotas</Label>
+                    <Input
+                      id="installmentCount"
+                      type="number"
+                      min="1"
+                      max="60"
+                      value={newInstallmentCount}
+                      onChange={(e) => setNewInstallmentCount(Math.max(1, parseInt(e.target.value) || 1))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dueDate">Fecha del primer vencimiento</Label>
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="dueDate"
+                        type="date"
+                        value={newDueDate}
+                        onChange={(e) => setNewDueDate(e.target.value)}
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -324,9 +375,9 @@ export function UnifyCreditInstallmentsModal({
               </Button>
               <Button
                 onClick={handleUnifyInstallments}
-                disabled={summary.selectedOrders === 0 || !newDueDate || processing}
+                disabled={summary.selectedOrders === 0 || !newDueDate || newInstallmentCount < 1 || processing}
               >
-                {processing ? 'Unificando...' : `Unificar ${summary.totalInstallments} Cuotas`}
+                {processing ? 'Unificando...' : `Unificar en ${newInstallmentCount} Cuotas`}
               </Button>
             </div>
           </div>
