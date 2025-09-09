@@ -64,28 +64,17 @@ export const CreateCustomerOrderModal = ({
       return;
     }
 
-    if (!profile?.user_id) {
-      toast({
-        title: 'Error',
-        description: 'Usuario no autenticado',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
       setLoading(true);
 
       // Generate order number
       const orderNumber = `ORD-${Date.now()}`;
 
-      console.log('Creating order with payment method:', formData.payment_method);
-
       const { data: order, error } = await supabase
         .from('orders')
         .insert({
           customer_id: customerId,
-          seller_id: profile.user_id,
+          seller_id: profile?.user_id,
           order_number: orderNumber,
           products: JSON.parse(formData.products || '[]'),
           total_amount: parseFloat(formData.total_amount),
@@ -102,12 +91,8 @@ export const CreateCustomerOrderModal = ({
 
       if (error) throw error;
 
-      console.log('Order created successfully:', order);
-
       // Si es Crédito Moderna, crear las cuotas
       if (formData.payment_method === 'credito_moderna' && formData.cantidad_cuotas && formData.dia_pago_cuota) {
-        console.log('Creating credit moderna installments for order:', order.id);
-        
         const installmentsNum = parseInt(formData.cantidad_cuotas);
         const installmentAmount = parseFloat(formData.total_amount) / installmentsNum;
         const firstDueDay = parseInt(formData.dia_pago_cuota);
@@ -132,8 +117,6 @@ export const CreateCustomerOrderModal = ({
           });
         }
 
-        console.log('Inserting credit installments:', creditInstallments);
-
         const { error: creditError } = await supabase
           .from('credit_moderna_installments')
           .insert(creditInstallments);
@@ -145,19 +128,13 @@ export const CreateCustomerOrderModal = ({
             description: 'La orden se creó pero hubo un problema al generar las cuotas de crédito. Puede crearlas manualmente.',
             variant: 'default',
           });
-        } else {
-          console.log('Credit installments created successfully');
-          toast({
-            title: 'Éxito',
-            description: `Orden creada exitosamente con ${installmentsNum} cuotas de crédito moderna`,
-          });
         }
-      } else {
-        toast({
-          title: 'Éxito',
-          description: 'Orden creada exitosamente',
-        });
       }
+
+      toast({
+        title: 'Éxito',
+        description: 'Orden creada exitosamente',
+      });
 
       setFormData({
         products: '',
