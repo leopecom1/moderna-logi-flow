@@ -44,6 +44,10 @@ All colors MUST be HSL.
     --status-in-progress: 207 89% 44%;
     --status-completed: 142 71% 45%;
     --status-cancelled: 0 84.2% 60.2%;
+    --status-assigned: 262 83% 58%;
+    --status-payment: 168 76% 42%;
+    --status-waiting: 33 100% 50%;
+    --status-ready: 142 71% 45%;
 
     /* Role colors */
     --role-gerencia: 272 81% 49%;
@@ -97,6 +101,10 @@ All colors MUST be HSL.
     --status-in-progress: 207 89% 54%;
     --status-completed: 142 71% 55%;
     --status-cancelled: 0 62.8% 30.6%;
+    --status-assigned: 262 83% 68%;
+    --status-payment: 168 76% 52%;
+    --status-waiting: 33 100% 60%;
+    --status-ready: 142 71% 55%;
 
     --role-gerencia: 272 81% 59%;
     --role-vendedor: 207 89% 54%;

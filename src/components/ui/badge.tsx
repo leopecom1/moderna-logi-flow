@@ -15,6 +15,22 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
+        pending:
+          "border-transparent bg-[hsl(var(--status-pending))] text-white hover:bg-[hsl(var(--status-pending))]/80",
+        progress:
+          "border-transparent bg-[hsl(var(--status-in-progress))] text-white hover:bg-[hsl(var(--status-in-progress))]/80",
+        completed:
+          "border-transparent bg-[hsl(var(--status-completed))] text-white hover:bg-[hsl(var(--status-completed))]/80",
+        cancelled:
+          "border-transparent bg-[hsl(var(--status-cancelled))] text-white hover:bg-[hsl(var(--status-cancelled))]/80",
+        assigned:
+          "border-transparent bg-[hsl(var(--status-assigned))] text-white hover:bg-[hsl(var(--status-assigned))]/80",
+        payment:
+          "border-transparent bg-[hsl(var(--status-payment))] text-white hover:bg-[hsl(var(--status-payment))]/80",
+        waiting:
+          "border-transparent bg-[hsl(var(--status-waiting))] text-white hover:bg-[hsl(var(--status-waiting))]/80",
+        ready:
+          "border-transparent bg-[hsl(var(--status-ready))] text-white hover:bg-[hsl(var(--status-ready))]/80",
       },
     },
     defaultVariants: {

@@ -120,22 +120,34 @@ const OrdersPage = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string): { variant: any; label: string } => {
     switch (status) {
       case 'pendiente':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'confirmado':
-        return 'bg-blue-100 text-blue-800';
-      case 'en_preparacion':
-        return 'bg-orange-100 text-orange-800';
-      case 'listo':
-        return 'bg-green-100 text-green-800';
+        return { variant: 'pending', label: 'Pendiente' };
+      case 'pendiente_retiro':
+        return { variant: 'waiting', label: 'Pendiente Retiro' };
+      case 'pendiente_envio':
+        return { variant: 'waiting', label: 'Pendiente Envío' };
+      case 'armado':
+        return { variant: 'ready', label: 'Armado' };
+      case 'asignado':
+        return { variant: 'assigned', label: 'Asignado' };
+      case 'en_ruta':
+        return { variant: 'progress', label: 'En Ruta' };
       case 'entregado':
-        return 'bg-gray-100 text-gray-800';
+        return { variant: 'completed', label: 'Entregado' };
       case 'cancelado':
-        return 'bg-red-100 text-red-800';
+        return { variant: 'cancelled', label: 'Cancelado' };
+      case 'pago_ingresado':
+        return { variant: 'payment', label: 'Pago Ingresado' };
+      case 'pendiente_compra':
+        return { variant: 'waiting', label: 'Pendiente Compra' };
+      case 'movimiento_interno_pendiente':
+        return { variant: 'waiting', label: 'Movimiento Pendiente' };
+      case 'pendiente_confirmacion_transferencia':
+        return { variant: 'waiting', label: 'Confirmar Transferencia' };
       default:
-        return 'bg-gray-100 text-gray-800';
+        return { variant: 'secondary', label: status };
     }
   };
 
@@ -204,8 +216,8 @@ const OrdersPage = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(order.status)}>
-                      {order.status}
+                    <Badge variant={getStatusConfig(order.status).variant}>
+                      {getStatusConfig(order.status).label}
                     </Badge>
                   </TableCell>
                   <TableCell>
