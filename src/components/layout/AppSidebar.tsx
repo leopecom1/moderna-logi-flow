@@ -61,8 +61,6 @@ export const AppSidebar = () => {
       category: 'Principal',
       items: [
         { title: 'Dashboard', url: '/', icon: Home },
-        { title: 'Analytics & ML', url: '/analytics', icon: Brain },
-        { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
       ]
     },
     {
@@ -80,7 +78,6 @@ export const AppSidebar = () => {
         { title: 'Inventario', url: '/inventory', icon: Package },
         { title: 'Movimientos Stock', url: '/stock-movements', icon: ArrowRightLeft },
         { title: 'Pedidos a Armar', url: '/orders-to-assemble', icon: ClipboardList },
-        { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },
       ]
     },
     {
@@ -116,20 +113,23 @@ export const AppSidebar = () => {
       ]
     },
     {
-      category: 'Sistema',
-      items: [
-        { title: 'Configuración', url: '/settings', icon: Settings },
-        { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
-        { title: 'Notificaciones', url: '/notifications', icon: Bell },
-        { title: 'Mi Perfil', url: '/profile', icon: User },
-      ]
-    },
-    {
       category: 'Gestión de Personal',
       items: [
         { title: 'Usuarios', url: '/user-management', icon: Crown },
         { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
         { title: 'Vehículos', url: '/vehiculos', icon: Car },
+      ]
+    },
+    {
+      category: 'Herramientas',
+      items: [
+        { title: 'Analytics & ML', url: '/analytics', icon: Brain },
+        { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
+        { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },
+        { title: 'Configuración', url: '/settings', icon: Settings },
+        { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
+        { title: 'Notificaciones', url: '/notifications', icon: Bell },
+        { title: 'Mi Perfil', url: '/profile', icon: User },
       ]
     }
   ];
