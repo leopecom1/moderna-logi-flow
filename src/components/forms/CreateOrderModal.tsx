@@ -89,6 +89,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const [orderProducts, setOrderProducts] = useState<OrderProduct[]>([]);
   const [showCreditModernaForm, setShowCreditModernaForm] = useState(false);
   const [creditModernaData, setCreditModernaData] = useState<CreditModernaData | null>(null);
+  const [showDeliverNowConfirmation, setShowDeliverNowConfirmation] = useState(false);
   const [formData, setFormData] = useState({
     customer_id: '',
     branch_id: '',
@@ -341,6 +342,18 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     e.preventDefault();
     if (!profile?.user_id) return;
 
+    // Si es entrega inmediata, mostrar confirmación
+    if (formData.entregar_ahora) {
+      setShowDeliverNowConfirmation(true);
+      return;
+    }
+
+    await processOrder();
+  };
+
+  const processOrder = async () => {
+    if (!profile?.user_id) return;
+
     // Validaciones
     if (!formData.payment_method) {
       toast({
@@ -369,7 +382,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       return;
     }
 
-    if (!formData.retiro_en_sucursal && !formData.delivery_address.trim()) {
+    if (!formData.retiro_en_sucursal && !formData.entregar_ahora && !formData.delivery_address.trim()) {
       toast({
         title: 'Error de validación',
         description: 'Por favor ingresa una dirección de entrega o selecciona retiro en sucursal',
@@ -1003,20 +1016,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             </div>
           </div>
 
-          {/* Fecha Prometida */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="delivery_date">Fecha Prometida *</Label>
-              <Input
-                id="delivery_date"
-                type="date"
-                value={formData.delivery_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
-                required
-              />
-            </div>
-            
-            {/* Checkbox Entregar Ahora */}
+          {/* Checkbox Entregar Ahora */}
+          <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="entregar_ahora"
@@ -1024,7 +1025,9 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                 onCheckedChange={(checked) => {
                   setFormData(prev => ({ 
                     ...prev, 
-                    entregar_ahora: !!checked
+                    entregar_ahora: !!checked,
+                    retiro_en_sucursal: checked ? true : prev.retiro_en_sucursal,
+                    delivery_address: checked ? 'Retiro en sucursal' : prev.delivery_address,
                   }));
                 }}
               />
@@ -1032,49 +1035,70 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                 Entregar ahora (entregado en sucursal)
               </Label>
             </div>
-          </div>
-
-          {/* Retiro en Sucursal */}
-          <div className="space-y-4 p-4 border rounded-lg">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="retiro_en_sucursal"
-                checked={formData.retiro_en_sucursal}
-                onCheckedChange={(checked) => {
-                  setFormData(prev => ({ 
-                    ...prev, 
-                    retiro_en_sucursal: !!checked,
-                    delivery_address: checked ? 'Retiro en sucursal' : '',
-                    delivery_neighborhood: '',
-                    delivery_departamento: '',
-                  }));
-                }}
-              />
-              <Label htmlFor="retiro_en_sucursal" className="font-semibold">Retiro en Sucursal</Label>
-            </div>
-
-            {formData.retiro_en_sucursal && (
-              <div className="space-y-2">
-                <Label htmlFor="sucursal_retiro">Sucursal de Retiro *</Label>
-                <Select 
-                  value={formData.sucursal_retiro_id} 
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, sucursal_retiro_id: value }))}
-                  required={formData.retiro_en_sucursal}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar sucursal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {formData.entregar_ahora && (
+              <p className="text-sm text-muted-foreground">
+                El pedido se marcará como entregado directamente en sucursal
+              </p>
             )}
           </div>
+
+          {/* Fecha Prometida - Solo si NO es entrega inmediata */}
+          {!formData.entregar_ahora && (
+            <div className="space-y-2">
+              <Label htmlFor="delivery_date">Fecha Prometida *</Label>
+              <Input
+                id="delivery_date"
+                type="date"
+                value={formData.delivery_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
+                required={!formData.entregar_ahora}
+              />
+            </div>
+          )}
+
+          {/* Retiro en Sucursal - Solo si NO es entrega inmediata */}
+          {!formData.entregar_ahora && (
+            <div className="space-y-4 p-4 border rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="retiro_en_sucursal"
+                  checked={formData.retiro_en_sucursal}
+                  onCheckedChange={(checked) => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      retiro_en_sucursal: !!checked,
+                      delivery_address: checked ? 'Retiro en sucursal' : '',
+                      delivery_neighborhood: '',
+                      delivery_departamento: '',
+                    }));
+                  }}
+                />
+                <Label htmlFor="retiro_en_sucursal" className="font-semibold">Retiro en Sucursal</Label>
+              </div>
+
+              {formData.retiro_en_sucursal && (
+                <div className="space-y-2">
+                  <Label htmlFor="sucursal_retiro">Sucursal de Retiro *</Label>
+                  <Select 
+                    value={formData.sucursal_retiro_id} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, sucursal_retiro_id: value }))}
+                    required={formData.retiro_en_sucursal}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar sucursal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          )}
 
           {!formData.retiro_en_sucursal && (
             <div className="space-y-2">
@@ -1231,6 +1255,38 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
           }}
         />
       </DialogContent>
+
+      {/* Modal de confirmación para entrega inmediata */}
+      <Dialog open={showDeliverNowConfirmation} onOpenChange={setShowDeliverNowConfirmation}>
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Confirmar Entrega Inmediata</DialogTitle>
+            <DialogDescription>
+              Estás seleccionando que el pedido ya está armado y el cliente está retirando ahora en la sucursal.
+              <br /><br />
+              ¿Deseas continuar?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowDeliverNowConfirmation(false)}
+            >
+              Volver
+            </Button>
+            <Button 
+              type="button" 
+              onClick={async () => {
+                setShowDeliverNowConfirmation(false);
+                await processOrder();
+              }}
+            >
+              Sí, correcto
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
