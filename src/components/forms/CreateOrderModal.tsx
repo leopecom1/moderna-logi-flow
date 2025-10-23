@@ -1027,7 +1027,9 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                     ...prev, 
                     entregar_ahora: !!checked,
                     retiro_en_sucursal: checked ? true : prev.retiro_en_sucursal,
-                    delivery_address: checked ? 'Retiro en sucursal' : prev.delivery_address,
+                    delivery_address: checked ? 'Entrega inmediata en sucursal' : prev.delivery_address,
+                    delivery_date: checked ? '' : prev.delivery_date,
+                    sucursal_retiro_id: checked ? '' : prev.sucursal_retiro_id,
                   }));
                 }}
               />
@@ -1100,7 +1102,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             </div>
           )}
 
-          {!formData.retiro_en_sucursal && (
+          {!formData.retiro_en_sucursal && !formData.entregar_ahora && (
             <div className="space-y-2">
               <Label htmlFor="delivery_address">Dirección de Entrega *</Label>
               <GooglePlacesAutocomplete
@@ -1176,7 +1178,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
           </div>
           )}
 
-          {!formData.retiro_en_sucursal && (
+          {!formData.retiro_en_sucursal && !formData.entregar_ahora && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="delivery_neighborhood">Barrio</Label>
