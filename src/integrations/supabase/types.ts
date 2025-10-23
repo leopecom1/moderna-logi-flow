@@ -2348,10 +2348,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      generate_customer_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_customer_number: { Args: never; Returns: string }
       get_user_role: {
         Args: { user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -2391,6 +2388,7 @@ export type Database = {
         | "movimiento_interno_pendiente"
         | "pendiente_confirmacion_transferencia"
         | "pendiente_envio"
+        | "pendiente_retiro"
       payment_method:
         | "efectivo"
         | "tarjeta"
@@ -2562,6 +2560,7 @@ export const Constants = {
         "movimiento_interno_pendiente",
         "pendiente_confirmacion_transferencia",
         "pendiente_envio",
+        "pendiente_retiro",
       ],
       payment_method: [
         "efectivo",

@@ -407,11 +407,12 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       }
 
       // Determinar el estado inicial del pedido basado en stock y método de pago
-      let initialStatus: 'pendiente' | 'pendiente_compra' | 'movimiento_interno_pendiente' | 'pendiente_confirmacion_transferencia' | 'pendiente_envio' = 'pendiente';
+      let initialStatus: 'pendiente' | 'pendiente_compra' | 'movimiento_interno_pendiente' | 'pendiente_confirmacion_transferencia' | 'pendiente_envio' | 'pendiente_retiro' = 'pendiente';
       
       const hasOutOfStockProducts = orderProducts.some(p => p.needs_movement && p.available_stock === 0);
       const hasMovementNeeded = orderProducts.some(p => p.needs_movement && p.available_stock > 0);
       const isTransfer = formData.payment_method === 'transferencia';
+      const isPickup = formData.retiro_en_sucursal;
       
       if (hasOutOfStockProducts) {
         initialStatus = 'pendiente_compra';
@@ -419,6 +420,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         initialStatus = 'movimiento_interno_pendiente';
       } else if (isTransfer) {
         initialStatus = 'pendiente_confirmacion_transferencia';
+      } else if (isPickup) {
+        initialStatus = 'pendiente_retiro';
       } else {
         initialStatus = 'pendiente_envio';
       }
