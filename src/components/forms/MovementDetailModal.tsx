@@ -75,6 +75,7 @@ export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({
   };
 
   const isTransferPending = movement.type === 'transferencia' && movement.status === 'pendiente';
+  const isConfirmedBySales = movement.status === 'confirmado_por_ventas';
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -94,7 +95,7 @@ export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({
           <div className="flex items-center justify-between">
             {getTypeBadge(movement.type)}
             <Badge variant={movement.status === 'confirmado' || movement.status === 'pagado' ? 'default' : 'secondary'}>
-              {movement.status}
+              {movement.status === 'confirmado_por_ventas' ? 'Confirmado por Ventas' : movement.status}
             </Badge>
           </div>
 
@@ -181,7 +182,34 @@ export const MovementDetailModal: React.FC<MovementDetailModalProps> = ({
             </>
           )}
 
-          {!isTransferPending && (
+          {/* Botón de confirmación para pagos confirmados por ventas */}
+          {isConfirmedBySales && onConfirmTransfer && (
+            <>
+              <Separator />
+              <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-md mb-4">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  Este pago fue confirmado por ventas en una entrega inmediata. Administración debe confirmar la llegada del dinero.
+                </p>
+              </div>
+              <div className="flex space-x-2">
+                <Button 
+                  onClick={() => onConfirmTransfer(movement.id)}
+                  className="flex-1"
+                >
+                  Confirmar Llegada (Administración)
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={onClose}
+                  className="flex-1"
+                >
+                  Cerrar
+                </Button>
+              </div>
+            </>
+          )}
+
+          {!isTransferPending && !isConfirmedBySales && (
             <div className="flex justify-end">
               <Button variant="outline" onClick={onClose}>
                 Cerrar

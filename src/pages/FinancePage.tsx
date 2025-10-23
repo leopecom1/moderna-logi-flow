@@ -95,6 +95,7 @@ const FinancePage = () => {
           reference_number,
           liquidation_date,
           card_type,
+          notes,
           orders:order_id (
             customers:customer_id (name)
           )
@@ -106,6 +107,7 @@ const FinancePage = () => {
           const isTransfer = payment.payment_method?.toLowerCase().includes('transfer') || 
                            payment.payment_method === 'transferencia';
           const isCreditCard = payment.payment_method?.toLowerCase().includes('tarjeta');
+          const isConfirmedBySales = payment.notes?.includes('CONFIRMADO_POR_VENTAS');
           
           movements.push({
             id: payment.id,
@@ -115,7 +117,7 @@ const FinancePage = () => {
             description: `Pago - ${payment.orders?.customers?.name || 'Cliente'}`,
             customer: payment.orders?.customers?.name,
             reference: payment.reference_number,
-            status: payment.status,
+            status: isConfirmedBySales ? 'confirmado_por_ventas' : payment.status,
             method: payment.payment_method,
             liquidation_date: payment.liquidation_date,
             card_type: payment.card_type
@@ -261,6 +263,20 @@ const FinancePage = () => {
       // Check if this is an order (transferencia from orders table)
       const movement = movements?.find(m => m.id === movementId);
       
+      // If it's a payment with "confirmado_por_ventas" status, just update to pagado
+      if (movement?.status === 'confirmado_por_ventas') {
+        const { error } = await supabase
+          .from('payments')
+          .update({ 
+            status: 'pagado',
+            notes: null  // Clear the special status note
+          })
+          .eq('id', movementId);
+
+        if (error) throw error;
+        return;
+      }
+      
       if (movement?.type === 'transferencia' && movement.reference?.startsWith('PED-')) {
         // This is an order, first update payment status, then determine next order status
         const { error } = await supabase
@@ -384,10 +400,15 @@ const FinancePage = () => {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, movementId) => {
+      const movement = movements?.find(m => m.id === movementId);
+      const isConfirmedBySales = movement?.status === 'confirmado_por_ventas';
+      
       toast({
-        title: "Transferencia confirmada",
-        description: "La transferencia ha sido marcada como confirmada"
+        title: isConfirmedBySales ? "Pago confirmado por Administración" : "Transferencia confirmada",
+        description: isConfirmedBySales 
+          ? "El pago confirmado por ventas ha sido verificado y marcado como pagado"
+          : "La transferencia ha sido marcada como confirmada"
       });
       queryClient.invalidateQueries({ queryKey: ['finance-movements'] });
       setShowDetailModal(false);
@@ -699,6 +720,7 @@ const FinancePage = () => {
                       <SelectItem value="all">Todos los estados</SelectItem>
                       <SelectItem value="pendiente">Pendiente</SelectItem>
                       <SelectItem value="confirmado">Confirmado</SelectItem>
+                      <SelectItem value="confirmado_por_ventas">Confirmado por Ventas</SelectItem>
                       <SelectItem value="pagado">Pagado</SelectItem>
                       <SelectItem value="pago_ingresado">Pago Ingresado</SelectItem>
                       <SelectItem value="cancelado">Cancelado</SelectItem>

@@ -556,8 +556,27 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         await Promise.all(movementPromises);
       }
 
+      // Si es entrega inmediata con transferencia, crear el pago con estado especial
+      if (isDeliverNow && isTransfer) {
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert([{
+            order_id: order.id,
+            amount: getTotalAmount(),
+            payment_method: 'transferencia' as const,
+            status: 'pendiente' as const,
+            notes: 'CONFIRMADO_POR_VENTAS - Pendiente confirmación de administración',
+          }]);
+
+        if (paymentError) {
+          console.error('Error creating payment for immediate delivery:', paymentError);
+        }
+      }
+
       let toastMessage = 'El pedido ha sido creado exitosamente';
-      if (hasOutOfStockProducts) {
+      if (isDeliverNow && isTransfer) {
+        toastMessage = 'Pedido entregado. El pago fue confirmado por ventas y requiere confirmación de administración en Finanzas.';
+      } else if (hasOutOfStockProducts) {
         toastMessage = 'El pedido ha sido creado. Se generaron solicitudes de compra para productos sin stock.';
       } else if (hasMovementNeeded) {
         toastMessage = 'El pedido ha sido creado. Se generaron movimientos internos para productos de otras sucursales.';
