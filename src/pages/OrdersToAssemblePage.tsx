@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { Search, CheckCircle, Package } from 'lucide-react';
+import { Search, CheckCircle, Package, History } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface Order {
@@ -33,7 +34,8 @@ interface Order {
 export default function OrdersToAssemblePage() {
   const { profile } = useAuth();
   const navigate = useNavigate();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
+  const [historyOrders, setHistoryOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -44,18 +46,35 @@ export default function OrdersToAssemblePage() {
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Fetch active orders (pendiente_envio, pendiente_retiro, armado)
+      const { data: activeData, error: activeError } = await supabase
         .from('orders')
         .select(`
           *,
           customers (name),
           branches (name)
         `)
-        .in('status', ['pendiente_envio', 'pendiente_retiro'])
+        .in('status', ['pendiente_envio', 'pendiente_retiro', 'armado'])
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setOrders(data || []);
+      if (activeError) throw activeError;
+      setActiveOrders(activeData || []);
+
+      // Fetch history orders (entregado)
+      const { data: historyData, error: historyError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          customers (name),
+          branches (name)
+        `)
+        .eq('status', 'entregado')
+        .order('updated_at', { ascending: false })
+        .limit(50);
+
+      if (historyError) throw historyError;
+      setHistoryOrders(historyData || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -118,17 +137,24 @@ export default function OrdersToAssemblePage() {
     }
   };
 
-  const filteredOrders = orders.filter(order => 
-    order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    order.customers?.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filterOrders = (ordersList: Order[]) => {
+    return ordersList.filter(order => 
+      order.order_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customers?.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  };
+
+  const filteredActiveOrders = filterOrders(activeOrders);
+  const filteredHistoryOrders = filterOrders(historyOrders);
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      'pendiente_envio': { label: 'Pendiente Envío', variant: 'default' as const },
-      'pendiente_retiro': { label: 'Pendiente Retiro', variant: 'secondary' as const },
+      'pendiente_envio': { label: 'Pendiente Envío', variant: 'waiting' as const },
+      'pendiente_retiro': { label: 'Pendiente Retiro', variant: 'waiting' as const },
+      'armado': { label: 'Armado', variant: 'ready' as const },
+      'entregado': { label: 'Entregado', variant: 'completed' as const },
     };
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'default' as const };
+    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, variant: 'secondary' as const };
     return <Badge variant={config.variant}>{config.label}</Badge>;
   };
 
@@ -169,87 +195,163 @@ export default function OrdersToAssemblePage() {
           
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Pedidos Pendientes</CardTitle>
+              <CardTitle className="text-sm font-medium">Pedidos Activos</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{filteredOrders.length}</div>
+              <div className="text-2xl font-bold">{filteredActiveOrders.length}</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Orders Table */}
-        <Card>
-          <CardContent className="pt-6">
-            {loading ? (
-              <div className="text-center py-8">Cargando pedidos...</div>
-            ) : filteredOrders.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No hay pedidos pendientes para armar
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Número</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Productos</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Fecha Entrega</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        <Button
-                          variant="link"
-                          className="p-0 h-auto"
-                          onClick={() => navigate(`/orders/${order.id}`)}
-                        >
-                          {order.order_number}
-                        </Button>
-                      </TableCell>
-                      <TableCell>{order.customers?.name}</TableCell>
-                      <TableCell>{getStatusBadge(order.status)}</TableCell>
-                      <TableCell>{getProductCount(order.products)} items</TableCell>
-                      <TableCell>${order.total_amount.toFixed(2)}</TableCell>
-                      <TableCell>
-                        {new Date(order.delivery_date).toLocaleDateString('es-UY')}
-                      </TableCell>
-                      <TableCell>
-                        {order.retiro_en_sucursal ? (
-                          <Badge variant="outline">Retiro en Sucursal</Badge>
-                        ) : (
-                          <Badge variant="outline">Envío a Domicilio</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right space-x-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => markAsAssembled(order.id)}
-                        >
-                          <Package className="h-4 w-4 mr-1" />
-                          Armado
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => deliverOrder(order.id)}
-                        >
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Entregar
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+        {/* Tabs for Active and History */}
+        <Tabs defaultValue="active" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="active">
+              <Package className="h-4 w-4 mr-2" />
+              Activos
+            </TabsTrigger>
+            <TabsTrigger value="history">
+              <History className="h-4 w-4 mr-2" />
+              Historial
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Active Orders Tab */}
+          <TabsContent value="active">
+            <Card>
+              <CardContent className="pt-6">
+                {loading ? (
+                  <div className="text-center py-8">Cargando pedidos...</div>
+                ) : filteredActiveOrders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No hay pedidos activos para armar
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Número</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Estado Actual</TableHead>
+                        <TableHead>Productos</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Fecha Entrega</TableHead>
+                        <TableHead>Tipo</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredActiveOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto"
+                              onClick={() => navigate(`/orders/${order.id}`)}
+                            >
+                              {order.order_number}
+                            </Button>
+                          </TableCell>
+                          <TableCell>{order.customers?.name}</TableCell>
+                          <TableCell>{getStatusBadge(order.status)}</TableCell>
+                          <TableCell>{getProductCount(order.products)} items</TableCell>
+                          <TableCell>${order.total_amount.toFixed(2)}</TableCell>
+                          <TableCell>
+                            {new Date(order.delivery_date).toLocaleDateString('es-UY')}
+                          </TableCell>
+                          <TableCell>
+                            {order.retiro_en_sucursal ? (
+                              <Badge variant="outline">Retiro en Sucursal</Badge>
+                            ) : (
+                              <Badge variant="outline">Envío a Domicilio</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
+                            {order.status !== 'armado' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => markAsAssembled(order.id)}
+                              >
+                                <Package className="h-4 w-4 mr-1" />
+                                Armado
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => deliverOrder(order.id)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Entregar
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* History Orders Tab */}
+          <TabsContent value="history">
+            <Card>
+              <CardContent className="pt-6">
+                {loading ? (
+                  <div className="text-center py-8">Cargando historial...</div>
+                ) : filteredHistoryOrders.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No hay pedidos en el historial
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Número</TableHead>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>Estado Final</TableHead>
+                        <TableHead>Productos</TableHead>
+                        <TableHead>Total</TableHead>
+                        <TableHead>Fecha Entrega</TableHead>
+                        <TableHead>Tipo</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredHistoryOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-medium">
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto"
+                              onClick={() => navigate(`/orders/${order.id}`)}
+                            >
+                              {order.order_number}
+                            </Button>
+                          </TableCell>
+                          <TableCell>{order.customers?.name}</TableCell>
+                          <TableCell>{getStatusBadge(order.status)}</TableCell>
+                          <TableCell>{getProductCount(order.products)} items</TableCell>
+                          <TableCell>${order.total_amount.toFixed(2)}</TableCell>
+                          <TableCell>
+                            {new Date(order.delivery_date).toLocaleDateString('es-UY')}
+                          </TableCell>
+                          <TableCell>
+                            {order.retiro_en_sucursal ? (
+                              <Badge variant="outline">Retiro en Sucursal</Badge>
+                            ) : (
+                              <Badge variant="outline">Envío a Domicilio</Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
