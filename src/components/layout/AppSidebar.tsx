@@ -66,11 +66,11 @@ export const AppSidebar = () => {
       ]
     },
     {
-      category: 'Gestión de Personal',
+      category: 'Ventas y Clientes',
       items: [
-        { title: 'Usuarios', url: '/user-management', icon: Crown },
-        { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
-        { title: 'Vehículos', url: '/vehiculos', icon: Car },
+        { title: 'Clientes', url: '/customers', icon: Users },
+        { title: 'Ventas', url: '/orders', icon: ShoppingCart },
+        { title: 'Entregas', url: '/deliveries', icon: Truck },
       ]
     },
     {
@@ -80,14 +80,6 @@ export const AppSidebar = () => {
         { title: 'Inventario', url: '/inventory', icon: Package },
         { title: 'Movimientos Stock', url: '/stock-movements', icon: ArrowRightLeft },
         { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },
-      ]
-    },
-    {
-      category: 'Ventas y Clientes',
-      items: [
-        { title: 'Clientes', url: '/customers', icon: Users },
-        { title: 'Ventas', url: '/orders', icon: ShoppingCart },
-        { title: 'Entregas', url: '/deliveries', icon: Truck },
       ]
     },
     {
@@ -129,6 +121,14 @@ export const AppSidebar = () => {
         { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
         { title: 'Notificaciones', url: '/notifications', icon: Bell },
         { title: 'Mi Perfil', url: '/profile', icon: User },
+      ]
+    },
+    {
+      category: 'Gestión de Personal',
+      items: [
+        { title: 'Usuarios', url: '/user-management', icon: Crown },
+        { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
+        { title: 'Vehículos', url: '/vehiculos', icon: Car },
       ]
     }
   ];
