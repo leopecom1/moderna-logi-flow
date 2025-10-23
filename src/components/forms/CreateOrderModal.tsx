@@ -113,6 +113,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     // Retiro en sucursal
     retiro_en_sucursal: false,
     sucursal_retiro_id: '',
+    // Entrega inmediata
+    entregar_ahora: false,
   });
   const [priceListConfig, setPriceListConfig] = useState({
     price_list_1_name: 'Lista 1',
@@ -407,14 +409,18 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       }
 
       // Determinar el estado inicial del pedido basado en stock y método de pago
-      let initialStatus: 'pendiente' | 'pendiente_compra' | 'movimiento_interno_pendiente' | 'pendiente_confirmacion_transferencia' | 'pendiente_envio' | 'pendiente_retiro' = 'pendiente';
+      let initialStatus: 'pendiente' | 'pendiente_compra' | 'movimiento_interno_pendiente' | 'pendiente_confirmacion_transferencia' | 'pendiente_envio' | 'pendiente_retiro' | 'entregado' = 'pendiente';
       
       const hasOutOfStockProducts = orderProducts.some(p => p.needs_movement && p.available_stock === 0);
       const hasMovementNeeded = orderProducts.some(p => p.needs_movement && p.available_stock > 0);
       const isTransfer = formData.payment_method === 'transferencia';
       const isPickup = formData.retiro_en_sucursal;
+      const isDeliverNow = formData.entregar_ahora;
       
-      if (hasOutOfStockProducts) {
+      if (isDeliverNow) {
+        // Si se marca "Entregar Ahora", el pedido pasa directamente a entregado
+        initialStatus = 'entregado';
+      } else if (hasOutOfStockProducts) {
         initialStatus = 'pendiente_compra';
       } else if (hasMovementNeeded) {
         initialStatus = 'movimiento_interno_pendiente';
@@ -590,6 +596,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       // Resetear retiro en sucursal
       retiro_en_sucursal: false,
       sucursal_retiro_id: '',
+      entregar_ahora: false,
     });
     setOrderProducts([]);
     setSelectedPlaceDetails(null);
@@ -996,16 +1003,35 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             </div>
           </div>
 
-          {/* Fecha de Entrega */}
-          <div className="space-y-2">
-            <Label htmlFor="delivery_date">Fecha de Entrega *</Label>
-            <Input
-              id="delivery_date"
-              type="date"
-              value={formData.delivery_date}
-              onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
-              required
-            />
+          {/* Fecha Prometida */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="delivery_date">Fecha Prometida *</Label>
+              <Input
+                id="delivery_date"
+                type="date"
+                value={formData.delivery_date}
+                onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
+                required
+              />
+            </div>
+            
+            {/* Checkbox Entregar Ahora */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="entregar_ahora"
+                checked={formData.entregar_ahora}
+                onCheckedChange={(checked) => {
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    entregar_ahora: !!checked
+                  }));
+                }}
+              />
+              <Label htmlFor="entregar_ahora" className="font-medium">
+                Entregar ahora (entregado en sucursal)
+              </Label>
+            </div>
           </div>
 
           {/* Retiro en Sucursal */}
