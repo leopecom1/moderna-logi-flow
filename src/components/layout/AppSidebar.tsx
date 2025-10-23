@@ -83,9 +83,7 @@ export const AppSidebar = () => {
     {
       category: 'Logística',
       items: [
-        { title: 'Módulo Logístico', url: '/logistics', icon: ClipboardList },
-        { title: 'Rutas', url: '/routes', icon: Route },
-        { title: 'Optimización Rutas', url: '/route-optimization', icon: Navigation },
+        { title: 'Gestión Logística', url: '/logistics', icon: ClipboardList },
       ]
     },
     {

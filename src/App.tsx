@@ -39,7 +39,7 @@ import SupplierPaymentsPage from "./pages/SupplierPaymentsPage";
 import UnauthorizedPage from "./pages/UnauthorizedPage";
 import ReferencesPage from "./pages/ReferencesPage";
 import CashManagementPage from "./pages/CashManagementPage";
-import LogisticsPage from "./pages/LogisticsPage";
+import NewLogisticsPage from "./pages/NewLogisticsPage";
 import CreditoModernaPage from "./pages/CreditoModernaPage";
 import OrdersToAssemblePage from "./pages/OrdersToAssemblePage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
@@ -101,7 +101,7 @@ function App() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/credito-moderna" element={<ProtectedRoute><CreditoModernaPage /></ProtectedRoute>} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            <Route path="/logistics" element={<LogisticsPage />} />
+            <Route path="/logistics" element={<ProtectedRoute><NewLogisticsPage /></ProtectedRoute>} />
             <Route path="/orders-to-assemble" element={<ProtectedRoute><OrdersToAssemblePage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>

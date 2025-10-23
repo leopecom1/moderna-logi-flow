@@ -48,6 +48,7 @@ export default function OrdersToAssemblePage() {
       setLoading(true);
       
       // Fetch active orders (pendiente_envio, pendiente_retiro, armado)
+      // Exclude orders with entregar_ahora = true
       const { data: activeData, error: activeError } = await supabase
         .from('orders')
         .select(`
@@ -56,6 +57,7 @@ export default function OrdersToAssemblePage() {
           branches (name)
         `)
         .in('status', ['pendiente_envio', 'pendiente_retiro', 'armado'])
+        .or('entregar_ahora.is.null,entregar_ahora.eq.false')
         .order('created_at', { ascending: false });
 
       if (activeError) throw activeError;
