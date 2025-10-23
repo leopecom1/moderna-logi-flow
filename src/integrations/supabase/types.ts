@@ -2389,6 +2389,7 @@ export type Database = {
         | "pendiente_confirmacion_transferencia"
         | "pendiente_envio"
         | "pendiente_retiro"
+        | "armado"
       payment_method:
         | "efectivo"
         | "tarjeta"
@@ -2561,6 +2562,7 @@ export const Constants = {
         "pendiente_confirmacion_transferencia",
         "pendiente_envio",
         "pendiente_retiro",
+        "armado",
       ],
       payment_method: [
         "efectivo",

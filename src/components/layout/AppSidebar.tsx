@@ -79,6 +79,7 @@ export const AppSidebar = () => {
         { title: 'Productos', url: '/products', icon: Package2 },
         { title: 'Inventario', url: '/inventory', icon: Package },
         { title: 'Movimientos Stock', url: '/stock-movements', icon: ArrowRightLeft },
+        { title: 'Pedidos a Armar', url: '/orders-to-assemble', icon: ClipboardList },
         { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },
       ]
     },

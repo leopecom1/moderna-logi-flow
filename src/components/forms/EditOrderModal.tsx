@@ -43,7 +43,7 @@ interface Order {
   delivery_departamento?: string;
   delivery_time_slot?: string;
   notes?: string;
-  status: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'cancelado' | 'pago_ingresado' | 'pendiente_compra' | 'movimiento_interno_pendiente' | 'pendiente_confirmacion_transferencia' | 'pendiente_envio';
+  status: 'pendiente' | 'asignado' | 'en_ruta' | 'entregado' | 'cancelado' | 'pago_ingresado' | 'pendiente_compra' | 'movimiento_interno_pendiente' | 'pendiente_confirmacion_transferencia' | 'pendiente_envio' | 'pendiente_retiro' | 'armado';
 }
 
 export const EditOrderModal = ({ open, onOpenChange, onOrderUpdated, orderId }: EditOrderModalProps) => {
