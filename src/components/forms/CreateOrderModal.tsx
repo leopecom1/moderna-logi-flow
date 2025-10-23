@@ -110,6 +110,9 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       tarjeta_credito_tipo: '',
       numero_comprobante: '',
       cantidad_cuotas: '',
+    // Retiro en sucursal
+    retiro_en_sucursal: false,
+    sucursal_retiro_id: '',
   });
   const [priceListConfig, setPriceListConfig] = useState({
     price_list_1_name: 'Lista 1',
@@ -544,6 +547,9 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       tarjeta_credito_tipo: '',
       numero_comprobante: '',
       cantidad_cuotas: '',
+      // Resetear retiro en sucursal
+      retiro_en_sucursal: false,
+      sucursal_retiro_id: '',
     });
     setOrderProducts([]);
     setSelectedPlaceDetails(null);
@@ -962,36 +968,79 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="delivery_address">Dirección de Entrega *</Label>
-            <GooglePlacesAutocomplete
-              value={formData.delivery_address}
-              onChange={(value, placeDetails) => {
-                setFormData(prev => ({ ...prev, delivery_address: value }));
-                
-                // Extraer información adicional del lugar si está disponible
-                if (placeDetails?.address_components) {
-                  const addressComponents = placeDetails.address_components;
-                  const neighborhood = addressComponents.find((comp: any) => 
-                    comp.types.includes('sublocality') || comp.types.includes('neighborhood')
-                  )?.long_name;
+          {/* Retiro en Sucursal */}
+          <div className="space-y-4 p-4 border rounded-lg">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="retiro_en_sucursal"
+                checked={formData.retiro_en_sucursal}
+                onCheckedChange={(checked) => {
+                  setFormData(prev => ({ 
+                    ...prev, 
+                    retiro_en_sucursal: !!checked,
+                    delivery_address: checked ? 'Retiro en sucursal' : '',
+                    delivery_neighborhood: '',
+                    delivery_departamento: '',
+                  }));
+                }}
+              />
+              <Label htmlFor="retiro_en_sucursal" className="font-semibold">Retiro en Sucursal</Label>
+            </div>
+
+            {formData.retiro_en_sucursal && (
+              <div className="space-y-2">
+                <Label htmlFor="sucursal_retiro">Sucursal de Retiro *</Label>
+                <Select 
+                  value={formData.sucursal_retiro_id} 
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, sucursal_retiro_id: value }))}
+                  required={formData.retiro_en_sucursal}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar sucursal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+
+          {!formData.retiro_en_sucursal && (
+            <div className="space-y-2">
+              <Label htmlFor="delivery_address">Dirección de Entrega *</Label>
+              <GooglePlacesAutocomplete
+                value={formData.delivery_address}
+                onChange={(value, placeDetails) => {
+                  setFormData(prev => ({ ...prev, delivery_address: value }));
                   
-                  if (neighborhood) {
-                    setFormData(prev => ({ ...prev, delivery_neighborhood: neighborhood }));
+                  // Extraer información adicional del lugar si está disponible
+                  if (placeDetails?.address_components) {
+                    const addressComponents = placeDetails.address_components;
+                    const neighborhood = addressComponents.find((comp: any) => 
+                      comp.types.includes('sublocality') || comp.types.includes('neighborhood')
+                    )?.long_name;
+                    
+                    if (neighborhood) {
+                      setFormData(prev => ({ ...prev, delivery_neighborhood: neighborhood }));
+                    }
                   }
-                }
-                
-                // Store place details for map
-                if (placeDetails) {
-                  setSelectedPlaceDetails(placeDetails);
-                }
-              }}
-              placeholder="Comience a escribir la dirección..."
-              onManualInput={(manual) => {
-                setIsManualInput(manual);
-                setShowMap(manual);
-              }}
-            />
+                  
+                  // Store place details for map
+                  if (placeDetails) {
+                    setSelectedPlaceDetails(placeDetails);
+                  }
+                }}
+                placeholder="Comience a escribir la dirección..."
+                onManualInput={(manual) => {
+                  setIsManualInput(manual);
+                  setShowMap(manual);
+                }}
+              />
             
             {/* Manual input: show search button */}
             {isManualInput && formData.delivery_address && (
@@ -1035,7 +1084,9 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
               </div>
             )}
           </div>
+          )}
 
+          {!formData.retiro_en_sucursal && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="delivery_neighborhood">Barrio</Label>
@@ -1073,6 +1124,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
               />
             </div>
           </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">Notas</Label>
