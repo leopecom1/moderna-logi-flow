@@ -274,6 +274,21 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     setOrderProducts(updatedProducts);
   };
 
+  // Actualizar precios de todos los productos cuando cambia la lista de precios
+  const updateAllProductsPrices = () => {
+    const updatedProducts = orderProducts.map(orderProduct => {
+      if (orderProduct.product_id) {
+        const product = products.find(p => p.id === orderProduct.product_id);
+        if (product) {
+          const selectedPrice = formData.price_list === 'price_list_1' ? product.price_list_1 : product.price_list_2;
+          return { ...orderProduct, unit_price: selectedPrice };
+        }
+      }
+      return orderProduct;
+    });
+    setOrderProducts(updatedProducts);
+  };
+
   const checkStock = async (index: number, productId: string, warehouseId: string, products: OrderProduct[]) => {
     try {
       // Verificar stock en el depósito específico (de la sucursal)
@@ -916,11 +931,28 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
           <div className="space-y-2">
             <Label htmlFor="payment_method">Método de Pago *</Label>
             <Select value={formData.payment_method} onValueChange={(value) => {
+              const newPriceList = value === 'credito_moderna' ? 'price_list_2' : formData.price_list;
               setFormData(prev => ({ 
                 ...prev, 
                 payment_method: value,
-                price_list: value === 'credito_moderna' ? 'price_list_2' : prev.price_list
+                price_list: newPriceList
               }));
+              
+              // Si cambia a crédito moderna, actualizar precios de todos los productos
+              if (value === 'credito_moderna') {
+                setTimeout(() => {
+                  const updatedProducts = orderProducts.map(orderProduct => {
+                    if (orderProduct.product_id) {
+                      const product = products.find(p => p.id === orderProduct.product_id);
+                      if (product) {
+                        return { ...orderProduct, unit_price: product.price_list_2 };
+                      }
+                    }
+                    return orderProduct;
+                  });
+                  setOrderProducts(updatedProducts);
+                }, 0);
+              }
             }} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar método" />
@@ -1023,7 +1055,28 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             </div>
             
             <div className="space-y-2">
-              <Select value={formData.price_list} onValueChange={(value) => setFormData(prev => ({ ...prev, price_list: value }))}>
+              <Select 
+                value={formData.price_list} 
+                onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, price_list: value }));
+                  
+                  // Actualizar precios de todos los productos cuando cambia la lista
+                  setTimeout(() => {
+                    const updatedProducts = orderProducts.map(orderProduct => {
+                      if (orderProduct.product_id) {
+                        const product = products.find(p => p.id === orderProduct.product_id);
+                        if (product) {
+                          const selectedPrice = value === 'price_list_1' ? product.price_list_1 : product.price_list_2;
+                          return { ...orderProduct, unit_price: selectedPrice };
+                        }
+                      }
+                      return orderProduct;
+                    });
+                    setOrderProducts(updatedProducts);
+                  }, 0);
+                }}
+                disabled={formData.payment_method === 'credito_moderna'}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar lista de precio" />
                 </SelectTrigger>
@@ -1032,6 +1085,11 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                   <SelectItem value="price_list_2">{formData.payment_method === 'credito_moderna' ? 'Lista Crédito Moderna' : priceListConfig.price_list_2_name}</SelectItem>
                 </SelectContent>
               </Select>
+              {formData.payment_method === 'credito_moderna' && (
+                <p className="text-xs text-muted-foreground">
+                  La lista de precios está fijada a Crédito Moderna para este método de pago
+                </p>
+              )}
             </div>
           </div>
 
