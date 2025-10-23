@@ -339,6 +339,43 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     e.preventDefault();
     if (!profile?.user_id) return;
 
+    // Validaciones
+    if (!formData.payment_method) {
+      toast({
+        title: 'Error de validación',
+        description: 'Por favor selecciona un método de pago',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.branch_id) {
+      toast({
+        title: 'Error de validación',
+        description: 'Por favor selecciona una sucursal',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (orderProducts.length === 0) {
+      toast({
+        title: 'Error de validación',
+        description: 'Por favor agrega al menos un producto al pedido',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!formData.retiro_en_sucursal && !formData.delivery_address.trim()) {
+      toast({
+        title: 'Error de validación',
+        description: 'Por favor ingresa una dirección de entrega o selecciona retiro en sucursal',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Si es crédito moderna y no tenemos los datos, abrir el formulario
     if (formData.payment_method === 'credito_moderna' && !creditModernaData) {
       setShowCreditModernaForm(true);
