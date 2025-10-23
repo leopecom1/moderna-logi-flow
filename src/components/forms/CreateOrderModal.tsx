@@ -663,6 +663,23 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             )}
           </div>
 
+          {/* Sucursal del Pedido */}
+          <div className="space-y-2">
+            <Label htmlFor="branch_id">Sucursal del Pedido *</Label>
+            <Select value={formData.branch_id} onValueChange={(value) => setFormData(prev => ({ ...prev, branch_id: value }))} required>
+              <SelectTrigger>
+                <SelectValue placeholder="Seleccionar sucursal" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((branch) => (
+                  <SelectItem key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Productos */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -939,33 +956,16 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="branch_id">Sucursal *</Label>
-              <Select value={formData.branch_id} onValueChange={(value) => setFormData(prev => ({ ...prev, branch_id: value }))} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar sucursal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="delivery_date">Fecha de Entrega *</Label>
-              <Input
-                id="delivery_date"
-                type="date"
-                value={formData.delivery_date}
-                onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
-                required
-              />
-            </div>
+          {/* Fecha de Entrega */}
+          <div className="space-y-2">
+            <Label htmlFor="delivery_date">Fecha de Entrega *</Label>
+            <Input
+              id="delivery_date"
+              type="date"
+              value={formData.delivery_date}
+              onChange={(e) => setFormData(prev => ({ ...prev, delivery_date: e.target.value }))}
+              required
+            />
           </div>
 
           {/* Retiro en Sucursal */}
