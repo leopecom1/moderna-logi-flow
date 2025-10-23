@@ -217,7 +217,8 @@ export const CreateCustomerOrderModal = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="efectivo">Efectivo</SelectItem>
-                <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                <SelectItem value="tarjeta">Tarjeta de Crédito</SelectItem>
+                <SelectItem value="tarjeta_debito">Tarjeta de Débito</SelectItem>
                 <SelectItem value="transferencia">Transferencia</SelectItem>
                 <SelectItem value="credito">Crédito</SelectItem>
                 <SelectItem value="credito_moderna">Crédito Moderna</SelectItem>

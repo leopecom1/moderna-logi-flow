@@ -960,6 +960,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                 <SelectContent>
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="tarjeta">Tarjeta de Crédito</SelectItem>
+                  <SelectItem value="tarjeta_debito">Tarjeta de Débito</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
                   <SelectItem value="mercadopago">MercadoPago</SelectItem>
                   <SelectItem value="credito_moderna">Crédito Moderna</SelectItem>

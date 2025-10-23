@@ -220,7 +220,8 @@ export const EditOrderModal = ({ open, onOpenChange, onOrderUpdated, orderId }: 
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                  <SelectItem value="tarjeta">Tarjeta de Crédito</SelectItem>
+                  <SelectItem value="tarjeta_debito">Tarjeta de Débito</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
                   <SelectItem value="cuenta_corriente">Cuenta Corriente</SelectItem>
                 </SelectContent>

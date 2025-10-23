@@ -190,7 +190,8 @@ export const CreateCustomerPaymentModal = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="efectivo">Efectivo</SelectItem>
-                <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                <SelectItem value="tarjeta">Tarjeta de Crédito</SelectItem>
+                <SelectItem value="tarjeta_debito">Tarjeta de Débito</SelectItem>
                 <SelectItem value="transferencia">Transferencia</SelectItem>
                 <SelectItem value="credito">Crédito</SelectItem>
               </SelectContent>
