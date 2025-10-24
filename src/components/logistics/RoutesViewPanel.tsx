@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { MessageLoading } from '@/components/ui/message-loading';
 import { RouteMap } from '@/components/ui/route-map';
-import { Calendar, MapPin, User, Package, Clock, TrendingUp } from 'lucide-react';
+import { Calendar, MapPin, User, Package, Clock, TrendingUp, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 interface Route {
@@ -169,6 +169,51 @@ export const RoutesViewPanel = () => {
     return Math.round((route.completed_deliveries / route.total_deliveries) * 100);
   };
 
+  const handleMarkAsDelivered = async (deliveryId: string) => {
+    try {
+      const { error } = await supabase
+        .from('deliveries')
+        .update({
+          status: 'entregado',
+          delivered_at: new Date().toISOString(),
+        })
+        .eq('id', deliveryId);
+
+      if (error) throw error;
+
+      // Update route's completed_deliveries count
+      if (selectedRoute) {
+        const currentRoute = routes.find(r => r.id === selectedRoute);
+        if (currentRoute) {
+          await supabase
+            .from('routes')
+            .update({
+              completed_deliveries: currentRoute.completed_deliveries + 1,
+            })
+            .eq('id', selectedRoute);
+        }
+      }
+
+      toast({
+        title: 'Éxito',
+        description: 'Entrega marcada como completada',
+      });
+
+      // Refresh data
+      if (selectedRoute) {
+        await fetchRouteDeliveries(selectedRoute);
+      }
+      await fetchRoutes();
+    } catch (error: any) {
+      console.error('Error marking delivery as delivered:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo marcar la entrega como completada',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -329,6 +374,50 @@ export const RoutesViewPanel = () => {
                   </div>
                 </div>
                 <RouteMap deliveries={deliveries} height="500px" />
+                
+                {/* Deliveries List */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-semibold mb-4">Entregas de la Ruta</h3>
+                  <div className="space-y-2">
+                    {deliveries.map((delivery) => (
+                      <Card key={delivery.id} className="overflow-hidden">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Package className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-semibold">{delivery.customer_name}</span>
+                                <Badge 
+                                  variant={delivery.status === 'entregado' ? 'default' : 'secondary'}
+                                  className={delivery.status === 'entregado' ? 'bg-green-500' : ''}
+                                >
+                                  {delivery.status === 'entregado' ? 'Entregado' : 'Pendiente'}
+                                </Badge>
+                              </div>
+                              <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                <span>{delivery.address}</span>
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                Pedido: <span className="font-medium">{delivery.order_number}</span>
+                              </div>
+                            </div>
+                            {delivery.status !== 'entregado' && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleMarkAsDelivered(delivery.id)}
+                                className="flex-shrink-0"
+                              >
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Entregar
+                              </Button>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
