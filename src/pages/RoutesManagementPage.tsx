@@ -34,26 +34,34 @@ export default function RoutesManagementPage() {
   const fetchRoutes = async () => {
     try {
       setLoading(true);
-      // @ts-ignore - Complex Supabase query type inference
-      const { data, error } = await supabase
+      const { data: routesData, error } = await supabase
         .from('routes')
-        .select('id, route_name, route_date, cadete_id, total_deliveries, completed_deliveries, start_time, end_time, profiles(full_name)')
+        .select('*')
         .order('route_date', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedRoutes = data.map((route: any) => ({
+      // Fetch cadetes information separately
+      const cadeteIds = [...new Set(routesData?.map(r => r.cadete_id).filter(Boolean))];
+      const { data: cadetesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', cadeteIds);
+
+      const cadetesMap = new Map(cadetesData?.map(c => [c.user_id, c.full_name]));
+
+      const formattedRoutes = routesData?.map((route: any) => ({
         id: route.id,
         route_name: route.route_name,
         route_date: route.route_date,
         cadete_id: route.cadete_id,
-        cadete_name: route.profiles?.full_name || 'Sin asignar',
+        cadete_name: cadetesMap.get(route.cadete_id) || 'Sin asignar',
         total_deliveries: route.total_deliveries || 0,
         completed_deliveries: route.completed_deliveries || 0,
         start_time: route.start_time,
         end_time: route.end_time,
-      }));
+      })) || [];
 
       setRoutes(formattedRoutes);
     } catch (error: any) {

@@ -46,19 +46,33 @@ export const ShipmentsModule = () => {
   const fetchTodayRoutes = async () => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      // @ts-ignore - Complex Supabase query type inference
-      const { data, error } = await supabase
+      const { data: routesData, error } = await supabase
         .from('routes')
-        .select('id, route_name, profiles(full_name)')
+        .select('*')
         .eq('route_date', today);
 
       if (error) throw error;
 
-      const formattedRoutes = data.map((route: any) => ({
+      // Fetch cadetes information separately
+      const cadeteIds = [...new Set(routesData?.map(r => r.cadete_id).filter(Boolean))];
+      
+      if (cadeteIds.length === 0) {
+        setRoutes([]);
+        return;
+      }
+
+      const { data: cadetesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', cadeteIds);
+
+      const cadetesMap = new Map(cadetesData?.map(c => [c.user_id, c.full_name]));
+
+      const formattedRoutes = routesData?.map((route: any) => ({
         id: route.id,
         route_name: route.route_name,
-        cadete_name: route.profiles?.full_name || 'Sin asignar',
-      }));
+        cadete_name: cadetesMap.get(route.cadete_id) || 'Sin asignar',
+      })) || [];
 
       setRoutes(formattedRoutes);
     } catch (error: any) {
