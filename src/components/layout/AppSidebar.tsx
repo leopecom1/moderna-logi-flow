@@ -77,13 +77,12 @@ export const AppSidebar = () => {
         { title: 'Productos', url: '/products', icon: Package2 },
         { title: 'Stock de Productos', url: '/inventory', icon: Package },
         { title: 'Movimientos Stock', url: '/stock-movements', icon: ArrowRightLeft },
-        { title: 'Pedidos a Armar', url: '/orders-to-assemble', icon: ClipboardList },
       ]
     },
     {
-      category: 'Logística',
+      category: 'Procesos de Pedidos',
       items: [
-        { title: 'Gestión Logística', url: '/logistics', icon: ClipboardList },
+        { title: 'Gestión de Pedidos', url: '/logistics', icon: ClipboardList },
       ]
     },
     {
