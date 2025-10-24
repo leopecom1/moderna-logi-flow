@@ -1284,11 +1284,13 @@ export type Database = {
           delivery_departamento: string | null
           delivery_neighborhood: string | null
           delivery_time_slot: string | null
+          entregar_ahora: boolean | null
           id: string
           notes: string | null
           order_number: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           products: Json
+          retiro_en_sucursal: boolean | null
           seller_id: string
           status: Database["public"]["Enums"]["order_status"]
           total_amount: number
@@ -1304,11 +1306,13 @@ export type Database = {
           delivery_departamento?: string | null
           delivery_neighborhood?: string | null
           delivery_time_slot?: string | null
+          entregar_ahora?: boolean | null
           id?: string
           notes?: string | null
           order_number: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           products: Json
+          retiro_en_sucursal?: boolean | null
           seller_id: string
           status?: Database["public"]["Enums"]["order_status"]
           total_amount: number
@@ -1324,11 +1328,13 @@ export type Database = {
           delivery_departamento?: string | null
           delivery_neighborhood?: string | null
           delivery_time_slot?: string | null
+          entregar_ahora?: boolean | null
           id?: string
           notes?: string | null
           order_number?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
           products?: Json
+          retiro_en_sucursal?: boolean | null
           seller_id?: string
           status?: Database["public"]["Enums"]["order_status"]
           total_amount?: number

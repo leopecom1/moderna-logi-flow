@@ -475,6 +475,8 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         notes: formData.notes,
         order_number: generateOrderNumber(),
         status: initialStatus,
+        retiro_en_sucursal: formData.retiro_en_sucursal,
+        entregar_ahora: formData.entregar_ahora,
       };
 
       const { data: order, error } = await supabase

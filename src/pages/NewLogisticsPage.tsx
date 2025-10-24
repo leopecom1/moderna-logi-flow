@@ -6,11 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { PickupsModule } from '@/components/logistics/PickupsModule';
 import { ShipmentsModule } from '@/components/logistics/ShipmentsModule';
+import { OrdersToAssembleModule } from '@/components/logistics/OrdersToAssembleModule';
 import { Package, Truck, ClipboardList } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 export default function NewLogisticsPage() {
-  const navigate = useNavigate();
   const [counts, setCounts] = useState({
     toAssemble: 0,
     pickups: 0,
@@ -131,28 +130,7 @@ export default function NewLogisticsPage() {
           </TabsList>
 
           <TabsContent value="to-assemble">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pedidos para Armar</CardTitle>
-                <CardDescription>
-                  Gestiona los pedidos que necesitan ser preparados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <button
-                  onClick={() => navigate('/orders-to-assemble')}
-                  className="w-full p-8 border-2 border-dashed rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex flex-col items-center gap-2">
-                    <ClipboardList className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm font-medium">Ver todos los pedidos para armar</p>
-                    <Badge variant="secondary" className="text-lg px-3 py-1">
-                      {counts.toAssemble} pedidos
-                    </Badge>
-                  </div>
-                </button>
-              </CardContent>
-            </Card>
+            <OrdersToAssembleModule />
           </TabsContent>
 
           <TabsContent value="pickups">

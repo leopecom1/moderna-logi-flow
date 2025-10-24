@@ -41,7 +41,6 @@ import ReferencesPage from "./pages/ReferencesPage";
 import CashManagementPage from "./pages/CashManagementPage";
 import NewLogisticsPage from "./pages/NewLogisticsPage";
 import CreditoModernaPage from "./pages/CreditoModernaPage";
-import OrdersToAssemblePage from "./pages/OrdersToAssemblePage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -102,7 +101,6 @@ function App() {
             <Route path="/credito-moderna" element={<ProtectedRoute><CreditoModernaPage /></ProtectedRoute>} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="/logistics" element={<ProtectedRoute><NewLogisticsPage /></ProtectedRoute>} />
-            <Route path="/orders-to-assemble" element={<ProtectedRoute><OrdersToAssemblePage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
