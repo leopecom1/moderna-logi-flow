@@ -83,6 +83,7 @@ export const AppSidebar = () => {
       category: 'Procesos de Pedidos',
       items: [
         { title: 'Gestión de Pedidos', url: '/logistics', icon: ClipboardList },
+        { title: 'Gestión de Envíos', url: '/routes-management', icon: Truck },
       ]
     },
     {

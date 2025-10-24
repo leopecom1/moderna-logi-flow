@@ -5,9 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { MessageLoading } from '@/components/ui/message-loading';
-import { Truck, Search, Package, MapPin } from 'lucide-react';
+import { Truck, Search, Package, MapPin, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ShipmentOrder {
   id: string;
@@ -23,14 +25,46 @@ interface ShipmentOrder {
   created_at: string;
 }
 
+interface Route {
+  id: string;
+  route_name: string;
+  cadete_name: string;
+}
+
 export const ShipmentsModule = () => {
   const [orders, setOrders] = useState<ShipmentOrder[]>([]);
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [selectedRoute, setSelectedRoute] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchShipmentOrders();
+    fetchTodayRoutes();
   }, []);
+
+  const fetchTodayRoutes = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      // @ts-ignore - Complex Supabase query type inference
+      const { data, error } = await supabase
+        .from('routes')
+        .select('id, route_name, profiles(full_name)')
+        .eq('route_date', today);
+
+      if (error) throw error;
+
+      const formattedRoutes = data.map((route: any) => ({
+        id: route.id,
+        route_name: route.route_name,
+        cadete_name: route.profiles?.full_name || 'Sin asignar',
+      }));
+
+      setRoutes(formattedRoutes);
+    } catch (error: any) {
+      console.error('Error fetching routes:', error);
+    }
+  };
 
   const fetchShipmentOrders = async () => {
     try {
@@ -71,6 +105,33 @@ export const ShipmentsModule = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssignToRoute = async (orderId: string) => {
+    if (!selectedRoute) {
+      toast({
+        title: 'Error',
+        description: 'Selecciona una ruta primero',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Aquí irá la lógica para asignar el pedido a la ruta
+      // Por ahora solo mostramos un mensaje
+      toast({
+        title: 'Funcionalidad pendiente',
+        description: 'La asignación de pedidos a rutas estará disponible próximamente',
+      });
+    } catch (error: any) {
+      console.error('Error assigning order to route:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo asignar el pedido a la ruta',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -127,6 +188,32 @@ export const ShipmentsModule = () => {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {routes.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No hay rutas creadas para el día de hoy. Por favor, crea una ruta en <strong>Gestión de Envíos</strong> antes de asignar pedidos.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-2 block">Seleccionar Ruta</label>
+                <Select value={selectedRoute} onValueChange={setSelectedRoute}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una ruta..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {routes.map((route) => (
+                      <SelectItem key={route.id} value={route.id}>
+                        {route.route_name} - {route.cadete_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -183,6 +270,8 @@ export const ShipmentsModule = () => {
                           size="sm"
                           variant="outline"
                           className="gap-2"
+                          onClick={() => handleAssignToRoute(order.id)}
+                          disabled={!selectedRoute}
                         >
                           <Truck className="h-4 w-4" />
                           Asignar a Ruta
