@@ -1317,7 +1317,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || orderProducts.length === 0 || !formData.customer_id}
+              disabled={loading || orderProducts.length === 0 || (!formData.customer_id && !formData.create_new_customer) || (formData.create_new_customer && !formData.new_customer_name)}
             >
               {loading ? 'Creando...' : 
                formData.payment_method === 'credito_moderna' && !creditModernaData ? 'Configurar Crédito' : 
