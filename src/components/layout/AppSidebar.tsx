@@ -84,6 +84,7 @@ export const AppSidebar = () => {
       items: [
         { title: 'Gestión de Pedidos', url: '/logistics', icon: ClipboardList },
         { title: 'Gestión de Envíos', url: '/routes-management', icon: Truck },
+        { title: 'Visualización de Rutas', url: '/routes-view', icon: MapPin },
       ]
     },
     {

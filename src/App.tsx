@@ -41,6 +41,7 @@ import ReferencesPage from "./pages/ReferencesPage";
 import CashManagementPage from "./pages/CashManagementPage";
 import NewLogisticsPage from "./pages/NewLogisticsPage";
 import RoutesManagementPage from "./pages/RoutesManagementPage";
+import RoutesViewPage from "./pages/RoutesViewPage";
 import CreditoModernaPage from "./pages/CreditoModernaPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
@@ -103,6 +104,7 @@ function App() {
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="/logistics" element={<ProtectedRoute><NewLogisticsPage /></ProtectedRoute>} />
             <Route path="/routes-management" element={<ProtectedRoute><RoutesManagementPage /></ProtectedRoute>} />
+            <Route path="/routes-view" element={<ProtectedRoute><RoutesViewPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
