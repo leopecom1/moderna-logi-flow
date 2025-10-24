@@ -29,6 +29,7 @@ interface Route {
   id: string;
   route_name: string;
   cadete_name: string;
+  cadete_id: string;
 }
 
 export const ShipmentsModule = () => {
@@ -72,6 +73,7 @@ export const ShipmentsModule = () => {
         id: route.id,
         route_name: route.route_name,
         cadete_name: cadetesMap.get(route.cadete_id) || 'Sin asignar',
+        cadete_id: route.cadete_id,
       })) || [];
 
       setRoutes(formattedRoutes);
@@ -89,6 +91,7 @@ export const ShipmentsModule = () => {
         .select('id, order_number, customer_id, delivery_address, delivery_neighborhood, delivery_departamento, delivery_date, products, total_amount, created_at, customers(name)')
         .eq('status', 'armado')
         .eq('retiro_en_sucursal', false)
+        .is('route_id', null)
         .or('entregar_ahora.is.null,entregar_ahora.eq.false')
         .order('delivery_date', { ascending: true });
 
@@ -133,12 +136,61 @@ export const ShipmentsModule = () => {
     }
 
     try {
-      // Aquí irá la lógica para asignar el pedido a la ruta
-      // Por ahora solo mostramos un mensaje
+      // Get the route details including cadete_id
+      const route = routes.find(r => r.id === selectedRoute);
+      if (!route || !route.cadete_id) {
+        toast({
+          title: 'Error',
+          description: 'La ruta seleccionada no tiene un cadete asignado',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Update order with route_id and cadete_id
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+          route_id: selectedRoute,
+          cadete_id: route.cadete_id 
+        })
+        .eq('id', orderId);
+
+      if (updateError) throw updateError;
+
+      // Create delivery record
+      const { error: deliveryError } = await supabase
+        .from('deliveries')
+        .insert({
+          order_id: orderId,
+          route_id: selectedRoute,
+          cadete_id: route.cadete_id,
+          status: 'pendiente'
+        });
+
+      if (deliveryError) throw deliveryError;
+
+      // Increment total_deliveries for the route
+      const { data: currentRoute } = await supabase
+        .from('routes')
+        .select('total_deliveries')
+        .eq('id', selectedRoute)
+        .single();
+
+      await supabase
+        .from('routes')
+        .update({ 
+          total_deliveries: (currentRoute?.total_deliveries || 0) + 1 
+        })
+        .eq('id', selectedRoute);
+
       toast({
-        title: 'Funcionalidad pendiente',
-        description: 'La asignación de pedidos a rutas estará disponible próximamente',
+        title: 'Pedido asignado',
+        description: `El pedido se asignó correctamente a ${route.route_name}`,
       });
+
+      // Refresh the orders list
+      fetchShipmentOrders();
     } catch (error: any) {
       console.error('Error assigning order to route:', error);
       toast({

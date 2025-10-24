@@ -1291,6 +1291,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"]
           products: Json
           retiro_en_sucursal: boolean | null
+          route_id: string | null
           seller_id: string
           status: Database["public"]["Enums"]["order_status"]
           total_amount: number
@@ -1313,6 +1314,7 @@ export type Database = {
           payment_method: Database["public"]["Enums"]["payment_method"]
           products: Json
           retiro_en_sucursal?: boolean | null
+          route_id?: string | null
           seller_id: string
           status?: Database["public"]["Enums"]["order_status"]
           total_amount: number
@@ -1335,6 +1337,7 @@ export type Database = {
           payment_method?: Database["public"]["Enums"]["payment_method"]
           products?: Json
           retiro_en_sucursal?: boolean | null
+          route_id?: string | null
           seller_id?: string
           status?: Database["public"]["Enums"]["order_status"]
           total_amount?: number
@@ -1353,6 +1356,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "routes"
             referencedColumns: ["id"]
           },
         ]
