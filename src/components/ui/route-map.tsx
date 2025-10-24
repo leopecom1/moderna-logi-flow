@@ -81,19 +81,31 @@ export const RouteMap = ({
   };
 
   const createMarkers = async () => {
-    if (!mapInstanceRef.current || !window.google) return;
+    if (!mapInstanceRef.current || !window.google) {
+      console.log('Map or Google not ready');
+      return;
+    }
     
+    console.log('Creating markers for deliveries:', deliveries);
     clearMarkers();
     
     const bounds = new window.google.maps.LatLngBounds();
+    let markersCreated = 0;
     
     for (const delivery of deliveries) {
       let position: { lat: number; lng: number } | null = null;
       
       if (delivery.lat && delivery.lng) {
         position = { lat: delivery.lat, lng: delivery.lng };
+        console.log(`Using coordinates for ${delivery.order_number}:`, position);
       } else {
+        console.log(`Geocoding address for ${delivery.order_number}:`, delivery.address);
         position = await geocodeAddress(delivery.address);
+        if (position) {
+          console.log(`Geocoded position for ${delivery.order_number}:`, position);
+        } else {
+          console.warn(`Failed to geocode address for ${delivery.order_number}:`, delivery.address);
+        }
       }
       
       if (position) {
@@ -127,8 +139,11 @@ export const RouteMap = ({
 
         markersRef.current.push(marker);
         bounds.extend(position);
+        markersCreated++;
       }
     }
+    
+    console.log(`Created ${markersCreated} markers out of ${deliveries.length} deliveries`);
     
     if (markersRef.current.length > 0) {
       mapInstanceRef.current.fitBounds(bounds);
@@ -137,6 +152,8 @@ export const RouteMap = ({
       if (markersRef.current.length === 1) {
         mapInstanceRef.current.setZoom(16);
       }
+    } else {
+      console.warn('No markers were created');
     }
   };
 
