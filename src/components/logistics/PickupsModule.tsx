@@ -36,14 +36,16 @@ export const PickupsModule = () => {
   const fetchPickupOrders = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      // @ts-ignore - Complex Supabase query type inference
+      const result = await supabase
         .from('orders')
         .select('id, order_number, customer_id, delivery_date, products, total_amount, created_at, customers(name), branches(name)')
         .eq('status', 'armado')
         .eq('retiro_en_sucursal', true)
         .or('entregar_ahora.is.null,entregar_ahora.eq.false')
-        .order('delivery_date', { ascending: true }) as any;
+        .order('delivery_date', { ascending: true });
 
+      const { data, error } = result;
       if (error) throw error;
 
       const formattedOrders = data.map((order: any) => ({

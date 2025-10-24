@@ -35,14 +35,17 @@ export default function NewLogisticsPage() {
 
   const fetchCounts = async () => {
     try {
-      const { count: c1 } = await supabase.from('orders').select('id', { count: 'exact', head: true }).in('status', ['pendiente_envio', 'pendiente_retiro']).or('entregar_ahora.is.null,entregar_ahora.eq.false') as any;
-      const { count: c2 } = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'armado').eq('retiro_en_sucursal', true).or('entregar_ahora.is.null,entregar_ahora.eq.false') as any;
-      const { count: c3 } = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'armado').eq('retiro_en_sucursal', false).or('entregar_ahora.is.null,entregar_ahora.eq.false') as any;
+      // @ts-ignore - Complex Supabase query type inference
+      const r1 = await supabase.from('orders').select('id', { count: 'exact', head: true }).in('status', ['pendiente_envio', 'pendiente_retiro']).or('entregar_ahora.is.null,entregar_ahora.eq.false');
+      // @ts-ignore - Complex Supabase query type inference
+      const r2 = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'armado').eq('retiro_en_sucursal', true).or('entregar_ahora.is.null,entregar_ahora.eq.false');
+      // @ts-ignore - Complex Supabase query type inference
+      const r3 = await supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'armado').eq('retiro_en_sucursal', false).or('entregar_ahora.is.null,entregar_ahora.eq.false');
 
       setCounts({
-        toAssemble: c1 || 0,
-        pickups: c2 || 0,
-        shipments: c3 || 0,
+        toAssemble: r1.count || 0,
+        pickups: r2.count || 0,
+        shipments: r3.count || 0,
       });
     } catch (error) {
       console.error('Error fetching counts:', error);
