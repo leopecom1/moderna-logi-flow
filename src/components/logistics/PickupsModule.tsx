@@ -142,7 +142,7 @@ export const PickupsModule = () => {
             <div>
               <CardTitle>Pedidos para Retiro</CardTitle>
               <CardDescription>
-                Pedidos armados listos para ser retirados por los clientes
+                Pedidos preparados listos para ser retirados por los clientes
               </CardDescription>
             </div>
             <Badge variant="secondary" className="text-lg px-4 py-2">

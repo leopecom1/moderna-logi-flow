@@ -129,7 +129,7 @@ const OrdersPage = () => {
       case 'pendiente_envio':
         return { variant: 'waiting', label: 'Pendiente Envío' };
       case 'armado':
-        return { variant: 'ready', label: 'Armado' };
+        return { variant: 'ready', label: 'Preparado' };
       case 'asignado':
         return { variant: 'assigned', label: 'Asignado' };
       case 'en_ruta':

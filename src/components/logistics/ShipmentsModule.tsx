@@ -245,7 +245,7 @@ export const ShipmentsModule = () => {
             <div>
               <CardTitle>Pedidos para Envío</CardTitle>
               <CardDescription>
-                Pedidos armados listos para asignar a rutas de entrega
+                Pedidos preparados listos para asignar a rutas de entrega
               </CardDescription>
             </div>
             <Badge variant="secondary" className="text-lg px-4 py-2">

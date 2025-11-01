@@ -1526,7 +1526,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
           <DialogHeader>
             <DialogTitle>Confirmar Entrega Inmediata</DialogTitle>
             <DialogDescription>
-              Estás seleccionando que el pedido ya está armado y el cliente está retirando ahora en la sucursal.
+              Estás seleccionando que el pedido ya está preparado y el cliente está retirando ahora en la sucursal.
               <br /><br />
               ¿Deseas continuar?
             </DialogDescription>
