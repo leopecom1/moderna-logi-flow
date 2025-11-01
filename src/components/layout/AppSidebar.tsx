@@ -1,6 +1,6 @@
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink, useLocation } from 'react-router-dom';
-import modernaLogo from '@/assets/moderna-logo.png';
+import modernaLogo from '@/assets/moderna-logo-blanco.png';
 import {
   Sidebar,
   SidebarContent,
