@@ -51,6 +51,7 @@ const formSchema = z.object({
     "efectivo", "transferencia", "mercado_pago", "tarjeta_credito", 
     "tarjeta_debito", "credito_moderna", "cheque", "otros"
   ]),
+  card_installments: z.number().min(1).max(6).optional(),
   payment_reference: z.string().optional(),
   bank_name: z.string().optional(),
   account_info: z.string().optional(),
@@ -136,6 +137,7 @@ export function CreateCollectionModal({
       collection_date: new Date().toISOString().split('T')[0],
       amount: 0,
       payment_method_type: "efectivo",
+      card_installments: 1,
       payment_reference: "",
       bank_name: "",
       account_info: "",
@@ -188,14 +190,15 @@ export function CreateCollectionModal({
     }
   }, [watchCustomerId, open]);
 
-  // Escuchar cambios en el método de pago para recalcular recargo
+  // Escuchar cambios en el método de pago y cuotas para recalcular recargo
   const watchPaymentMethod = form.watch("payment_method_type");
+  const watchCardInstallments = form.watch("card_installments");
   React.useEffect(() => {
     if (collectionType === "credito_moderna" && selectedInstallments.size > 0) {
-      const surcharge = calculateSurcharge(baseAmount, watchPaymentMethod, selectedInstallments.size);
+      const surcharge = calculateSurcharge(baseAmount, watchPaymentMethod, selectedInstallments.size, watchCardInstallments || 1);
       setCardSurcharge(surcharge);
     }
-  }, [watchPaymentMethod, baseAmount, selectedInstallments.size, collectionType]);
+  }, [watchPaymentMethod, watchCardInstallments, baseAmount, selectedInstallments.size, collectionType]);
 
   const loadCreditInstallments = async (custId: string) => {
     try {
@@ -249,12 +252,12 @@ export function CreateCollectionModal({
     }
   };
 
-  const calculateSurcharge = (baseAmount: number, paymentMethod: string, installmentCount: number) => {
+  const calculateSurcharge = (baseAmount: number, paymentMethod: string, installmentCount: number, cardInstallments: number = 1) => {
     if (paymentMethod === "tarjeta_credito") {
-      if (installmentCount > 1) {
-        return baseAmount * 0.10; // 10% para más de una cuota
-      } else {
+      if (cardInstallments === 1) {
         return baseAmount * 0.01; // 1% para una sola cuota
+      } else if (cardInstallments > 1 && cardInstallments <= 6) {
+        return baseAmount * 0.10; // 10% para 2-6 cuotas
       }
     } else if (paymentMethod === "tarjeta_debito") {
       return baseAmount * 0.01; // 1% siempre
@@ -280,9 +283,10 @@ export function CreateCollectionModal({
     setBaseAmount(total);
     form.setValue("amount", total);
 
-    // Calculate surcharge based on payment method
+    // Calculate surcharge based on payment method and card installments
     const paymentMethod = form.getValues("payment_method_type");
-    const surcharge = calculateSurcharge(total, paymentMethod, newSelected.size);
+    const cardInstallments = form.getValues("card_installments") || 1;
+    const surcharge = calculateSurcharge(total, paymentMethod, newSelected.size, cardInstallments);
     setCardSurcharge(surcharge);
   };
 
@@ -378,6 +382,7 @@ export function CreateCollectionModal({
         collection_date: new Date().toISOString().split('T')[0],
         amount: 0,
         payment_method_type: "efectivo",
+        card_installments: 1,
         payment_reference: "",
         bank_name: "",
         account_info: "",
@@ -770,6 +775,41 @@ export function CreateCollectionModal({
                 )}
               />
             </div>
+
+            {/* Campo de cuotas para tarjeta de crédito */}
+            {watchPaymentMethod === "tarjeta_credito" && collectionType === "credito_moderna" && (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="card_installments"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número de Cuotas</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(parseInt(value))} 
+                        defaultValue={field.value?.toString()}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleccionar cuotas" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="1">1 cuota (1% interés)</SelectItem>
+                          <SelectItem value="2">2 cuotas (10% interés)</SelectItem>
+                          <SelectItem value="3">3 cuotas (10% interés)</SelectItem>
+                          <SelectItem value="4">4 cuotas (10% interés)</SelectItem>
+                          <SelectItem value="5">5 cuotas (10% interés)</SelectItem>
+                          <SelectItem value="6">6 cuotas (10% interés)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div></div>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField
