@@ -66,6 +66,8 @@ interface CreateCollectionModalProps {
   customerId?: string;
   saleId?: string;
   orderId?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 interface CreditInstallment {
@@ -94,9 +96,22 @@ export function CreateCollectionModal({
   onCollectionCreated, 
   customerId, 
   saleId, 
-  orderId 
+  orderId,
+  open: controlledOpen,
+  onOpenChange,
 }: CreateCollectionModalProps) {
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  
+  // Use controlled state if provided, otherwise use internal state
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
   const [customers, setCustomers] = React.useState<any[]>([]);
   const [orders, setOrders] = React.useState<any[]>([]);
   const [creditInstallments, setCreditInstallments] = React.useState<CreditInstallment[]>([]);

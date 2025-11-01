@@ -430,11 +430,10 @@ export default function CustomerDetailPage() {
       />
 
       <CreateCollectionModal 
-        customerId={showCreateCollectionModal ? id : undefined} 
-        onCollectionCreated={() => {
-          fetchCustomerData();
-          setShowCreateCollectionModal(false);
-        }} 
+        customerId={id}
+        open={showCreateCollectionModal}
+        onOpenChange={setShowCreateCollectionModal}
+        onCollectionCreated={fetchCustomerData}
       />
 
     </MainLayout>
