@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Grid, List, Settings, Upload, Download, Package, TrendingUp, Table, Hash } from "lucide-react";
+import { Search, Grid, List, Settings, Upload, Download, Package, TrendingUp, Table, Hash, Check, X } from "lucide-react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MessageLoading } from "@/components/ui/message-loading";
 import { CreateProductModal } from "@/components/forms/CreateProductModal";
@@ -17,6 +17,8 @@ import { ProductImportModal } from "@/components/forms/ProductImportModal";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table as TableComponent,
   TableBody,
@@ -44,6 +46,7 @@ interface Product {
   updated_at: string;
   cost: number;
   currency?: 'UYU' | 'USD';
+  use_automatic_pricing?: boolean;
   categories?: {
     id: string;
     name: string;
@@ -55,7 +58,10 @@ export default function ProductsPage() {
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [showPriceListsConfig, setShowPriceListsConfig] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Partial<Product>>({});
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ["products"],
@@ -72,6 +78,65 @@ export default function ProductsPage() {
       return data as Product[];
     },
   });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Product> }) => {
+      const { data, error } = await supabase
+        .from("products")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      toast({
+        title: "Producto actualizado",
+        description: "Los cambios se guardaron correctamente",
+      });
+      setEditingProduct(null);
+      setEditValues({});
+    },
+    onError: (error) => {
+      console.error('Error updating product:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el producto",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleStartEdit = (product: Product) => {
+    setEditingProduct(product.id);
+    setEditValues({
+      price: product.price,
+      cost: product.cost,
+      currency: product.currency,
+      use_automatic_pricing: product.use_automatic_pricing,
+    });
+  };
+
+  const handleSaveEdit = () => {
+    if (editingProduct && Object.keys(editValues).length > 0) {
+      updateProductMutation.mutate({
+        id: editingProduct,
+        updates: editValues,
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null);
+    setEditValues({});
+  };
+
+  const handleFieldChange = (field: keyof Product, value: any) => {
+    setEditValues(prev => ({ ...prev, [field]: value }));
+  };
 
   const filteredProducts = products?.filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -329,72 +394,157 @@ export default function ProductsPage() {
                   <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-right">Costo</TableHead>
                   <TableHead>Moneda</TableHead>
+                  <TableHead>Precio Auto</TableHead>
                   <TableHead className="text-right">Margen</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProducts.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.code}</TableCell>
-                    <TableCell>{product.name}</TableCell>
-                    <TableCell>
-                      {product.categories?.name ? (
-                        <Badge variant="outline" className="text-xs">
-                          {product.categories.name}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {product.brand ? (
-                        <Badge variant="outline" className="text-xs">
-                          {product.brand}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {product.supplier_code ? (
-                        <span className="text-sm font-mono">
-                          {product.supplier_code}
+                {filteredProducts.map((product) => {
+                  const isEditing = editingProduct === product.id;
+                  
+                  return (
+                    <TableRow key={product.id} className={isEditing ? "bg-muted/50" : ""}>
+                      <TableCell className="font-medium">{product.code}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>
+                        {product.categories?.name ? (
+                          <Badge variant="outline" className="text-xs">
+                            {product.categories.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.brand ? (
+                          <Badge variant="outline" className="text-xs">
+                            {product.brand}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {product.supplier_code ? (
+                          <span className="text-sm font-mono">
+                            {product.supplier_code}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editValues.price ?? product.price}
+                            onChange={(e) => handleFieldChange('price', parseFloat(e.target.value))}
+                            className="w-24 h-8 text-right"
+                            autoFocus
+                          />
+                        ) : (
+                          <span className="font-semibold">${product.price}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isEditing ? (
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editValues.cost ?? product.cost}
+                            onChange={(e) => handleFieldChange('cost', parseFloat(e.target.value))}
+                            className="w-24 h-8 text-right"
+                          />
+                        ) : (
+                          <span className="font-semibold">${product.cost}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Select
+                            value={editValues.currency ?? product.currency ?? 'UYU'}
+                            onValueChange={(value) => handleFieldChange('currency', value)}
+                          >
+                            <SelectTrigger className="w-24 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="UYU">🇺🇾 UYU</SelectItem>
+                              <SelectItem value="USD">💵 USD</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <Badge variant={product.currency === 'USD' ? 'default' : 'secondary'} className="text-xs">
+                            {product.currency === 'USD' ? '💵 USD' : '🇺🇾 UYU'}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Switch
+                            checked={editValues.use_automatic_pricing ?? product.use_automatic_pricing ?? true}
+                            onCheckedChange={(checked) => handleFieldChange('use_automatic_pricing', checked)}
+                          />
+                        ) : (
+                          <Badge variant={product.use_automatic_pricing ? 'default' : 'outline'} className="text-xs">
+                            {product.use_automatic_pricing ? 'Auto' : 'Manual'}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-green-600 font-semibold">
+                          {product.margin_percentage?.toFixed(2) || 0}%
                         </span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      ${product.price}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      ${product.cost}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.currency === 'USD' ? 'default' : 'secondary'} className="text-xs">
-                        {product.currency === 'USD' ? '💵 USD' : '🇺🇾 UYU'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <span className="text-green-600 font-semibold">
-                        {product.margin_percentage?.toFixed(2) || 0}%
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={product.is_active ? "default" : "secondary"}>
-                        {product.is_active ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <EditProductModal 
-                        product={product} 
-                        onProductUpdated={refetch}
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={product.is_active ? "default" : "secondary"}>
+                          {product.is_active ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          {isEditing ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleSaveEdit}
+                                disabled={updateProductMutation.isPending}
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={handleCancelEdit}
+                                disabled={updateProductMutation.isPending}
+                              >
+                                <X className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleStartEdit(product)}
+                              >
+                                Editar
+                              </Button>
+                              <EditProductModal 
+                                product={product} 
+                                onProductUpdated={refetch}
+                              />
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </TableComponent>
           </CardContent>
