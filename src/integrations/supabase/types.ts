@@ -1278,6 +1278,7 @@ export type Database = {
           branch_id: string | null
           cadete_id: string | null
           created_at: string
+          currency_rate: number | null
           customer_id: string
           delivery_address: string
           delivery_date: string | null
@@ -1285,6 +1286,7 @@ export type Database = {
           delivery_neighborhood: string | null
           delivery_time_slot: string | null
           entregar_ahora: boolean | null
+          exchange_rate_date: string | null
           id: string
           notes: string | null
           order_number: string
@@ -1301,6 +1303,7 @@ export type Database = {
           branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
+          currency_rate?: number | null
           customer_id: string
           delivery_address: string
           delivery_date?: string | null
@@ -1308,6 +1311,7 @@ export type Database = {
           delivery_neighborhood?: string | null
           delivery_time_slot?: string | null
           entregar_ahora?: boolean | null
+          exchange_rate_date?: string | null
           id?: string
           notes?: string | null
           order_number: string
@@ -1324,6 +1328,7 @@ export type Database = {
           branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
+          currency_rate?: number | null
           customer_id?: string
           delivery_address?: string
           delivery_date?: string | null
@@ -1331,6 +1336,7 @@ export type Database = {
           delivery_neighborhood?: string | null
           delivery_time_slot?: string | null
           entregar_ahora?: boolean | null
+          exchange_rate_date?: string | null
           id?: string
           notes?: string | null
           order_number?: string
@@ -1608,6 +1614,7 @@ export type Database = {
           code: string
           cost: number
           created_at: string
+          currency: string
           has_variants: boolean
           id: string
           is_active: boolean
@@ -1628,6 +1635,7 @@ export type Database = {
           code: string
           cost: number
           created_at?: string
+          currency?: string
           has_variants?: boolean
           id?: string
           is_active?: boolean
@@ -1648,6 +1656,7 @@ export type Database = {
           code?: string
           cost?: number
           created_at?: string
+          currency?: string
           has_variants?: boolean
           id?: string
           is_active?: boolean

@@ -50,6 +50,7 @@ const formSchema = z.object({
   has_variants: z.boolean().default(false),
   createNewCategory: z.boolean().default(false),
   newCategoryName: z.string().optional(),
+  currency: z.enum(['UYU', 'USD']).default('UYU'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -163,6 +164,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       has_variants: false,
       createNewCategory: false,
       newCategoryName: "",
+      currency: "UYU",
     },
   });
 
@@ -243,6 +245,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         is_active: values.is_active,
         use_automatic_pricing: values.use_automatic_pricing,
         has_variants: values.has_variants,
+        currency: values.currency,
       };
 
       const { data: product, error: productError } = await supabase
@@ -401,25 +404,59 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
               />
             </div>
 
-            <FormField
-              control={form.control}
-              name="cost"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Costo</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-             />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Costo</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+               />
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Moneda</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar moneda" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="UYU">
+                          <div className="flex items-center gap-2">
+                            <span>🇺🇾</span>
+                            <span>Pesos Uruguayos (UYU)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="USD">
+                          <div className="flex items-center gap-2">
+                            <span>💵</span>
+                            <span>Dólares (USD)</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

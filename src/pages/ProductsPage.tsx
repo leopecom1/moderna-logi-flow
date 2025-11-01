@@ -31,7 +31,6 @@ interface Product {
   code: string;
   name: string;
   price: number;
-  cost: number;
   price_list_1: number;
   price_list_2: number;
   margin_percentage?: number;
@@ -43,6 +42,8 @@ interface Product {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  cost: number;
+  currency?: 'UYU' | 'USD';
   categories?: {
     id: string;
     name: string;
@@ -279,11 +280,21 @@ export default function ProductsPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground">Precio</p>
-                    <p className="font-semibold">${product.price}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">${product.price}</p>
+                      <Badge variant={product.currency === 'USD' ? 'default' : 'secondary'} className="text-xs">
+                        {product.currency || 'UYU'}
+                      </Badge>
+                    </div>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Costo</p>
-                    <p className="font-semibold">${product.cost}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">${product.cost}</p>
+                      <Badge variant={product.currency === 'USD' ? 'default' : 'secondary'} className="text-xs">
+                        {product.currency || 'UYU'}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
                 
@@ -317,6 +328,7 @@ export default function ProductsPage() {
                   <TableHead>Código Proveedor</TableHead>
                   <TableHead className="text-right">Precio</TableHead>
                   <TableHead className="text-right">Costo</TableHead>
+                  <TableHead>Moneda</TableHead>
                   <TableHead className="text-right">Margen</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
@@ -359,6 +371,11 @@ export default function ProductsPage() {
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       ${product.cost}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={product.currency === 'USD' ? 'default' : 'secondary'} className="text-xs">
+                        {product.currency === 'USD' ? '💵 USD' : '🇺🇾 UYU'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <span className="text-green-600 font-semibold">

@@ -13,6 +13,8 @@ import { GooglePlacesAutocomplete } from '@/components/ui/google-places-autocomp
 import { GoogleMap } from '@/components/ui/google-map';
 import { Plus, Package, MapPin, Search, Minus } from 'lucide-react';
 import { CreditModernaOrderForm, CreditModernaData } from './CreditModernaOrderForm';
+import { useUSDRate } from '@/hooks/useCurrencyRates';
+import { Badge } from '@/components/ui/badge';
 
 const DEPARTAMENTOS_URUGUAY = [
   'Artigas', 'Canelones', 'Cerro Largo', 'Colonia', 'Durazno', 'Flores',
@@ -52,6 +54,7 @@ interface Product {
   price: number;
   price_list_1: number;
   price_list_2: number;
+  currency?: 'UYU' | 'USD';
 }
 
 interface Warehouse {
@@ -69,6 +72,9 @@ interface OrderProduct {
   available_stock: number;
   needs_movement: boolean;
   variant_id?: string;
+  currency?: 'UYU' | 'USD';
+  original_price_usd?: number;
+  exchange_rate_used?: number;
 }
 
 interface Branch {
@@ -78,6 +84,7 @@ interface Branch {
 
 export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateOrderModalProps) => {
   const { profile } = useAuth();
+  const { data: usdRate } = useUSDRate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
@@ -151,12 +158,12 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     try {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, code, price, price_list_1, price_list_2')
+        .select('id, name, code, price, price_list_1, price_list_2, currency')
         .eq('is_active', true)
         .order('name');
 
       if (error) throw error;
-      setProducts(data || []);
+      setProducts((data || []) as Product[]);
     } catch (error) {
       console.error('Error fetching products:', error);
     }
@@ -257,8 +264,19 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       const product = products.find(p => p.id === value);
       if (product) {
         updatedProducts[index].product_name = product.name;
+        updatedProducts[index].currency = product.currency || 'UYU';
+        
         // Usar el precio de la lista seleccionada
-        const selectedPrice = formData.price_list === 'price_list_1' ? product.price_list_1 : product.price_list_2;
+        let selectedPrice = formData.price_list === 'price_list_1' ? product.price_list_1 : product.price_list_2;
+        
+        // Si el producto está en USD y tenemos cotización, convertir a UYU
+        if (product.currency === 'USD' && usdRate) {
+          const priceInUYU = selectedPrice * usdRate.sell_rate;
+          updatedProducts[index].original_price_usd = selectedPrice;
+          updatedProducts[index].exchange_rate_used = usdRate.sell_rate;
+          selectedPrice = priceInUYU;
+        }
+        
         updatedProducts[index].unit_price = selectedPrice;
       }
     }
@@ -864,12 +882,19 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
                   <div className="space-y-2">
                     <Label>Precio Unitario</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={product.unit_price}
-                      onChange={(e) => updateProduct(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                    />
+                    <div className="space-y-1">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={product.unit_price}
+                        onChange={(e) => updateProduct(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                      />
+                      {product.currency === 'USD' && product.original_price_usd && product.exchange_rate_used && (
+                        <p className="text-xs text-muted-foreground">
+                          💵 Precio original: ${product.original_price_usd.toFixed(2)} USD (TC: ${product.exchange_rate_used.toFixed(2)})
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-2">

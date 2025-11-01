@@ -47,6 +47,7 @@ const formSchema = z.object({
   is_active: z.boolean(),
   use_automatic_pricing: z.boolean().default(true),
   has_variants: z.boolean().default(false),
+  currency: z.enum(['UYU', 'USD']).default('UYU'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -71,6 +72,7 @@ interface Product {
   is_active: boolean;
   use_automatic_pricing?: boolean;
   has_variants?: boolean;
+  currency?: 'UYU' | 'USD';
 }
 
 interface EditProductModalProps {
@@ -168,6 +170,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
       is_active: product.is_active,
       use_automatic_pricing: product.use_automatic_pricing ?? true,
       has_variants: product.has_variants ?? false,
+      currency: product.currency || "UYU",
     },
   });
 
@@ -187,6 +190,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
         is_active: product.is_active,
         use_automatic_pricing: product.use_automatic_pricing ?? true,
         has_variants: product.has_variants ?? false,
+        currency: product.currency || "UYU",
       });
     }
   }, [open, product, form]);
@@ -234,6 +238,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
           is_active: values.is_active,
           use_automatic_pricing: values.use_automatic_pricing,
           has_variants: values.has_variants,
+          currency: values.currency,
         })
         .eq("id", product.id);
 
@@ -446,25 +451,59 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="cost"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Costo</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="cost"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Costo</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        {...field}
+                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Moneda</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar moneda" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="UYU">
+                          <div className="flex items-center gap-2">
+                            <span>🇺🇾</span>
+                            <span>Pesos Uruguayos (UYU)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="USD">
+                          <div className="flex items-center gap-2">
+                            <span>💵</span>
+                            <span>Dólares (USD)</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}
