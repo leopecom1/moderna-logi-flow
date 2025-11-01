@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink, useLocation } from 'react-router-dom';
+import modernaLogo from '@/assets/moderna-logo.png';
 import {
   Sidebar,
   SidebarContent,
@@ -206,8 +207,8 @@ export const AppSidebar = () => {
         <div className="p-4 border-b border-sidebar-border">
           <div className="flex items-center justify-center">
             <img 
-              src="/lovable-uploads/629c5c32-2f75-4980-89b7-b7666a341b25.png" 
-              alt="RutaMOD Logo" 
+              src={modernaLogo} 
+              alt="Moderna Logo" 
               className={`object-contain transition-all duration-200 ${
                 state === 'collapsed' ? 'h-8 w-8' : 'h-12 w-auto'
               }`}
