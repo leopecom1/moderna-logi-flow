@@ -251,14 +251,6 @@ export const AuthPage = () => {
             >
               {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
-            <Button 
-              type="button" 
-              variant="ghost"
-              className="w-full"
-              onClick={() => setShowResetPassword(true)}
-            >
-              ¿Olvidaste tu contraseña?
-            </Button>
           </form>
         </CardContent>
       </Card>
