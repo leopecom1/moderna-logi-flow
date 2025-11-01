@@ -4,9 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import Stats1 from '@/components/ui/stats-1';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { KPIGrid, RealtimeActivityFeed } from '@/components/dashboard/DashboardMetrics';
 import { MessageLoading } from '@/components/ui/message-loading';
 import { CashClosureAlert } from '@/components/alerts/CashClosureAlert';
+import { CreateCustomerOrderModal } from '@/components/forms/CreateCustomerOrderModal';
+import { CreateCollectionModal } from '@/components/forms/CreateCollectionModal';
 import { 
   Package, 
   Truck, 
@@ -19,7 +22,8 @@ import {
   DollarSign,
   MapPin,
   Target,
-  Activity
+  Activity,
+  Plus
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -53,6 +57,10 @@ interface DashboardStats {
 
 export default function Dashboard() {
   const { profile } = useAuth();
+  const [showQuickOrderModal, setShowQuickOrderModal] = useState(false);
+  const [showQuickCollectionModal, setShowQuickCollectionModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [customers, setCustomers] = useState<any[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
     // KPIs principales
     totalOrders: 0,
@@ -86,8 +94,17 @@ export default function Dashboard() {
   useEffect(() => {
     if (profile?.user_id) {
       fetchDashboardStats();
+      fetchCustomers();
     }
   }, [profile?.user_id]);
+
+  const fetchCustomers = async () => {
+    const { data } = await supabase
+      .from('customers')
+      .select('id, name, address')
+      .order('name');
+    setCustomers(data || []);
+  };
 
   const fetchDashboardStats = async () => {
     try {
@@ -253,9 +270,12 @@ export default function Dashboard() {
           <h1 className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight">Dashboard Gerencia</h1>
           <p className="text-muted-foreground mt-2">Resumen general del sistema logístico</p>
         </div>
-        <Badge variant="outline" className="bg-purple-100 text-purple-800 smooth-transition">
-          <span className="capitalize">{profile?.role}</span>
-        </Badge>
+        <div className="flex items-center gap-2">
+          <CreateCollectionModal />
+          <Badge variant="outline" className="bg-purple-100 text-purple-800 smooth-transition">
+            <span className="capitalize">{profile?.role}</span>
+          </Badge>
+        </div>
       </div>
 
       {loading ? (

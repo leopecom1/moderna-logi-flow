@@ -142,17 +142,26 @@ export function CreateCollectionModal({
 
         // Si hay customerId, cargar cuotas de crédito
         if (customerId) {
+          form.setValue("customer_id", customerId);
           await loadCreditInstallments(customerId);
+        }
+        
+        // Si hay otros IDs, establecerlos
+        if (saleId) {
+          form.setValue("sale_id", saleId);
+        }
+        if (orderId) {
+          form.setValue("order_id", orderId);
         }
       } catch (error) {
         console.error("Error loading data:", error);
       }
     };
 
-    if (open) {
+    if (open || customerId) {
       loadData();
     }
-  }, [open, customerId]);
+  }, [open, customerId, saleId, orderId]);
 
   const loadCreditInstallments = async (custId: string) => {
     try {
@@ -357,13 +366,15 @@ export function CreateCollectionModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <DollarSign className="mr-2 h-4 w-4" />
-          Registrar Cobro
-        </Button>
-      </DialogTrigger>
+    <Dialog open={customerId ? true : open} onOpenChange={customerId ? undefined : setOpen}>
+      {!customerId && (
+        <DialogTrigger asChild>
+          <Button>
+            <DollarSign className="mr-2 h-4 w-4" />
+            Registrar Cobro
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar Nuevo Cobro</DialogTitle>

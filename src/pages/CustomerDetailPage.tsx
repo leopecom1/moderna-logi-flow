@@ -257,6 +257,18 @@ export default function CustomerDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Action Buttons */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <Button onClick={() => setShowCreateOrderModal(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Crear Orden
+        </Button>
+        <Button onClick={() => setShowCreateCollectionModal(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Registrar Cobro
+        </Button>
+      </div>
+
       {/* Tabs for History */}
       <Tabs defaultValue="summary" className="space-y-4">
         <TabsList className="grid w-full grid-cols-5">
@@ -314,18 +326,6 @@ export default function CustomerDetailPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => setShowCreateOrderModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Orden
-              </Button>
-              <Button onClick={() => setShowCreateCollectionModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Registrar Cobro
-              </Button>
             </div>
           </div>
         </TabsContent>
@@ -429,9 +429,13 @@ export default function CustomerDetailPage() {
         onOrderCreated={fetchCustomerData}
       />
 
-      {showCreateCollectionModal && (
-        <CreateCollectionModal customerId={id} onCollectionCreated={fetchCustomerData} />
-      )}
+      <CreateCollectionModal 
+        customerId={showCreateCollectionModal ? id : undefined} 
+        onCollectionCreated={() => {
+          fetchCustomerData();
+          setShowCreateCollectionModal(false);
+        }} 
+      />
 
     </MainLayout>
   );
