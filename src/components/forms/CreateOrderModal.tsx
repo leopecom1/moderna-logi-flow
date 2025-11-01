@@ -141,6 +141,45 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     }
   }, [open]);
 
+  // Reconvertir todos los productos cuando cambia la moneda del pedido
+  useEffect(() => {
+    if (orderProducts.length === 0 || !usdRate) return;
+
+    const updatedProducts = orderProducts.map(orderProduct => {
+      if (!orderProduct.product_id) return orderProduct;
+
+      const product = products.find(p => p.id === orderProduct.product_id);
+      if (!product) return orderProduct;
+
+      // Usar el precio de la lista seleccionada
+      let selectedPrice = formData.price_list === 'price_list_1' ? product.price_list_1 : product.price_list_2;
+      let originalPriceUSD = null;
+      let exchangeRateUsed = null;
+
+      // Conversión según moneda del pedido vs moneda del producto
+      if (product.currency === 'USD' && orderCurrency === 'UYU') {
+        // Producto en USD, pedido en UYU: convertir usando sell_rate
+        originalPriceUSD = selectedPrice;
+        exchangeRateUsed = usdRate.sell_rate;
+        selectedPrice = selectedPrice * usdRate.sell_rate;
+      } else if (product.currency === 'UYU' && orderCurrency === 'USD') {
+        // Producto en UYU, pedido en USD: convertir usando buy_rate
+        exchangeRateUsed = usdRate.buy_rate;
+        selectedPrice = selectedPrice / usdRate.buy_rate;
+        originalPriceUSD = selectedPrice;
+      }
+
+      return {
+        ...orderProduct,
+        original_price_usd: originalPriceUSD,
+        exchange_rate_used: exchangeRateUsed,
+        unit_price: selectedPrice,
+      };
+    });
+
+    setOrderProducts(updatedProducts);
+  }, [orderCurrency]);
+
   const fetchCustomers = async () => {
     try {
       const { data, error } = await supabase
