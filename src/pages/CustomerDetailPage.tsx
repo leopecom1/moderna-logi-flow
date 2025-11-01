@@ -10,7 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowLeft, Users, ShoppingCart, CreditCard, Truck, Calculator, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { CreateCustomerOrderModal } from '@/components/forms/CreateCustomerOrderModal';
-import { CreateCustomerPaymentModal } from '@/components/forms/CreateCustomerPaymentModal';
 import { CreateCollectionModal } from '@/components/forms/CreateCollectionModal';
 import { CreditModernaTab } from '@/components/forms/CreditModernaTab';
 import { AllPaymentsTable } from '@/components/customers/AllPaymentsTable';
@@ -75,7 +74,6 @@ export default function CustomerDetailPage() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
-  const [showCreatePaymentModal, setShowCreatePaymentModal] = useState(false);
   const [showCreateCollectionModal, setShowCreateCollectionModal] = useState(false);
 
   useEffect(() => {
@@ -324,10 +322,6 @@ export default function CustomerDetailPage() {
                 <Plus className="h-4 w-4 mr-2" />
                 Crear Orden
               </Button>
-              <Button onClick={() => setShowCreatePaymentModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Pago
-              </Button>
               <Button onClick={() => setShowCreateCollectionModal(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar Cobro
@@ -434,15 +428,6 @@ export default function CustomerDetailPage() {
         customerAddress={customer.address}
         onOrderCreated={fetchCustomerData}
       />
-
-      <CreateCustomerPaymentModal
-        open={showCreatePaymentModal}
-        onOpenChange={setShowCreatePaymentModal}
-        customerId={id!}
-        customerName={customer.name}
-        onPaymentCreated={fetchCustomerData}
-      />
-
 
       {showCreateCollectionModal && (
         <CreateCollectionModal customerId={id} onCollectionCreated={fetchCustomerData} />
