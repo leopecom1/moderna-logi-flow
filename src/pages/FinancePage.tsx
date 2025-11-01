@@ -39,6 +39,13 @@ interface FinanceMovement {
   };
 }
 
+// Parse YYYY-MM-DD as local date (avoid UTC shift)
+const toLocalDate = (dateStr: string) => {
+  if (!dateStr) return new Date();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+};
+
 const FinancePage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedMovement, setSelectedMovement] = useState<FinanceMovement | null>(null);
@@ -216,7 +223,7 @@ const FinancePage = () => {
       }
 
       // Sort by date (most recent first)
-      return movements.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return movements.sort((a, b) => toLocalDate(b.date).getTime() - toLocalDate(a.date).getTime());
     }
   });
 
@@ -777,7 +784,7 @@ const FinancePage = () => {
                         filteredMovements.map((movement) => (
                           <TableRow key={movement.id}>
                             <TableCell>
-                              {format(new Date(movement.date), 'dd/MM/yyyy', { locale: es })}
+                              {format(toLocalDate(movement.date), 'dd/MM/yyyy', { locale: es })}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
@@ -789,7 +796,7 @@ const FinancePage = () => {
                               {movement.description}
                               {movement.liquidation_date && (
                                 <div className="text-xs text-muted-foreground">
-                                  Liquidación: {format(new Date(movement.liquidation_date), 'dd/MM/yyyy', { locale: es })}
+                                  Liquidación: {format(toLocalDate(movement.liquidation_date), 'dd/MM/yyyy', { locale: es })}
                                 </div>
                               )}
                             </TableCell>
@@ -974,7 +981,7 @@ const FinancePage = () => {
                                 {formatCurrency(movement.amount_sent_to_central || 0)}
                               </TableCell>
                               <TableCell>
-                                {format(new Date(movement.closure_date), 'dd/MM/yyyy', { locale: es })}
+                                {format(toLocalDate(movement.closure_date), 'dd/MM/yyyy', { locale: es })}
                               </TableCell>
                             </TableRow>
                           ))

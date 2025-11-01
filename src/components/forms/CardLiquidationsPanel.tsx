@@ -289,7 +289,7 @@ export const CardLiquidationsPanel = () => {
                         {groupedLiquidations[cardType].map((liquidation) => (
                           <TableRow key={liquidation.id}>
                             <TableCell>
-                              {format(new Date(liquidation.liquidation_date), 'dd/MM/yyyy', { locale: es })}
+                            {format(new Date(`${liquidation.liquidation_date}T00:00:00`), 'dd/MM/yyyy', { locale: es })}
                             </TableCell>
                             <TableCell className="font-mono">
                               {liquidation.surcharge_info ? (
@@ -319,8 +319,8 @@ export const CardLiquidationsPanel = () => {
                             </TableCell>
                             <TableCell>
                               {liquidation.expected_arrival_date
-                                ? format(new Date(liquidation.expected_arrival_date), 'dd/MM/yyyy', { locale: es })
-                                : format(addDays(new Date(liquidation.liquidation_date), 2), 'dd/MM/yyyy', { locale: es })
+                                ? format(new Date(`${liquidation.expected_arrival_date}T00:00:00`), 'dd/MM/yyyy', { locale: es })
+                                : format(addDays(new Date(`${liquidation.liquidation_date}T00:00:00`), 2), 'dd/MM/yyyy', { locale: es })
                               }
                             </TableCell>
                             <TableCell>
@@ -375,7 +375,7 @@ export const CardLiquidationsPanel = () => {
                   {(groupedLiquidations[selectedCardType] || []).map((liquidation) => (
                     <TableRow key={liquidation.id}>
                       <TableCell>
-                        {format(new Date(liquidation.liquidation_date), 'dd/MM/yyyy', { locale: es })}
+                        {format(new Date(`${liquidation.liquidation_date}T00:00:00`), 'dd/MM/yyyy', { locale: es })}
                       </TableCell>
                       <TableCell className="font-mono">
                         {liquidation.surcharge_info ? (
@@ -405,8 +405,8 @@ export const CardLiquidationsPanel = () => {
                       </TableCell>
                       <TableCell>
                         {liquidation.expected_arrival_date
-                          ? format(new Date(liquidation.expected_arrival_date), 'dd/MM/yyyy', { locale: es })
-                          : format(addDays(new Date(liquidation.liquidation_date), 2), 'dd/MM/yyyy', { locale: es })
+                          ? format(new Date(`${liquidation.expected_arrival_date}T00:00:00`), 'dd/MM/yyyy', { locale: es })
+                          : format(addDays(new Date(`${liquidation.liquidation_date}T00:00:00`), 2), 'dd/MM/yyyy', { locale: es })
                         }
                       </TableCell>
                       <TableCell>
