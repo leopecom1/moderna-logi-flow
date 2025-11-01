@@ -121,6 +121,8 @@ export function CreateCollectionModal({
   const [expandedOrders, setExpandedOrders] = React.useState<Record<string, boolean>>({});
   const [expandedUnified, setExpandedUnified] = React.useState<Record<string, boolean>>({});
   const [collectionType, setCollectionType] = React.useState<string>("pago_cuenta");
+  const [cardSurcharge, setCardSurcharge] = React.useState<number>(0);
+  const [baseAmount, setBaseAmount] = React.useState<number>(0);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -186,6 +188,15 @@ export function CreateCollectionModal({
     }
   }, [watchCustomerId, open]);
 
+  // Escuchar cambios en el método de pago para recalcular recargo
+  const watchPaymentMethod = form.watch("payment_method_type");
+  React.useEffect(() => {
+    if (collectionType === "credito_moderna" && selectedInstallments.size > 0) {
+      const surcharge = calculateSurcharge(baseAmount, watchPaymentMethod, selectedInstallments.size);
+      setCardSurcharge(surcharge);
+    }
+  }, [watchPaymentMethod, baseAmount, selectedInstallments.size, collectionType]);
+
   const loadCreditInstallments = async (custId: string) => {
     try {
       // Fetch regular installments
@@ -238,6 +249,19 @@ export function CreateCollectionModal({
     }
   };
 
+  const calculateSurcharge = (baseAmount: number, paymentMethod: string, installmentCount: number) => {
+    if (paymentMethod === "tarjeta_credito") {
+      if (installmentCount > 1) {
+        return baseAmount * 0.10; // 10% para más de una cuota
+      } else {
+        return baseAmount * 0.01; // 1% para una sola cuota
+      }
+    } else if (paymentMethod === "tarjeta_debito") {
+      return baseAmount * 0.01; // 1% siempre
+    }
+    return 0;
+  };
+
   const toggleInstallmentSelection = (installmentId: string, amount: number) => {
     const newSelected = new Set(selectedInstallments);
     if (newSelected.has(installmentId)) {
@@ -247,13 +271,19 @@ export function CreateCollectionModal({
     }
     setSelectedInstallments(newSelected);
 
-    // Calculate total amount
+    // Calculate base amount
     const allInstallments = [...creditInstallments, ...unifiedInstallments];
     const total = allInstallments
       .filter(inst => newSelected.has(inst.id))
       .reduce((sum, inst) => sum + inst.amount, 0);
     
+    setBaseAmount(total);
     form.setValue("amount", total);
+
+    // Calculate surcharge based on payment method
+    const paymentMethod = form.getValues("payment_method_type");
+    const surcharge = calculateSurcharge(total, paymentMethod, newSelected.size);
+    setCardSurcharge(surcharge);
   };
 
   const getStatusColor = (status: string, dueDate: string) => {
@@ -357,6 +387,8 @@ export function CreateCollectionModal({
       });
       setSelectedInstallments(new Set());
       setCollectionType("pago_cuenta");
+      setCardSurcharge(0);
+      setBaseAmount(0);
       setOpen(false);
       onCollectionCreated?.();
     } catch (error) {
@@ -673,7 +705,7 @@ export function CreateCollectionModal({
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Monto Total</FormLabel>
+                    <FormLabel>Monto Base</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -684,7 +716,26 @@ export function CreateCollectionModal({
                         disabled={collectionType === "credito_moderna"}
                       />
                     </FormControl>
-                    {collectionType === "credito_moderna" && (
+                    {collectionType === "credito_moderna" && cardSurcharge > 0 && (
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Monto base:</span>
+                          <span>${baseAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Recargo tarjeta:</span>
+                          <span>${cardSurcharge.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between font-bold text-primary border-t pt-1">
+                          <span>Total a cobrar:</span>
+                          <span>${(baseAmount + cardSurcharge).toFixed(2)}</span>
+                        </div>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                          ⚠️ El recargo por tarjeta se suma al total a cobrar. El crédito se registra con el monto base.
+                        </p>
+                      </div>
+                    )}
+                    {collectionType === "credito_moderna" && cardSurcharge === 0 && (
                       <p className="text-xs text-muted-foreground">
                         El monto se calcula automáticamente según las cuotas seleccionadas
                       </p>
