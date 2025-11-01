@@ -163,6 +163,14 @@ export function CreateCollectionModal({
     }
   }, [open, customerId, saleId, orderId]);
 
+  // Escuchar cambios en el customer_id del formulario para cargar sus cuotas
+  const watchCustomerId = form.watch("customer_id");
+  React.useEffect(() => {
+    if (watchCustomerId && (open || customerId)) {
+      loadCreditInstallments(watchCustomerId);
+    }
+  }, [watchCustomerId, open]);
+
   const loadCreditInstallments = async (custId: string) => {
     try {
       // Fetch regular installments
