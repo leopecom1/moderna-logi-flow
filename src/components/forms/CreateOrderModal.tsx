@@ -94,6 +94,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
   const [isManualInput, setIsManualInput] = useState(false);
   const [showMap, setShowMap] = useState(false);
   const [orderProducts, setOrderProducts] = useState<OrderProduct[]>([]);
+  const [orderCurrency, setOrderCurrency] = useState<'UYU' | 'USD'>('UYU');
   const [showCreditModernaForm, setShowCreditModernaForm] = useState(false);
   const [creditModernaData, setCreditModernaData] = useState<CreditModernaData | null>(null);
   const [showDeliverNowConfirmation, setShowDeliverNowConfirmation] = useState(false);
@@ -268,15 +269,24 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         
         // Usar el precio de la lista seleccionada
         let selectedPrice = formData.price_list === 'price_list_1' ? product.price_list_1 : product.price_list_2;
+        let originalPriceUSD = null;
+        let exchangeRateUsed = null;
         
-        // Si el producto está en USD y tenemos cotización, convertir a UYU
-        if (product.currency === 'USD' && usdRate) {
-          const priceInUYU = selectedPrice * usdRate.sell_rate;
-          updatedProducts[index].original_price_usd = selectedPrice;
-          updatedProducts[index].exchange_rate_used = usdRate.sell_rate;
-          selectedPrice = priceInUYU;
+        // Conversión según moneda del pedido vs moneda del producto
+        if (product.currency === 'USD' && orderCurrency === 'UYU' && usdRate) {
+          // Producto en USD, pedido en UYU: convertir usando sell_rate
+          originalPriceUSD = selectedPrice;
+          exchangeRateUsed = usdRate.sell_rate;
+          selectedPrice = selectedPrice * usdRate.sell_rate;
+        } else if (product.currency === 'UYU' && orderCurrency === 'USD' && usdRate) {
+          // Producto en UYU, pedido en USD: convertir usando buy_rate
+          exchangeRateUsed = usdRate.buy_rate;
+          selectedPrice = selectedPrice / usdRate.buy_rate;
+          originalPriceUSD = selectedPrice;
         }
         
+        updatedProducts[index].original_price_usd = originalPriceUSD;
+        updatedProducts[index].exchange_rate_used = exchangeRateUsed;
         updatedProducts[index].unit_price = selectedPrice;
       }
     }
@@ -696,6 +706,23 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Moneda del Pedido */}
+          <div className="space-y-2">
+            <Label htmlFor="orderCurrency">Moneda del Pedido *</Label>
+            <Select
+              value={orderCurrency}
+              onValueChange={(value: 'UYU' | 'USD') => setOrderCurrency(value)}
+            >
+              <SelectTrigger id="orderCurrency">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="UYU">🇺🇾 Pesos Uruguayos (UYU)</SelectItem>
+                <SelectItem value="USD">🇺🇸 Dólares (USD)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Cliente */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
@@ -889,9 +916,13 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                         value={product.unit_price}
                         onChange={(e) => updateProduct(index, 'unit_price', parseFloat(e.target.value) || 0)}
                       />
-                      {product.currency === 'USD' && product.original_price_usd && product.exchange_rate_used && (
+                      {product.exchange_rate_used && (
                         <p className="text-xs text-muted-foreground">
-                          💵 Precio original: ${product.original_price_usd.toFixed(2)} USD (TC: ${product.exchange_rate_used.toFixed(2)})
+                          {product.currency === 'USD' && orderCurrency === 'UYU' ? (
+                            <>💵 Precio original: ${product.original_price_usd?.toFixed(2)} USD (TC: ${product.exchange_rate_used.toFixed(2)})</>
+                          ) : product.currency === 'UYU' && orderCurrency === 'USD' ? (
+                            <>💵 Precio original: ${(product.unit_price * product.exchange_rate_used).toFixed(2)} UYU (TC: ${product.exchange_rate_used.toFixed(2)})</>
+                          ) : null}
                         </p>
                       )}
                     </div>
@@ -925,7 +956,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
                 <div className="text-right">
                   <span className="text-lg font-semibold">
-                    Total: ${(product.quantity * product.unit_price).toFixed(2)}
+                    Total: {orderCurrency} ${(product.quantity * product.unit_price).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -946,7 +977,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
               <div className="p-4 bg-muted rounded-lg">
                 <div className="flex justify-between items-center text-lg font-semibold">
                   <span>Total del Pedido:</span>
-                  <span>${getTotalAmount().toFixed(2)}</span>
+                  <span>{orderCurrency} ${getTotalAmount().toFixed(2)}</span>
                 </div>
               </div>
             )}
