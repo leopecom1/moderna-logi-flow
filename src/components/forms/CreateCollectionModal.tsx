@@ -320,6 +320,18 @@ export function CreateCollectionModal({
         return;
       }
 
+      // Preparar notas con información del recargo si aplica
+      let finalNotes = values.notes || null;
+      if (values.collection_type === "credito_moderna" && cardSurcharge > 0) {
+        const surchargeInfo = {
+          monto_base: baseAmount,
+          recargo_tarjeta: cardSurcharge,
+          total_cobrado: baseAmount + cardSurcharge,
+          cuotas_tarjeta: values.card_installments || 1
+        };
+        finalNotes = `RECARGO_TARJETA:${JSON.stringify(surchargeInfo)}${values.notes ? '\n' + values.notes : ''}`;
+      }
+
       const collectionData = {
         customer_id: values.customer_id,
         sale_id: values.sale_id === 'none' ? null : values.sale_id || null,
@@ -332,7 +344,7 @@ export function CreateCollectionModal({
         bank_name: values.bank_name || null,
         account_info: values.account_info || null,
         collection_status: values.collection_status,
-        notes: values.notes || null,
+        notes: finalNotes,
         receipt_number: values.receipt_number || null,
       };
 

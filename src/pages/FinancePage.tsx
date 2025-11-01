@@ -31,6 +31,12 @@ interface FinanceMovement {
   method?: string;
   liquidation_date?: string;
   card_type?: string;
+  surcharge_info?: {
+    monto_base: number;
+    recargo_tarjeta: number;
+    total_cobrado: number;
+    cuotas_tarjeta: number;
+  };
 }
 
 const FinancePage = () => {
@@ -59,6 +65,7 @@ const FinancePage = () => {
           collection_status,
           payment_reference,
           receipt_number,
+          notes,
           customers:customer_id (name)
         `)
         .order('collection_date', { ascending: false });
@@ -67,6 +74,17 @@ const FinancePage = () => {
         collections.forEach((collection: any) => {
           const isModernaCredit = collection.payment_method_type?.toLowerCase().includes('moderna') || 
                                  collection.payment_reference?.toLowerCase().includes('moderna');
+          
+          // Parse surcharge info from notes if exists
+          let surchargeInfo = undefined;
+          if (collection.notes?.startsWith('RECARGO_TARJETA:')) {
+            try {
+              const jsonStr = collection.notes.substring('RECARGO_TARJETA:'.length).split('\n')[0];
+              surchargeInfo = JSON.parse(jsonStr);
+            } catch (e) {
+              console.error('Error parsing surcharge info:', e);
+            }
+          }
           
           movements.push({
             id: collection.id,
@@ -78,7 +96,8 @@ const FinancePage = () => {
             customer: collection.customers?.name,
             reference: collection.receipt_number || collection.payment_reference,
             status: collection.collection_status,
-            method: collection.payment_method_type
+            method: collection.payment_method_type,
+            surcharge_info: surchargeInfo
           });
         });
       }
@@ -780,7 +799,26 @@ const FinancePage = () => {
                             <TableCell className={`text-right font-mono ${
                               movement.amount >= 0 ? 'text-green-600' : 'text-red-600'
                             }`}>
-                              {formatCurrency(movement.amount)}
+                              <div>
+                                {movement.surcharge_info ? (
+                                  <div className="space-y-1">
+                                    <div className="text-xs text-muted-foreground text-right">
+                                      Base: {formatCurrency(movement.surcharge_info.monto_base)}
+                                    </div>
+                                    <div className="text-xs text-amber-600 dark:text-amber-400 text-right">
+                                      Interés: {formatCurrency(movement.surcharge_info.recargo_tarjeta)}
+                                    </div>
+                                    <div className="font-bold border-t pt-1">
+                                      {formatCurrency(movement.surcharge_info.total_cobrado)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground text-right">
+                                      {movement.surcharge_info.cuotas_tarjeta} cuota{movement.surcharge_info.cuotas_tarjeta > 1 ? 's' : ''}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  formatCurrency(movement.amount)
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               {movement.reference || '-'}

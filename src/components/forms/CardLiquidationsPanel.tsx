@@ -21,6 +21,13 @@ interface CardLiquidation {
   expected_arrival_date?: string;
   confirmed_at?: string;
   notes?: string;
+  payment_id?: string;
+  surcharge_info?: {
+    monto_base: number;
+    recargo_tarjeta: number;
+    total_cobrado: number;
+    cuotas_tarjeta: number;
+  };
 }
 
 export const CardLiquidationsPanel = () => {
@@ -41,6 +48,38 @@ export const CardLiquidationsPanel = () => {
 
       const { data, error } = await query;
       if (error) throw error;
+
+      // Fetch collection notes to get surcharge info
+      if (data && data.length > 0) {
+        const paymentIds = data.map(l => l.payment_id).filter(Boolean);
+        
+        if (paymentIds.length > 0) {
+          const { data: collections } = await supabase
+            .from('collections')
+            .select('id, notes')
+            .in('id', paymentIds);
+
+          // Parse surcharge info and add to liquidations
+          return data.map(liquidation => {
+            const collection = collections?.find(c => c.id === liquidation.payment_id);
+            let surchargeInfo = undefined;
+            
+            if (collection?.notes?.startsWith('RECARGO_TARJETA:')) {
+              try {
+                const jsonStr = collection.notes.substring('RECARGO_TARJETA:'.length).split('\n')[0];
+                surchargeInfo = JSON.parse(jsonStr);
+              } catch (e) {
+                console.error('Error parsing surcharge info:', e);
+              }
+            }
+            
+            return {
+              ...liquidation,
+              surcharge_info: surchargeInfo
+            };
+          });
+        }
+      }
 
       return data as CardLiquidation[];
     }
@@ -253,7 +292,24 @@ export const CardLiquidationsPanel = () => {
                               {format(new Date(liquidation.liquidation_date), 'dd/MM/yyyy', { locale: es })}
                             </TableCell>
                             <TableCell className="font-mono">
-                              {formatCurrency(liquidation.amount)}
+                              {liquidation.surcharge_info ? (
+                                <div className="space-y-1">
+                                  <div className="text-xs text-muted-foreground">
+                                    Base: {formatCurrency(liquidation.surcharge_info.monto_base)}
+                                  </div>
+                                  <div className="text-xs text-amber-600 dark:text-amber-400">
+                                    Interés: {formatCurrency(liquidation.surcharge_info.recargo_tarjeta)}
+                                  </div>
+                                  <div className="font-bold border-t pt-1">
+                                    {formatCurrency(liquidation.surcharge_info.total_cobrado)}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {liquidation.surcharge_info.cuotas_tarjeta} cuota{liquidation.surcharge_info.cuotas_tarjeta > 1 ? 's' : ''}
+                                  </div>
+                                </div>
+                              ) : (
+                                formatCurrency(liquidation.amount)
+                              )}
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center space-x-2">
@@ -322,7 +378,24 @@ export const CardLiquidationsPanel = () => {
                         {format(new Date(liquidation.liquidation_date), 'dd/MM/yyyy', { locale: es })}
                       </TableCell>
                       <TableCell className="font-mono">
-                        {formatCurrency(liquidation.amount)}
+                        {liquidation.surcharge_info ? (
+                          <div className="space-y-1">
+                            <div className="text-xs text-muted-foreground">
+                              Base: {formatCurrency(liquidation.surcharge_info.monto_base)}
+                            </div>
+                            <div className="text-xs text-amber-600 dark:text-amber-400">
+                              Interés: {formatCurrency(liquidation.surcharge_info.recargo_tarjeta)}
+                            </div>
+                            <div className="font-bold border-t pt-1">
+                              {formatCurrency(liquidation.surcharge_info.total_cobrado)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {liquidation.surcharge_info.cuotas_tarjeta} cuota{liquidation.surcharge_info.cuotas_tarjeta > 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        ) : (
+                          formatCurrency(liquidation.amount)
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
