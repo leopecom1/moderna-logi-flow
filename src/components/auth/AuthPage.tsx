@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useAuth, UserRole } from '@/hooks/useAuth';
-import { SignInPage } from '@/components/ui/sign-in';
 import { ResetPasswordPage } from '@/components/auth/ResetPasswordPage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Truck, User, Users, Crown } from 'lucide-react';
+import { Users, Crown, Truck } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import modernaLogoAuth from '@/assets/moderna-logo-auth.png';
 
 export const AuthPage = () => {
   const { signIn, signUp } = useAuth();
@@ -107,12 +107,14 @@ export const AuthPage = () => {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex items-center justify-center mb-4">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-                <Truck className="h-6 w-6 text-primary-foreground" />
-              </div>
+              <img 
+                src={modernaLogoAuth} 
+                alt="Moderna Logo" 
+                className="h-16 w-auto object-contain"
+              />
             </div>
-            <CardTitle className="text-2xl font-bold">MODERNA</CardTitle>
-            <CardDescription>Sistema de Logística - Registro</CardDescription>
+            <CardTitle className="text-2xl font-bold">Crear Cuenta</CardTitle>
+            <CardDescription>Regístrate en el sistema</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSignup} className="space-y-4">
@@ -207,22 +209,69 @@ export const AuthPage = () => {
   }
 
   return (
-    <SignInPage
-      title={
-        <div className="flex flex-col items-center gap-4">
-          <img 
-            src="/lovable-uploads/629c5c32-2f75-4980-89b7-b7666a341b25.png" 
-            alt="RutaMOD Logo" 
-            className="h-20 w-auto object-contain"
-          />
-        </div>
-      }
-      description="Sistema de Logística - Accede a tu cuenta para continuar"
-      heroVideoSrc="https://ndusxjrjrjpauuqeruzg.supabase.co/storage/v1/object/public/media//0715.mp4"
-      testimonials={testimonials}
-      onSignIn={handleSignIn}
-      onResetPassword={() => setShowResetPassword(true)}
-      onCreateAccount={() => setShowSignup(true)}
-    />
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex items-center justify-center mb-4">
+            <img 
+              src={modernaLogoAuth} 
+              alt="Moderna Logo" 
+              className="h-16 w-auto object-contain"
+            />
+          </div>
+          <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
+          <CardDescription>Accede a tu cuenta para continuar</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSignIn} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="tu@email.com"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Tu contraseña"
+                required
+              />
+            </div>
+            <Button 
+              type="submit" 
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+            </Button>
+            <div className="flex flex-col gap-2">
+              <Button 
+                type="button" 
+                variant="ghost"
+                className="w-full"
+                onClick={() => setShowResetPassword(true)}
+              >
+                ¿Olvidaste tu contraseña?
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline"
+                className="w-full"
+                onClick={() => setShowSignup(true)}
+              >
+                Crear cuenta nueva
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
