@@ -55,7 +55,7 @@ interface Product {
 
 export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("table");
   const [showPriceListsConfig, setShowPriceListsConfig] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
