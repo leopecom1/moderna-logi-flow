@@ -69,7 +69,7 @@ export function OrdersToAssembleModule() {
       setOrders(formattedOrders);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      toast.error('Error al cargar pedidos para armar');
+      toast.error('Error al cargar pedidos para preparar');
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ export function OrdersToAssembleModule() {
 
       if (error) throw error;
 
-      toast.success('Pedido marcado como armado');
+      toast.success('Pedido marcado como preparado');
       fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
@@ -119,7 +119,7 @@ export function OrdersToAssembleModule() {
     return (
       <div className="flex items-center justify-center py-8">
         <MessageLoading />
-        <span className="ml-2 text-muted-foreground">Cargando pedidos para armar...</span>
+        <span className="ml-2 text-muted-foreground">Cargando pedidos para preparar...</span>
       </div>
     );
   }
@@ -129,7 +129,7 @@ export function OrdersToAssembleModule() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Pedidos para Armar
+          Pedidos para Preparar
         </CardTitle>
         <CardDescription>
           Prepara los pedidos antes de enviarlos o entregarlos
@@ -149,7 +149,7 @@ export function OrdersToAssembleModule() {
         {filteredOrders.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No hay pedidos pendientes de armar</p>
+            <p>No hay pedidos pendientes de preparar</p>
           </div>
         ) : (
           <div className="border rounded-md">
@@ -189,7 +189,7 @@ export function OrdersToAssembleModule() {
                         size="sm"
                         onClick={() => markAsAssembled(order.id)}
                       >
-                        Marcar Armado
+                        Marcar Preparado
                       </Button>
                     </TableCell>
                   </TableRow>

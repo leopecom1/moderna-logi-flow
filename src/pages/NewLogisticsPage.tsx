@@ -57,18 +57,18 @@ export default function NewLogisticsPage() {
         <div>
           <h1 className="text-3xl font-bold mb-2">Gestión de Pedidos</h1>
           <p className="text-muted-foreground">
-            Administra pedidos para armar, retiros y envíos
+            Administra pedidos para preparar, retiros y envíos
           </p>
         </div>
 
         {/* Tarjetas de resumen */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <ClipboardList className="h-4 w-4" />
-                  Para Armar
+                  Para Preparar
                 </div>
                 <Badge variant="secondary">{counts.toAssemble}</Badge>
               </CardTitle>
@@ -76,7 +76,7 @@ export default function NewLogisticsPage() {
             </CardHeader>
           </Card>
 
-          <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -89,7 +89,7 @@ export default function NewLogisticsPage() {
             </CardHeader>
           </Card>
 
-          <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
+          <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -108,7 +108,7 @@ export default function NewLogisticsPage() {
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="to-assemble" className="gap-2">
               <ClipboardList className="h-4 w-4" />
-              Para Armar
+              Para Preparar
               {counts.toAssemble > 0 && (
                 <Badge variant="secondary" className="ml-2">{counts.toAssemble}</Badge>
               )}
