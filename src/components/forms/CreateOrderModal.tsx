@@ -55,6 +55,7 @@ interface Product {
   price_list_1: number;
   price_list_2: number;
   currency?: 'UYU' | 'USD';
+  warehouse_stock?: { warehouse_id: string; warehouse_name: string; stock: number }[];
 }
 
 interface Warehouse {
@@ -196,14 +197,44 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
 
   const fetchProducts = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select('id, name, code, price, price_list_1, price_list_2, currency')
         .eq('is_active', true)
         .order('name');
 
-      if (error) throw error;
-      setProducts((data || []) as Product[]);
+      if (productsError) throw productsError;
+
+      // Obtener stock por depósito para cada producto
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .select(`
+          product_id,
+          warehouse_id,
+          current_stock,
+          warehouses!inner(id, name)
+        `)
+        .gt('current_stock', 0);
+
+      if (inventoryError) throw inventoryError;
+
+      // Mapear stock por producto
+      const productsWithStock = (productsData || []).map(product => {
+        const productInventory = (inventoryData || []).filter(
+          (inv: any) => inv.product_id === product.id
+        );
+        
+        return {
+          ...product,
+          warehouse_stock: productInventory.map((inv: any) => ({
+            warehouse_id: inv.warehouse_id,
+            warehouse_name: inv.warehouses.name,
+            stock: inv.current_stock,
+          })),
+        };
+      });
+
+      setProducts(productsWithStock as Product[]);
     } catch (error) {
       console.error('Error fetching products:', error);
     }
@@ -886,7 +917,7 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <Label>Producto *</Label>
                     <Select 
@@ -896,43 +927,99 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                       <SelectTrigger>
                         <SelectValue placeholder="Seleccionar producto" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-[300px]">
                         {products.map((p) => {
                           const selectedPrice = formData.price_list === 'price_list_1' ? p.price_list_1 : p.price_list_2;
+                          const totalStock = p.warehouse_stock?.reduce((sum, ws) => sum + ws.stock, 0) || 0;
                           return (
                             <SelectItem key={p.id} value={p.id}>
-                              {p.name} - ${selectedPrice}
+                              <div className="flex items-center justify-between w-full gap-4">
+                                <span>{p.name} - ${selectedPrice}</span>
+                                <Badge variant={totalStock > 0 ? "default" : "destructive"} className="ml-2">
+                                  Stock: {totalStock}
+                                </Badge>
+                              </div>
                             </SelectItem>
                           );
                         })}
                       </SelectContent>
                     </Select>
+                    {product.product_id && (
+                      <div className="text-xs text-muted-foreground">
+                        {(() => {
+                          const selectedProduct = products.find(p => p.id === product.product_id);
+                          if (!selectedProduct?.warehouse_stock?.length) return 'Sin stock en depósitos';
+                          return (
+                            <div className="flex flex-wrap gap-1">
+                              {selectedProduct.warehouse_stock.map(ws => (
+                                <span key={ws.warehouse_id} className="inline-flex items-center">
+                                  📦 {ws.warehouse_name}: {ws.stock}
+                                </span>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Depósito *</Label>
-                    <Select 
-                      value={product.warehouse_id} 
-                      onValueChange={(value) => {
-                        const warehouse = warehouses.find(w => w.id === value);
-                        updateProduct(index, 'warehouse_id', value);
-                        if (warehouse) {
-                          updateProduct(index, 'warehouse_name', warehouse.name);
-                        }
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar depósito" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {warehouses.map((w) => (
-                          <SelectItem key={w.id} value={w.id}>
-                            {w.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {product.product_id && (
+                    <div className="space-y-2">
+                      <Label>Depósito * - Selecciona de donde tomar el stock</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {(() => {
+                          const selectedProduct = products.find(p => p.id === product.product_id);
+                          if (!selectedProduct?.warehouse_stock?.length) {
+                            return (
+                              <div className="col-span-full text-center py-4 text-muted-foreground border rounded-lg border-dashed">
+                                No hay stock disponible en ningún depósito
+                              </div>
+                            );
+                          }
+                          
+                          return selectedProduct.warehouse_stock.map((ws) => {
+                            const isSelected = product.warehouse_id === ws.warehouse_id;
+                            return (
+                              <button
+                                key={ws.warehouse_id}
+                                type="button"
+                                onClick={() => {
+                                  updateProduct(index, 'warehouse_id', ws.warehouse_id);
+                                  updateProduct(index, 'warehouse_name', ws.warehouse_name);
+                                }}
+                                className={`
+                                  relative p-4 rounded-lg border-2 transition-all text-left
+                                  ${isSelected 
+                                    ? 'border-primary bg-primary/5 shadow-md' 
+                                    : 'border-border hover:border-primary/50 hover:bg-accent'
+                                  }
+                                `}
+                              >
+                                <div className="space-y-1">
+                                  <div className="font-semibold text-sm">{ws.warehouse_name}</div>
+                                  <div className="flex items-center gap-2">
+                                    <Package className="h-4 w-4 text-muted-foreground" />
+                                    <span className={`text-sm font-medium ${ws.stock > 10 ? 'text-green-600' : ws.stock > 0 ? 'text-yellow-600' : 'text-red-600'}`}>
+                                      {ws.stock} unidades
+                                    </span>
+                                  </div>
+                                </div>
+                                {isSelected && (
+                                  <div className="absolute top-2 right-2">
+                                    <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                                      <svg className="h-3 w-3 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          });
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
