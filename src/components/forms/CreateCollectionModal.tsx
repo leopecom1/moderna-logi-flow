@@ -41,6 +41,15 @@ import { DollarSign, CreditCard, ChevronDown, ChevronRight, Merge } from "lucide
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
+// Helper function to get local date in YYYY-MM-DD format
+const getLocalDateString = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const formSchema = z.object({
   customer_id: z.string().min(1, "Cliente es requerido"),
   collection_type: z.enum(["orden", "credito_moderna", "pago_cuenta"]),
@@ -136,7 +145,7 @@ export function CreateCollectionModal({
       collection_type: "pago_cuenta",
       sale_id: saleId || "",
       order_id: orderId || "",
-      collection_date: new Date().toISOString().split('T')[0],
+      collection_date: getLocalDateString(),
       amount: 0,
       payment_method_type: "efectivo",
       card_installments: 1,
@@ -294,7 +303,7 @@ export function CreateCollectionModal({
 
   const getStatusColor = (status: string, dueDate: string) => {
     if (status === 'pagado') return 'bg-green-500';
-    if (status === 'vencido' || (status === 'pendiente' && dueDate < new Date().toISOString().split('T')[0])) {
+    if (status === 'vencido' || (status === 'pendiente' && dueDate < getLocalDateString())) {
       return 'bg-red-500';
     }
     return 'bg-yellow-500';
@@ -302,7 +311,7 @@ export function CreateCollectionModal({
 
   const getStatusText = (status: string, dueDate: string) => {
     if (status === 'pagado') return 'Pagado';
-    if (status === 'vencido' || (status === 'pendiente' && dueDate < new Date().toISOString().split('T')[0])) {
+    if (status === 'vencido' || (status === 'pendiente' && dueDate < getLocalDateString())) {
       return 'Vencido';
     }
     return 'Pendiente';
@@ -414,7 +423,7 @@ export function CreateCollectionModal({
         collection_type: "pago_cuenta",
         sale_id: saleId || "",
         order_id: orderId || "",
-        collection_date: new Date().toISOString().split('T')[0],
+        collection_date: getLocalDateString(),
         amount: 0,
         payment_method_type: "efectivo",
         card_installments: 1,
