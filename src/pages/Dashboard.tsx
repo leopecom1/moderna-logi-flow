@@ -25,7 +25,9 @@ import {
   MapPin,
   Target,
   Activity,
-  Plus
+  Plus,
+  UserPlus,
+  ShoppingCart
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -274,12 +276,30 @@ export default function Dashboard() {
           <h1 className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight">Dashboard Gerencia</h1>
           <p className="text-muted-foreground mt-2">Resumen general del sistema logístico</p>
         </div>
-        <div className="flex items-center gap-2">
-          <CreateCollectionModal />
-          <Badge variant="outline" className="bg-purple-100 text-purple-800 smooth-transition">
-            <span className="capitalize">{profile?.role}</span>
-          </Badge>
-        </div>
+        <Badge variant="outline" className="bg-purple-100 text-purple-800 smooth-transition">
+          <span className="capitalize">{profile?.role}</span>
+        </Badge>
+      </div>
+
+      {/* Acciones Rápidas - Destacadas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-element animate-delay-150">
+        <Button 
+          size="lg"
+          className="h-auto py-4 flex flex-col items-center gap-2"
+          onClick={() => setShowCreateOrderModal(true)}
+        >
+          <ShoppingCart className="h-6 w-6" />
+          <span className="font-semibold">Crear Pedido</span>
+        </Button>
+        <Button 
+          size="lg"
+          className="h-auto py-4 flex flex-col items-center gap-2"
+          onClick={() => setShowCustomerModal(true)}
+        >
+          <UserPlus className="h-6 w-6" />
+          <span className="font-semibold">Crear Cliente</span>
+        </Button>
+        <CreateCollectionModal />
       </div>
 
       {loading ? (
@@ -413,33 +433,6 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Acciones Rápidas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start h-auto p-3"
-                onClick={() => setShowCreateOrderModal(true)}
-              >
-                <Package className="h-4 w-4 mr-3" />
-                <span className="font-medium">Crear Nuevo Pedido</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start h-auto p-3"
-                onClick={() => setShowCustomerModal(true)}
-              >
-                <Users className="h-4 w-4 mr-3" />
-                <span className="font-medium">Crear Nuevo Cliente</span>
-              </Button>
-              <CreateCollectionModal />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
             <CardTitle>Resumen de Ventas</CardTitle>
           </CardHeader>
           <CardContent>
@@ -481,6 +474,27 @@ export default function Dashboard() {
         <Badge variant="outline" className="bg-blue-100 text-blue-800 smooth-transition">
           <span className="capitalize">{profile?.role}</span>
         </Badge>
+      </div>
+
+      {/* Acciones Rápidas - Destacadas */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-element animate-delay-150">
+        <Button 
+          size="lg"
+          className="h-auto py-4 flex flex-col items-center gap-2"
+          onClick={() => setShowCreateOrderModal(true)}
+        >
+          <ShoppingCart className="h-6 w-6" />
+          <span className="font-semibold">Crear Pedido</span>
+        </Button>
+        <Button 
+          size="lg"
+          className="h-auto py-4 flex flex-col items-center gap-2"
+          onClick={() => setShowCustomerModal(true)}
+        >
+          <UserPlus className="h-6 w-6" />
+          <span className="font-semibold">Crear Cliente</span>
+        </Button>
+        <CreateCollectionModal />
       </div>
 
       {loading ? (
@@ -577,27 +591,22 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Acciones Rápidas</CardTitle>
+            <CardTitle>Resumen de Ventas</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <Button 
-                variant="outline" 
-                className="w-full justify-start h-auto p-3"
-                onClick={() => setShowCreateOrderModal(true)}
-              >
-                <Package className="h-4 w-4 mr-3" />
-                <span className="font-medium">Crear Nuevo Pedido</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full justify-start h-auto p-3"
-                onClick={() => setShowCustomerModal(true)}
-              >
-                <Users className="h-4 w-4 mr-3" />
-                <span className="font-medium">Crear Nuevo Cliente</span>
-              </Button>
-              <CreateCollectionModal />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Hoy</span>
+                <span className="text-sm font-bold">${stats.myTodayRevenue.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Esta semana</span>
+                <span className="text-sm font-bold">${stats.weekRevenue.toFixed(2)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Este mes</span>
+                <span className="text-sm font-bold">${stats.monthRevenue.toFixed(2)}</span>
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -477,9 +477,9 @@ export function CreateCollectionModal({
     <Dialog open={open} onOpenChange={setOpen}>
       {!isControlled && (
         <DialogTrigger asChild>
-          <Button>
-            <DollarSign className="mr-2 h-4 w-4" />
-            Registrar Cobro
+          <Button size="lg" className="h-auto py-4 flex flex-col items-center gap-2">
+            <DollarSign className="h-6 w-6" />
+            <span className="font-semibold">Registrar Cobro</span>
           </Button>
         </DialogTrigger>
       )}
