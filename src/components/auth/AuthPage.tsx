@@ -212,13 +212,13 @@ export const AuthPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <img 
-              src={modernaLogoAuth} 
-              alt="Moderna Logo" 
-              className="h-16 w-auto object-contain"
-            />
-          </div>
+            <div className="flex items-center justify-center mb-4">
+              <img 
+                src={modernaLogoAuth} 
+                alt="Moderna Logo" 
+                className="h-12 w-auto object-contain"
+              />
+            </div>
           <CardTitle className="text-2xl font-bold">Iniciar Sesión</CardTitle>
           <CardDescription>Accede a tu cuenta para continuar</CardDescription>
         </CardHeader>
@@ -251,24 +251,14 @@ export const AuthPage = () => {
             >
               {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </Button>
-            <div className="flex flex-col gap-2">
-              <Button 
-                type="button" 
-                variant="ghost"
-                className="w-full"
-                onClick={() => setShowResetPassword(true)}
-              >
-                ¿Olvidaste tu contraseña?
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline"
-                className="w-full"
-                onClick={() => setShowSignup(true)}
-              >
-                Crear cuenta nueva
-              </Button>
-            </div>
+            <Button 
+              type="button" 
+              variant="ghost"
+              className="w-full"
+              onClick={() => setShowResetPassword(true)}
+            >
+              ¿Olvidaste tu contraseña?
+            </Button>
           </form>
         </CardContent>
       </Card>
