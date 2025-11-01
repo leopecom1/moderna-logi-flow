@@ -10,6 +10,8 @@ import { MessageLoading } from '@/components/ui/message-loading';
 import { CashClosureAlert } from '@/components/alerts/CashClosureAlert';
 import { CreateCustomerOrderModal } from '@/components/forms/CreateCustomerOrderModal';
 import { CreateCollectionModal } from '@/components/forms/CreateCollectionModal';
+import { CreateCustomerModal } from '@/components/forms/CreateCustomerModal';
+import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
 import { 
   Package, 
   Truck, 
@@ -59,6 +61,8 @@ export default function Dashboard() {
   const { profile } = useAuth();
   const [showQuickOrderModal, setShowQuickOrderModal] = useState(false);
   const [showQuickCollectionModal, setShowQuickCollectionModal] = useState(false);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showCreateOrderModal, setShowCreateOrderModal] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [customers, setCustomers] = useState<any[]>([]);
   const [stats, setStats] = useState<DashboardStats>({
@@ -409,6 +413,33 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
+            <CardTitle>Acciones Rápidas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start h-auto p-3"
+                onClick={() => setShowCreateOrderModal(true)}
+              >
+                <Package className="h-4 w-4 mr-3" />
+                <span className="font-medium">Crear Nuevo Pedido</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start h-auto p-3"
+                onClick={() => setShowCustomerModal(true)}
+              >
+                <Users className="h-4 w-4 mr-3" />
+                <span className="font-medium">Crear Nuevo Cliente</span>
+              </Button>
+              <CreateCollectionModal />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
             <CardTitle>Resumen de Ventas</CardTitle>
           </CardHeader>
           <CardContent>
@@ -550,24 +581,23 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <button className="w-full p-3 text-left rounded-md border hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <Package className="h-4 w-4" />
-                  <span className="font-medium">Crear Nuevo Pedido</span>
-                </div>
-              </button>
-              <button className="w-full p-3 text-left rounded-md border hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <Users className="h-4 w-4" />
-                  <span className="font-medium">Gestionar Clientes</span>
-                </div>
-              </button>
-              <button className="w-full p-3 text-left rounded-md border hover:bg-muted/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-4 w-4" />
-                  <span className="font-medium">Reportar Incidencia</span>
-                </div>
-              </button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start h-auto p-3"
+                onClick={() => setShowCreateOrderModal(true)}
+              >
+                <Package className="h-4 w-4 mr-3" />
+                <span className="font-medium">Crear Nuevo Pedido</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start h-auto p-3"
+                onClick={() => setShowCustomerModal(true)}
+              >
+                <Users className="h-4 w-4 mr-3" />
+                <span className="font-medium">Crear Nuevo Cliente</span>
+              </Button>
+              <CreateCollectionModal />
             </div>
           </CardContent>
         </Card>
@@ -734,6 +764,18 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto animate-element animate-delay-100">
       {getDashboard()}
+      
+      {/* Modals */}
+      <CreateCustomerModal 
+        open={showCustomerModal}
+        onOpenChange={setShowCustomerModal}
+        onCustomerCreated={fetchCustomers}
+      />
+      <CreateOrderModal 
+        open={showCreateOrderModal}
+        onOpenChange={setShowCreateOrderModal}
+        onOrderCreated={fetchDashboardStats}
+      />
     </div>
   );
 }
