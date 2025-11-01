@@ -323,8 +323,7 @@ export function CreateCollectionModal({
             .update({
               status: 'pagado',
               paid_at: new Date().toISOString(),
-              paid_amount: installment.amount,
-              payment_id: collectionResult.id
+              paid_amount: installment.amount
             })
             .eq('id', installment.id);
 
@@ -389,8 +388,8 @@ export function CreateCollectionModal({
   };
 
   return (
-    <Dialog open={customerId ? true : open} onOpenChange={customerId ? undefined : setOpen}>
-      {!customerId && (
+    <Dialog open={open} onOpenChange={setOpen}>
+      {!isControlled && (
         <DialogTrigger asChild>
           <Button>
             <DollarSign className="mr-2 h-4 w-4" />
