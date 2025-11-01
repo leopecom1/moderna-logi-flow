@@ -36,6 +36,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
 import { DollarSign, CreditCard, ChevronDown, ChevronRight, Merge } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -126,6 +127,7 @@ export function CreateCollectionModal({
   const [baseAmount, setBaseAmount] = React.useState<number>(0);
   const { toast } = useToast();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -427,6 +429,11 @@ export function CreateCollectionModal({
       setCollectionType("pago_cuenta");
       setCardSurcharge(0);
       setBaseAmount(0);
+      
+      // Invalidate finance queries to refresh the data
+      queryClient.invalidateQueries({ queryKey: ['finance-movements'] });
+      queryClient.invalidateQueries({ queryKey: ['card-liquidations'] });
+      
       setOpen(false);
       onCollectionCreated?.();
     } catch (error) {

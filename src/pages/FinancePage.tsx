@@ -78,6 +78,7 @@ const FinancePage = () => {
             try {
               const jsonStr = collection.notes.substring('RECARGO_TARJETA:'.length).split('\n')[0];
               surchargeInfo = JSON.parse(jsonStr);
+              console.log('Parsed surcharge info:', surchargeInfo);
             } catch (e) {
               console.error('Error parsing surcharge info:', e);
             }
@@ -88,6 +89,8 @@ const FinancePage = () => {
                                  collection.payment_method_type?.toLowerCase().includes('moderna') || 
                                  collection.payment_reference?.toLowerCase().includes('moderna');
           
+          console.log('Collection:', collection.id, 'isModernaCredit:', isModernaCredit, 'surchargeInfo:', !!surchargeInfo);
+
           movements.push({
             id: collection.id,
             date: collection.collection_date,
