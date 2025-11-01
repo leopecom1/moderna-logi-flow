@@ -72,9 +72,6 @@ const FinancePage = () => {
 
       if (collections) {
         collections.forEach((collection: any) => {
-          const isModernaCredit = collection.payment_method_type?.toLowerCase().includes('moderna') || 
-                                 collection.payment_reference?.toLowerCase().includes('moderna');
-          
           // Parse surcharge info from notes if exists
           let surchargeInfo = undefined;
           if (collection.notes?.startsWith('RECARGO_TARJETA:')) {
@@ -85,6 +82,11 @@ const FinancePage = () => {
               console.error('Error parsing surcharge info:', e);
             }
           }
+
+          // Determine if it's a Crédito Moderna payment (has surcharge info or method includes 'moderna')
+          const isModernaCredit = surchargeInfo || 
+                                 collection.payment_method_type?.toLowerCase().includes('moderna') || 
+                                 collection.payment_reference?.toLowerCase().includes('moderna');
           
           movements.push({
             id: collection.id,
@@ -92,7 +94,7 @@ const FinancePage = () => {
             type: isModernaCredit ? 'credito_moderna' : 
                   collection.payment_method_type === 'tarjeta_credito' ? 'tarjeta_credito' : 'cobro',
             amount: collection.amount,
-            description: `Cobro - ${collection.customers?.name || 'Cliente'}`,
+            description: `Cobro - ${collection.customers?.name || 'Cliente'}${surchargeInfo ? ' (Crédito Moderna)' : ''}`,
             customer: collection.customers?.name,
             reference: collection.receipt_number || collection.payment_reference,
             status: collection.collection_status,

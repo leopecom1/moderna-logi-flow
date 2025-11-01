@@ -377,6 +377,27 @@ export function CreateCollectionModal({
             console.error("Error updating installment:", updateError);
           }
         }
+
+        // Si el pago fue con tarjeta (crédito o débito), crear entrada en card_liquidations
+        if ((values.payment_method_type === 'tarjeta_credito' || values.payment_method_type === 'tarjeta_debito') && cardSurcharge > 0) {
+          const cardType = values.payment_method_type === 'tarjeta_credito' ? 'Tarjeta de Crédito' : 'Tarjeta de Débito';
+          const totalAmount = baseAmount + cardSurcharge;
+          
+          const { error: liquidationError } = await supabase
+            .from('card_liquidations')
+            .insert({
+              card_type: cardType,
+              liquidation_date: values.collection_date,
+              amount: totalAmount,
+              status: 'pendiente',
+              payment_id: collectionResult.id,
+              notes: `Crédito Moderna - ${values.card_installments} cuota(s)`
+            });
+
+          if (liquidationError) {
+            console.error("Error creating card liquidation:", liquidationError);
+          }
+        }
       }
 
       toast({
