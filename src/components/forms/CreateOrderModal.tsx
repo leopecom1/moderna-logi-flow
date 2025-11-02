@@ -125,6 +125,12 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
     sucursal_retiro_id: '',
     // Entrega inmediata
     entregar_ahora: false,
+    // Armado
+    requiere_armado: false,
+    armado_fecha: '',
+    armado_horario: '',
+    armado_contacto_nombre: '',
+    armado_contacto_telefono: '',
   });
   const [priceListConfig, setPriceListConfig] = useState({
     price_list_1_name: 'Lista 1',
@@ -495,13 +501,25 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       return;
     }
 
-    if (!formData.retiro_en_sucursal && !formData.entregar_ahora && !formData.delivery_address.trim()) {
+    if (!formData.retiro_en_sucursal && !formData.entregar_ahora && !formData.requiere_armado && !formData.delivery_address.trim()) {
       toast({
         title: 'Error de validación',
-        description: 'Por favor ingresa una dirección de entrega o selecciona retiro en sucursal',
+        description: 'Por favor ingresa una dirección de entrega, selecciona retiro en sucursal o armado',
         variant: 'destructive',
       });
       return;
+    }
+
+    // Validar campos de armado si está habilitado
+    if (formData.requiere_armado) {
+      if (!formData.armado_fecha || !formData.armado_horario || !formData.armado_contacto_nombre || !formData.armado_contacto_telefono) {
+        toast({
+          title: 'Error de validación',
+          description: 'Por favor completa todos los campos de armado',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     // Si es crédito moderna y no tenemos los datos, abrir el formulario
@@ -575,6 +593,12 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
         status: initialStatus,
         retiro_en_sucursal: formData.retiro_en_sucursal,
         entregar_ahora: formData.entregar_ahora,
+        requiere_armado: formData.requiere_armado,
+        armado_fecha: formData.requiere_armado ? formData.armado_fecha : null,
+        armado_horario: formData.requiere_armado ? formData.armado_horario : null,
+        armado_contacto_nombre: formData.requiere_armado ? formData.armado_contacto_nombre : null,
+        armado_contacto_telefono: formData.requiere_armado ? formData.armado_contacto_telefono : null,
+        armado_estado: formData.requiere_armado ? 'pendiente' : null,
       };
 
       const { data: order, error } = await supabase
@@ -744,6 +768,12 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
       retiro_en_sucursal: false,
       sucursal_retiro_id: '',
       entregar_ahora: false,
+      // Resetear armado
+      requiere_armado: false,
+      armado_fecha: '',
+      armado_horario: '',
+      armado_contacto_nombre: '',
+      armado_contacto_telefono: '',
     });
     setOrderProducts([]);
     setSelectedPlaceDetails(null);
@@ -1359,6 +1389,79 @@ export const CreateOrderModal = ({ open, onOpenChange, onOrderCreated }: CreateO
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Armado - Solo si NO es entrega inmediata */}
+          {!formData.entregar_ahora && (
+            <div className="space-y-4 p-4 border rounded-lg">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="requiere_armado"
+                  checked={formData.requiere_armado}
+                  onCheckedChange={(checked) => {
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      requiere_armado: !!checked,
+                      armado_fecha: checked ? prev.armado_fecha : '',
+                      armado_horario: checked ? prev.armado_horario : '',
+                      armado_contacto_nombre: checked ? prev.armado_contacto_nombre : '',
+                      armado_contacto_telefono: checked ? prev.armado_contacto_telefono : '',
+                    }));
+                  }}
+                />
+                <Label htmlFor="requiere_armado" className="font-semibold">Requiere Armado</Label>
+              </div>
+
+              {formData.requiere_armado && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="armado_fecha">Fecha de Armado *</Label>
+                    <Input
+                      id="armado_fecha"
+                      type="date"
+                      value={formData.armado_fecha}
+                      onChange={(e) => setFormData(prev => ({ ...prev, armado_fecha: e.target.value }))}
+                      required={formData.requiere_armado}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="armado_horario">Horario *</Label>
+                    <Input
+                      id="armado_horario"
+                      type="time"
+                      value={formData.armado_horario}
+                      onChange={(e) => setFormData(prev => ({ ...prev, armado_horario: e.target.value }))}
+                      required={formData.requiere_armado}
+                      placeholder="09:00"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="armado_contacto_nombre">Nombre de Contacto *</Label>
+                    <Input
+                      id="armado_contacto_nombre"
+                      value={formData.armado_contacto_nombre}
+                      onChange={(e) => setFormData(prev => ({ ...prev, armado_contacto_nombre: e.target.value }))}
+                      required={formData.requiere_armado}
+                      placeholder="Nombre del responsable"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="armado_contacto_telefono">Teléfono de Contacto *</Label>
+                    <Input
+                      id="armado_contacto_telefono"
+                      type="tel"
+                      value={formData.armado_contacto_telefono}
+                      onChange={(e) => setFormData(prev => ({ ...prev, armado_contacto_telefono: e.target.value }))}
+                      required={formData.requiere_armado}
+                      placeholder="+598 99 123 456"
+                    />
+                  </div>
                 </div>
               )}
             </div>

@@ -42,7 +42,8 @@ import {
   Car,
   ArrowRightLeft,
   Calculator,
-  ClipboardList
+  ClipboardList,
+  Wrench
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -86,6 +87,7 @@ export const AppSidebar = () => {
         { title: 'Gestión de Pedidos', url: '/logistics', icon: ClipboardList },
         { title: 'Gestión de Envíos', url: '/routes-management', icon: Truck },
         { title: 'Visualización de Rutas', url: '/routes-view', icon: MapPin },
+        { title: 'Panel de Armado', url: '/assembly', icon: Wrench },
       ]
     },
     {

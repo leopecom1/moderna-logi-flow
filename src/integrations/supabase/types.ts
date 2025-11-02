@@ -64,6 +64,44 @@ export type Database = {
           },
         ]
       }
+      assembly_photos: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          order_id: string
+          photo_type: string
+          photo_url: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id: string
+          photo_type: string
+          photo_url: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string
+          photo_type?: string
+          photo_url?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assembly_photos_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branch_cash_registers: {
         Row: {
           branch_id: string
@@ -1275,6 +1313,14 @@ export type Database = {
       }
       orders: {
         Row: {
+          armado_completado_at: string | null
+          armado_confirmado_at: string | null
+          armado_confirmado_por: string | null
+          armado_contacto_nombre: string | null
+          armado_contacto_telefono: string | null
+          armado_estado: string | null
+          armado_fecha: string | null
+          armado_horario: string | null
           branch_id: string | null
           cadete_id: string | null
           created_at: string
@@ -1292,6 +1338,7 @@ export type Database = {
           order_number: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           products: Json
+          requiere_armado: boolean | null
           retiro_en_sucursal: boolean | null
           route_id: string | null
           seller_id: string
@@ -1300,6 +1347,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          armado_completado_at?: string | null
+          armado_confirmado_at?: string | null
+          armado_confirmado_por?: string | null
+          armado_contacto_nombre?: string | null
+          armado_contacto_telefono?: string | null
+          armado_estado?: string | null
+          armado_fecha?: string | null
+          armado_horario?: string | null
           branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
@@ -1317,6 +1372,7 @@ export type Database = {
           order_number: string
           payment_method: Database["public"]["Enums"]["payment_method"]
           products: Json
+          requiere_armado?: boolean | null
           retiro_en_sucursal?: boolean | null
           route_id?: string | null
           seller_id: string
@@ -1325,6 +1381,14 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          armado_completado_at?: string | null
+          armado_confirmado_at?: string | null
+          armado_confirmado_por?: string | null
+          armado_contacto_nombre?: string | null
+          armado_contacto_telefono?: string | null
+          armado_estado?: string | null
+          armado_fecha?: string | null
+          armado_horario?: string | null
           branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
@@ -1342,6 +1406,7 @@ export type Database = {
           order_number?: string
           payment_method?: Database["public"]["Enums"]["payment_method"]
           products?: Json
+          requiere_armado?: boolean | null
           retiro_en_sucursal?: boolean | null
           route_id?: string | null
           seller_id?: string
