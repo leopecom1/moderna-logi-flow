@@ -2478,10 +2478,14 @@ export type Database = {
       }
       woocommerce_config: {
         Row: {
+          auto_assign_to_route: boolean | null
           consumer_key: string
           consumer_secret: string
           created_at: string
           created_by: string
+          default_branch_id: string | null
+          default_requiere_armado: boolean | null
+          default_warehouse_id: string | null
           id: string
           is_active: boolean
           store_url: string
@@ -2489,10 +2493,14 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_assign_to_route?: boolean | null
           consumer_key: string
           consumer_secret: string
           created_at?: string
           created_by: string
+          default_branch_id?: string | null
+          default_requiere_armado?: boolean | null
+          default_warehouse_id?: string | null
           id?: string
           is_active?: boolean
           store_url: string
@@ -2500,17 +2508,36 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_assign_to_route?: boolean | null
           consumer_key?: string
           consumer_secret?: string
           created_at?: string
           created_by?: string
+          default_branch_id?: string | null
+          default_requiere_armado?: boolean | null
+          default_warehouse_id?: string | null
           id?: string
           is_active?: boolean
           store_url?: string
           sync_enabled?: boolean
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "woocommerce_config_default_branch_id_fkey"
+            columns: ["default_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "woocommerce_config_default_warehouse_id_fkey"
+            columns: ["default_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Store, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function WooCommerceConfigPage() {
   const { toast } = useToast();
@@ -23,6 +24,10 @@ export default function WooCommerceConfigPage() {
     consumer_key: '',
     consumer_secret: '',
     sync_enabled: true,
+    default_branch_id: '',
+    default_warehouse_id: '',
+    default_requiere_armado: false,
+    auto_assign_to_route: false,
   });
 
   // Fetch existing config
@@ -40,6 +45,33 @@ export default function WooCommerceConfigPage() {
     },
   });
 
+  // Fetch branches and warehouses for selects
+  const { data: branches } = useQuery({
+    queryKey: ['branches'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('branches')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: warehouses } = useQuery({
+    queryKey: ['warehouses'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('warehouses')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Set form data when config loads
   useEffect(() => {
     if (config) {
@@ -48,6 +80,10 @@ export default function WooCommerceConfigPage() {
         consumer_key: config.consumer_key,
         consumer_secret: config.consumer_secret,
         sync_enabled: config.sync_enabled,
+        default_branch_id: config.default_branch_id || '',
+        default_warehouse_id: config.default_warehouse_id || '',
+        default_requiere_armado: config.default_requiere_armado || false,
+        auto_assign_to_route: config.auto_assign_to_route || false,
       });
     }
   }, [config]);
@@ -265,6 +301,84 @@ export default function WooCommerceConfigPage() {
                 <Label htmlFor="sync_enabled" className="cursor-pointer">
                   Sincronización automática de pedidos
                 </Label>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="default_branch_id">Sucursal por defecto</Label>
+                  <Select
+                    value={formData.default_branch_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, default_branch_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar sucursal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches?.map((branch) => (
+                        <SelectItem key={branch.id} value={branch.id}>
+                          {branch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    Los pedidos de WooCommerce se asignarán a esta sucursal
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="default_warehouse_id">Depósito por defecto</Label>
+                  <Select
+                    value={formData.default_warehouse_id}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, default_warehouse_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar depósito" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {warehouses?.map((warehouse) => (
+                        <SelectItem key={warehouse.id} value={warehouse.id}>
+                          {warehouse.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-sm text-muted-foreground">
+                    Los productos se asignarán a este depósito
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="default_requiere_armado"
+                    checked={formData.default_requiere_armado}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, default_requiere_armado: checked })
+                    }
+                  />
+                  <Label htmlFor="default_requiere_armado" className="cursor-pointer">
+                    Los pedidos online requieren armado por defecto
+                  </Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="auto_assign_to_route"
+                    checked={formData.auto_assign_to_route}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, auto_assign_to_route: checked })
+                    }
+                  />
+                  <Label htmlFor="auto_assign_to_route" className="cursor-pointer">
+                    Asignar automáticamente a rutas
+                  </Label>
+                </div>
               </div>
 
               <div className="flex gap-3">

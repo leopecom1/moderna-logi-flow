@@ -25,15 +25,23 @@ serve(async (req) => {
     // Extract order data
     const wcOrder = webhookData;
     
-    // Get active WooCommerce config to get the warehouse/branch mapping
+    // Get active WooCommerce config with branch and warehouse data
     const { data: config } = await supabaseClient
       .from('woocommerce_config')
-      .select('*')
+      .select(`
+        *,
+        branches:default_branch_id(id, name),
+        warehouses:default_warehouse_id(id, name)
+      `)
       .eq('is_active', true)
       .single();
 
     if (!config) {
       throw new Error('No active WooCommerce configuration found');
+    }
+
+    if (!config.default_branch_id || !config.default_warehouse_id) {
+      throw new Error('WooCommerce config requires default branch and warehouse');
     }
 
     // Find or create customer
@@ -70,16 +78,43 @@ serve(async (req) => {
       customerId = newCustomer.id;
     }
 
-    // Transform WooCommerce line items to our products format
+    // Transform WooCommerce line items to our products format with warehouse info
     const products = wcOrder.line_items?.map((item: any) => ({
       product_id: item.product_id.toString(),
       product_name: item.name,
+      warehouse_id: config.default_warehouse_id,
+      warehouse_name: config.warehouses?.name || 'Depósito Principal',
       quantity: item.quantity,
       unit_price: parseFloat(item.price),
       currency: wcOrder.currency || 'UYU',
       sku: item.sku || '',
       variation_id: item.variation_id || null,
     })) || [];
+
+    // Detect pickup at branch (retiro en sucursal)
+    const isPickup = wcOrder.shipping_lines?.some((line: any) => 
+      line.method_id === 'local_pickup' || 
+      line.method_title?.toLowerCase().includes('retiro') ||
+      line.method_title?.toLowerCase().includes('pickup')
+    ) || false;
+
+    // Read custom metadata for assembly and delivery info
+    const getMetaValue = (key: string): string | null => {
+      const meta = wcOrder.meta_data?.find((m: any) => m.key === key);
+      return meta?.value || null;
+    };
+
+    const requiereArmado = getMetaValue('requiere_armado') === 'si' || config.default_requiere_armado;
+    const entregarAhora = getMetaValue('entregar_ahora') === 'si' || 
+                          wcOrder.customer_note?.toLowerCase().includes('urgente') ||
+                          wcOrder.customer_note?.toLowerCase().includes('hoy');
+    
+    // Assembly contact information
+    const armadoContactoNombre = getMetaValue('armado_contacto_nombre') || 
+                                  `${wcOrder.billing?.first_name || ''} ${wcOrder.billing?.last_name || ''}`.trim();
+    const armadoContactoTelefono = getMetaValue('armado_contacto_telefono') || wcOrder.billing?.phone || '';
+    const armadoFecha = getMetaValue('armado_fecha') || null;
+    const armadoHorario = getMetaValue('armado_horario') || null;
 
     // Map WooCommerce payment method to our enum
     const paymentMethodMap: { [key: string]: string } = {
@@ -160,13 +195,14 @@ serve(async (req) => {
 
     const sellerId = seller?.user_id || config.created_by;
 
-    // Create new order
+    // Create new order with complete operational data
     const { data: newOrder, error: orderError } = await supabaseClient
       .from('orders')
       .insert({
         order_number: `WC-${wcOrder.id}`,
         customer_id: customerId,
         seller_id: sellerId,
+        branch_id: config.default_branch_id,
         delivery_address: deliveryAddress,
         delivery_neighborhood: wcOrder.shipping?.city || wcOrder.billing?.city || '',
         delivery_departamento: wcOrder.shipping?.state || wcOrder.billing?.state || '',
@@ -175,9 +211,15 @@ serve(async (req) => {
         payment_method: paymentMethod,
         status: orderStatus,
         delivery_date: wcOrder.date_created ? new Date(wcOrder.date_created).toISOString().split('T')[0] : null,
-        notes: `WooCommerce Order #${wcOrder.id}`,
-        retiro_en_sucursal: false,
-        entregar_ahora: false,
+        notes: `WooCommerce Order #${wcOrder.id}${wcOrder.customer_note ? `\n\nNota del cliente: ${wcOrder.customer_note}` : ''}`,
+        retiro_en_sucursal: isPickup,
+        entregar_ahora: entregarAhora,
+        requiere_armado: requiereArmado,
+        armado_fecha: armadoFecha,
+        armado_horario: armadoHorario,
+        armado_contacto_nombre: armadoContactoNombre,
+        armado_contacto_telefono: armadoContactoTelefono,
+        armado_estado: requiereArmado ? 'pendiente' : null,
       })
       .select('id')
       .single();
