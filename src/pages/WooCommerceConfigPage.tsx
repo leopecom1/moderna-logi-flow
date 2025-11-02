@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Store, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Store, Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 export default function WooCommerceConfigPage() {
@@ -40,7 +41,7 @@ export default function WooCommerceConfigPage() {
   });
 
   // Set form data when config loads
-  useState(() => {
+  useEffect(() => {
     if (config) {
       setFormData({
         store_url: config.store_url,
@@ -49,7 +50,7 @@ export default function WooCommerceConfigPage() {
         sync_enabled: config.sync_enabled,
       });
     }
-  });
+  }, [config]);
 
   // Save/Update config
   const saveMutation = useMutation({
@@ -157,14 +158,28 @@ export default function WooCommerceConfigPage() {
   return (
     <MainLayout>
       <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <Store className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold">Tienda Online</h1>
-            <p className="text-muted-foreground">
-              Configura la conexión con tu tienda WooCommerce
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Store className="h-8 w-8 text-primary" />
+            <div>
+              <h1 className="text-3xl font-bold">Tienda Online</h1>
+              <p className="text-muted-foreground">
+                Configura la conexión con tu tienda WooCommerce
+              </p>
+            </div>
           </div>
+          
+          {config ? (
+            <Badge variant="default" className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Configuración activa
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="flex items-center gap-2">
+              <XCircle className="h-4 w-4" />
+              Sin configurar
+            </Badge>
+          )}
         </div>
 
         <Card>
