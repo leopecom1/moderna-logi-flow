@@ -2476,6 +2476,42 @@ export type Database = {
         }
         Relationships: []
       }
+      woocommerce_config: {
+        Row: {
+          consumer_key: string
+          consumer_secret: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          store_url: string
+          sync_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          consumer_key: string
+          consumer_secret: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          store_url: string
+          sync_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          consumer_key?: string
+          consumer_secret?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          store_url?: string
+          sync_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
