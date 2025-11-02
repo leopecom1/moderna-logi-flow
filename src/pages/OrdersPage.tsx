@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Search, Edit3, Building2, Trash2 } from 'lucide-react';
+import { Package, Plus, Search, Edit3, Building2, Trash2, Eye, Wrench } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
 import { EditOrderModal } from '@/components/forms/EditOrderModal';
+import { ViewOrderModal } from '@/components/forms/ViewOrderModal';
 import {
   Table,
   TableBody,
@@ -39,15 +39,16 @@ interface Branch {
 }
 
 const OrdersPage = () => {
-  const navigate = useNavigate();
   const { profile } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -61,6 +62,10 @@ const OrdersPage = () => {
         .select(`
           *,
           branches (
+            id,
+            name
+          ),
+          customers (
             id,
             name
           )
@@ -203,6 +208,7 @@ const OrdersPage = () => {
                 <TableHead>Método Pago</TableHead>
                 <TableHead>Entrega</TableHead>
                 <TableHead>Dirección</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -241,6 +247,25 @@ const OrdersPage = () => {
                     {order.delivery_address}
                   </TableCell>
                   <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {order.retiro_en_sucursal && (
+                        <Badge variant="outline" className="text-xs">Retiro</Badge>
+                      )}
+                      {order.entregar_ahora && (
+                        <Badge variant="default" className="text-xs">Ahora</Badge>
+                      )}
+                      {order.requiere_armado && (
+                        <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                          <Wrench className="h-3 w-3" />
+                          Armado
+                        </Badge>
+                      )}
+                      {!order.retiro_en_sucursal && !order.entregar_ahora && !order.requiere_armado && (
+                        <span className="text-xs text-muted-foreground">Envío</span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex items-center space-x-2">
                       {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
                         <Button
@@ -257,9 +282,12 @@ const OrdersPage = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => navigate(`/orders/${order.id}`)}
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setShowViewModal(true);
+                        }}
                       >
-                        Ver
+                        <Eye className="h-4 w-4" />
                       </Button>
                       {profile?.role === 'gerencia' && (
                         <Button
@@ -304,6 +332,12 @@ const OrdersPage = () => {
         onOpenChange={setShowEditModal}
         onOrderUpdated={fetchOrders}
         orderId={selectedOrderId}
+      />
+
+      <ViewOrderModal
+        open={showViewModal}
+        onOpenChange={setShowViewModal}
+        order={selectedOrder}
       />
     </MainLayout>
   );
