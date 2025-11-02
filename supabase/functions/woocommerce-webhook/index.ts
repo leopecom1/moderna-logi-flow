@@ -94,7 +94,7 @@ serve(async (req) => {
     // Map WooCommerce status to our order status
     const statusMap: { [key: string]: string } = {
       'pending': 'pendiente',
-      'processing': 'confirmado',
+      'processing': 'pendiente_envio',
       'on-hold': 'pendiente',
       'completed': 'entregado',
       'cancelled': 'cancelado',
