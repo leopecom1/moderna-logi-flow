@@ -6,13 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { MessageLoading } from '@/components/ui/message-loading';
 import { RouteMap } from '@/components/ui/route-map';
-import { Calendar, MapPin, User, Package, Clock, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Calendar, MapPin, User, Package, Clock, TrendingUp, CheckCircle2, Edit } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { EditRouteModal } from '@/components/forms/EditRouteModal';
 
 interface Route {
   id: string;
   route_name: string;
   route_date: string;
+  cadete_id: string;
   cadete_name: string;
   total_deliveries: number;
   completed_deliveries: number;
@@ -37,6 +39,8 @@ export const RoutesViewPanel = () => {
   const [loading, setLoading] = useState(true);
   const [loadingDeliveries, setLoadingDeliveries] = useState(false);
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingRoute, setEditingRoute] = useState<Route | null>(null);
 
   useEffect(() => {
     fetchRoutes();
@@ -72,6 +76,7 @@ export const RoutesViewPanel = () => {
         id: route.id,
         route_name: route.route_name,
         route_date: route.route_date,
+        cadete_id: route.cadete_id,
         cadete_name: cadetesMap.get(route.cadete_id) || 'Sin asignar',
         total_deliveries: route.total_deliveries || 0,
         completed_deliveries: route.completed_deliveries || 0,
@@ -214,6 +219,11 @@ export const RoutesViewPanel = () => {
     }
   };
 
+  const handleEditRoute = (route: Route) => {
+    setEditingRoute(route);
+    setEditModalOpen(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -253,21 +263,33 @@ export const RoutesViewPanel = () => {
                   className={`cursor-pointer transition-all hover:shadow-md ${
                     selectedRoute === route.id ? 'ring-2 ring-primary' : ''
                   }`}
-                  onClick={() => setSelectedRoute(route.id)}
                 >
                   <CardContent className="p-4 space-y-3">
                     <div className="flex items-start justify-between">
-                      <div className="space-y-1">
+                      <div className="flex-1 space-y-1" onClick={() => setSelectedRoute(route.id)}>
                         <h4 className="font-semibold text-sm">{route.route_name}</h4>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
                           <User className="h-3 w-3" />
                           <span>{route.cadete_name}</span>
                         </div>
                       </div>
-                      {getStatusBadge(getRouteStatus(route))}
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(getRouteStatus(route))}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditRoute(route);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center justify-between text-xs" onClick={() => setSelectedRoute(route.id)}>
                       <div className="flex items-center gap-1 text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         <span>{new Date(route.route_date).toLocaleDateString('es-UY')}</span>
@@ -281,7 +303,7 @@ export const RoutesViewPanel = () => {
                     </div>
 
                     {/* Progress bar */}
-                    <div className="space-y-1">
+                    <div className="space-y-1" onClick={() => setSelectedRoute(route.id)}>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Progreso</span>
                         <span className="font-medium">{getProgressPercentage(route)}%</span>
@@ -295,7 +317,7 @@ export const RoutesViewPanel = () => {
                     </div>
 
                     {route.start_time && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground" onClick={() => setSelectedRoute(route.id)}>
                         <Clock className="h-3 w-3" />
                         <span>
                           Inicio: {new Date(route.start_time).toLocaleTimeString('es-UY', { 
@@ -423,6 +445,20 @@ export const RoutesViewPanel = () => {
           </CardContent>
         </Card>
       </div>
+
+      {editingRoute && (
+        <EditRouteModal
+          open={editModalOpen}
+          onOpenChange={setEditModalOpen}
+          routeId={editingRoute.id}
+          currentCadeteId={editingRoute.cadete_id}
+          currentRouteDate={editingRoute.route_date}
+          onRouteUpdated={() => {
+            fetchRoutes();
+            setEditModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 };
