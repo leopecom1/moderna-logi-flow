@@ -53,7 +53,24 @@ const OrdersPage = () => {
   useEffect(() => {
     fetchOrders();
     fetchBranches();
+    updateCompletedAssemblyOrders();
   }, []);
+
+  const updateCompletedAssemblyOrders = async () => {
+    try {
+      // Actualizar pedidos con armado completado que aún estén en estado "armado"
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: 'entregado' })
+        .eq('requiere_armado', true)
+        .eq('armado_estado', 'completado')
+        .eq('status', 'armado');
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating completed assembly orders:', error);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
