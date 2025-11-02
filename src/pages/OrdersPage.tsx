@@ -231,7 +231,14 @@ const OrdersPage = () => {
             </TableHeader>
             <TableBody>
               {filteredOrders.map((order: any) => (
-                <TableRow key={order.id}>
+                <TableRow 
+                  key={order.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => {
+                    setSelectedOrder(order);
+                    setShowViewModal(true);
+                  }}
+                >
                   <TableCell className="font-medium">
                     <div className="flex items-center space-x-2">
                       <Package className="h-4 w-4 text-primary" />
@@ -301,7 +308,7 @@ const OrdersPage = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                       {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
                         <Button
                           variant="outline"
