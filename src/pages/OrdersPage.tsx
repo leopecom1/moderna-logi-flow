@@ -5,7 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Search, Edit3, Building2, Trash2, Eye, Wrench } from 'lucide-react';
+import { Package, Plus, Search, Edit3, Building2, Trash2, Eye, Wrench, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
 import { EditOrderModal } from '@/components/forms/EditOrderModal';
@@ -255,8 +255,18 @@ const OrdersPage = () => {
                         <Badge variant="default" className="text-xs">Ahora</Badge>
                       )}
                       {order.requiere_armado && (
-                        <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                        <Badge 
+                          variant={
+                            order.armado_estado === 'completado' ? 'default' : 
+                            order.armado_estado === 'en_progreso' ? 'secondary' : 
+                            'outline'
+                          } 
+                          className="text-xs flex items-center gap-1"
+                        >
                           <Wrench className="h-3 w-3" />
+                          {order.armado_estado === 'completado' && <CheckCircle className="h-3 w-3" />}
+                          {order.armado_estado === 'en_progreso' && <Clock className="h-3 w-3" />}
+                          {(order.armado_estado === 'pendiente' || order.armado_estado === 'confirmado') && <AlertTriangle className="h-3 w-3" />}
                           Armado
                         </Badge>
                       )}

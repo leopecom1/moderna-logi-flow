@@ -95,13 +95,18 @@ export default function OrderDetailPage() {
 
   const fetchAssemblyPhotos = async () => {
     try {
+      console.log('Fetching assembly photos for order:', id);
       const { data, error } = await supabase
         .from('assembly_photos')
         .select('*')
         .eq('order_id', id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching assembly photos:', error);
+        throw error;
+      }
+      console.log('Assembly photos fetched:', data);
       setAssemblyPhotos(data || []);
     } catch (error) {
       console.error('Error fetching assembly photos:', error);
@@ -604,7 +609,7 @@ export default function OrderDetailPage() {
           )}
 
           {/* Fotos de Armado */}
-          {assemblyPhotos.length > 0 && (
+          {order.requiere_armado && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -613,27 +618,35 @@ export default function OrderDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {assemblyPhotos.map((photo) => (
-                    <div key={photo.id} className="relative group">
-                      <img
-                        src={photo.photo_url}
-                        alt="Foto de armado"
-                        className="w-full h-40 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => window.open(photo.photo_url, '_blank')}
-                      />
-                      <Badge
-                        className="absolute top-2 right-2"
-                        variant={photo.photo_type === 'completado' ? 'default' : 'secondary'}
-                      >
-                        {photo.photo_type === 'completado' ? 'Completado' : 'Progreso'}
-                      </Badge>
-                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
-                        {new Date(photo.created_at).toLocaleString('es-ES')}
+                {assemblyPhotos.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {assemblyPhotos.map((photo) => (
+                      <div key={photo.id} className="relative group">
+                        <img
+                          src={photo.photo_url}
+                          alt="Foto de armado"
+                          className="w-full h-40 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open(photo.photo_url, '_blank')}
+                        />
+                        <Badge
+                          className="absolute top-2 right-2"
+                          variant={photo.photo_type === 'completado' ? 'default' : 'secondary'}
+                        >
+                          {photo.photo_type === 'completado' ? 'Completado' : 'Progreso'}
+                        </Badge>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          {new Date(photo.created_at).toLocaleString('es-ES')}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-muted p-4 rounded-md text-center">
+                    <p className="text-sm text-muted-foreground">
+                      No hay fotos del armado aún
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
