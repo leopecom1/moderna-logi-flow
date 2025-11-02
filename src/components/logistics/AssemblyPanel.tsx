@@ -156,6 +156,7 @@ export const AssemblyPanel = () => {
           armado_confirmado_por: profile?.user_id,
           armado_confirmado_at: new Date().toISOString(),
           armador_entrega_mercaderia: armadorEntrega,
+          status: 'armado', // Cambiar estado principal a armado
         })
         .eq('id', orderId);
 
@@ -165,7 +166,7 @@ export const AssemblyPanel = () => {
         title: 'Confirmado',
         description: armadorEntrega 
           ? 'Asistencia confirmada. Deberás llevar la mercadería.' 
-          : 'Asistencia confirmada para este armado',
+          : 'Asistencia confirmada. El pedido pasará a envíos.',
       });
 
       setShowDeliveryDialog(false);
@@ -187,6 +188,7 @@ export const AssemblyPanel = () => {
         .from('orders')
         .update({
           armado_estado: 'en_progreso',
+          status: 'armado', // Cambiar estado principal a armado
         })
         .eq('id', orderId);
 

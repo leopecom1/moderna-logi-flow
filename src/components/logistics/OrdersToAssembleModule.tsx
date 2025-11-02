@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MessageLoading } from '@/components/ui/message-loading';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Search, Package, Truck, Wrench } from 'lucide-react';
+import { Search, Package, Wrench } from 'lucide-react';
 
 interface OrderToAssemble {
   id: string;
@@ -26,8 +25,6 @@ export function OrdersToAssembleModule() {
   const [orders, setOrders] = useState<OrderToAssemble[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -53,6 +50,7 @@ export function OrdersToAssembleModule() {
         .from('orders')
         .select('id, order_number, customer_id, delivery_date, products, total_amount, status, retiro_en_sucursal, requiere_armado, customers(name)')
         .in('status', ['pendiente_envio', 'pendiente_retiro'])
+        .eq('requiere_armado', false) // Solo pedidos que NO requieren armado
         .or('entregar_ahora.is.null,entregar_ahora.eq.false')
         .order('created_at', { ascending: false });
 
@@ -80,34 +78,18 @@ export function OrdersToAssembleModule() {
     }
   };
 
-  const handleMarkAsAssembled = async (orderId: string) => {
-    const order = orders.find(o => o.id === orderId);
-    
-    // Si tiene armado, preguntar quién entrega
-    if (order?.requiere_armado) {
-      setSelectedOrderId(orderId);
-      setShowDeliveryDialog(true);
-    } else {
-      // Si no tiene armado, marcar directamente como preparado
-      await markAsAssembled(orderId, false);
-    }
-  };
-
-  const markAsAssembled = async (orderId: string, armadorEntrega: boolean) => {
+  const markAsAssembled = async (orderId: string) => {
     try {
       const { error } = await supabase
         .from('orders')
         .update({ 
-          status: 'armado',
-          armador_entrega_mercaderia: armadorEntrega
+          status: 'armado'
         })
         .eq('id', orderId);
 
       if (error) throw error;
 
       toast.success('Pedido marcado como preparado');
-      setShowDeliveryDialog(false);
-      setSelectedOrderId(null);
       fetchOrders();
     } catch (error) {
       console.error('Error updating order:', error);
@@ -218,7 +200,7 @@ export function OrdersToAssembleModule() {
                     <TableCell>
                       <Button
                         size="sm"
-                        onClick={() => handleMarkAsAssembled(order.id)}
+                        onClick={() => markAsAssembled(order.id)}
                       >
                         Marcar Preparado
                       </Button>
@@ -230,41 +212,6 @@ export function OrdersToAssembleModule() {
           </div>
         )}
       </CardContent>
-
-      {/* Dialog para preguntar quién entrega cuando hay armado */}
-      <Dialog open={showDeliveryDialog} onOpenChange={setShowDeliveryDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>¿Quién entregará el pedido?</DialogTitle>
-            <DialogDescription>
-              Este pedido requiere armado. Selecciona quién se encargará de la entrega.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <Button
-              className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => selectedOrderId && markAsAssembled(selectedOrderId, true)}
-            >
-              <Wrench className="h-6 w-6" />
-              <div>
-                <div className="font-semibold">El armador entrega</div>
-                <div className="text-xs text-muted-foreground">El armador llevará la mercadería</div>
-              </div>
-            </Button>
-            <Button
-              className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              variant="outline"
-              onClick={() => selectedOrderId && markAsAssembled(selectedOrderId, false)}
-            >
-              <Truck className="h-6 w-6" />
-              <div>
-                <div className="font-semibold">Enviar por logística</div>
-                <div className="text-xs text-muted-foreground">Se asignará un cadete para la entrega</div>
-              </div>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 }

@@ -85,20 +85,36 @@ export const ShipmentsModule = () => {
   const fetchShipmentOrders = async () => {
     try {
       setLoading(true);
-      // @ts-ignore - Complex Supabase query type inference
-      const result = await supabase
+      
+      const { data, error } = await supabase
         .from('orders')
-        .select('id, order_number, customer_id, delivery_address, delivery_neighborhood, delivery_departamento, delivery_date, products, total_amount, created_at, customers(name)')
+        .select('id, order_number, customer_id, delivery_address, delivery_neighborhood, delivery_departamento, delivery_date, products, total_amount, created_at, requiere_armado, armado_estado, armador_entrega_mercaderia, customers(name)')
         .eq('status', 'armado')
         .eq('retiro_en_sucursal', false)
         .is('route_id', null)
-        .or('entregar_ahora.is.null,entregar_ahora.eq.false')
         .order('delivery_date', { ascending: true });
 
-      const { data, error } = result;
       if (error) throw error;
 
-      const formattedOrders = data.map((order: any) => ({
+      // Filtrar pedidos que:
+      // - NO tienen entregar_ahora activo
+      // - El armador NO va a entregar (o es null)
+      // - NO requieren armado O ya completaron/confirmaron el armado
+      const filteredData = (data || []).filter((order: any) => {
+        // Excluir entregas inmediatas
+        if (order.entregar_ahora) return false;
+        
+        // Si el armador entrega la mercadería, no mostrar en envíos
+        if (order.armador_entrega_mercaderia) return false;
+        
+        // Si no requiere armado, incluir
+        if (!order.requiere_armado) return true;
+        
+        // Si requiere armado, debe estar completado o confirmado
+        return order.armado_estado === 'completado' || order.armado_estado === 'confirmado';
+      });
+
+      const formattedOrders = filteredData.map((order: any) => ({
         id: order.id,
         order_number: order.order_number,
         customer_id: order.customer_id,
