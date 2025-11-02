@@ -21,8 +21,18 @@ import {
   FileText,
   Clock,
   DollarSign,
-  AlertTriangle
+  AlertTriangle,
+  Camera,
+  Wrench
 } from 'lucide-react';
+
+interface AssemblyPhoto {
+  id: string;
+  photo_url: string;
+  photo_type: string;
+  created_at: string;
+  notes?: string;
+}
 
 interface OrderDetail {
   id: string;
@@ -39,6 +49,15 @@ interface OrderDetail {
   products: any;
   created_at: string;
   updated_at: string;
+  requiere_armado?: boolean;
+  armado_estado?: string;
+  armado_fecha?: string;
+  armado_horario?: string;
+  armado_contacto_nombre?: string;
+  armado_contacto_telefono?: string;
+  armado_confirmado_at?: string;
+  armado_completado_at?: string;
+  armador_entrega_mercaderia?: boolean;
   customer: {
     id: string;
     name: string;
@@ -65,12 +84,29 @@ export default function OrderDetailPage() {
   const navigate = useNavigate();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [assemblyPhotos, setAssemblyPhotos] = useState<AssemblyPhoto[]>([]);
 
   useEffect(() => {
     if (id) {
       fetchOrderDetail();
+      fetchAssemblyPhotos();
     }
   }, [id]);
+
+  const fetchAssemblyPhotos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('assembly_photos')
+        .select('*')
+        .eq('order_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAssemblyPhotos(data || []);
+    } catch (error) {
+      console.error('Error fetching assembly photos:', error);
+    }
+  };
 
   const fetchOrderDetail = async () => {
     try {
@@ -493,6 +529,110 @@ export default function OrderDetailPage() {
                     <p className="text-sm font-medium text-muted-foreground">Rol</p>
                     <p className="text-sm capitalize">{order.seller.role}</p>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Información de Armado */}
+          {order.requiere_armado && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Wrench className="h-5 w-5" />
+                  <span>Armado</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Estado</p>
+                    <Badge variant={order.armado_estado === 'completado' ? 'default' : 'outline'}>
+                      {order.armado_estado === 'pendiente' && 'Pendiente'}
+                      {order.armado_estado === 'confirmado' && 'Confirmado'}
+                      {order.armado_estado === 'en_progreso' && 'En Progreso'}
+                      {order.armado_estado === 'completado' && 'Completado'}
+                    </Badge>
+                  </div>
+                  {order.armado_fecha && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Fecha de Armado</p>
+                      <p className="text-sm">{formatDate(order.armado_fecha)}</p>
+                    </div>
+                  )}
+                  {order.armado_horario && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Horario</p>
+                      <p className="text-sm">{order.armado_horario}</p>
+                    </div>
+                  )}
+                  {order.armado_contacto_nombre && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Contacto</p>
+                      <p className="text-sm">{order.armado_contacto_nombre}</p>
+                    </div>
+                  )}
+                  {order.armado_contacto_telefono && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Teléfono de Contacto</p>
+                      <p className="text-sm">{order.armado_contacto_telefono}</p>
+                    </div>
+                  )}
+                  {order.armador_entrega_mercaderia !== undefined && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Entrega</p>
+                      <p className="text-sm">
+                        {order.armador_entrega_mercaderia ? 'El armador entrega' : 'Logística entrega'}
+                      </p>
+                    </div>
+                  )}
+                  {order.armado_confirmado_at && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Confirmado</p>
+                      <p className="text-sm">{formatDateTime(order.armado_confirmado_at)}</p>
+                    </div>
+                  )}
+                  {order.armado_completado_at && (
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Completado</p>
+                      <p className="text-sm">{formatDateTime(order.armado_completado_at)}</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Fotos de Armado */}
+          {assemblyPhotos.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Camera className="h-5 w-5" />
+                  <span>Fotos del Armado</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {assemblyPhotos.map((photo) => (
+                    <div key={photo.id} className="relative group">
+                      <img
+                        src={photo.photo_url}
+                        alt="Foto de armado"
+                        className="w-full h-40 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => window.open(photo.photo_url, '_blank')}
+                      />
+                      <Badge
+                        className="absolute top-2 right-2"
+                        variant={photo.photo_type === 'completado' ? 'default' : 'secondary'}
+                      >
+                        {photo.photo_type === 'completado' ? 'Completado' : 'Progreso'}
+                      </Badge>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-2 rounded-b-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                        {new Date(photo.created_at).toLocaleString('es-ES')}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>

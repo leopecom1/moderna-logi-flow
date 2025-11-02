@@ -362,7 +362,7 @@ export const AssemblyPanel = () => {
   };
 
   const captureAndUpload = async () => {
-    if (!videoRef.current || !canvasRef.current || !cameraPhotoType) return;
+    if (!videoRef.current || !canvasRef.current || !cameraPhotoType || !selectedOrder) return;
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -374,29 +374,28 @@ export const AssemblyPanel = () => {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     setUploadingPhoto(true);
-    canvas.toBlob(
-      async (blob) => {
-        if (!blob) {
-          setUploadingPhoto(false);
-          return;
-        }
-        try {
-          await uploadBlobPhoto(cameraPhotoType, blob);
-          closeCamera();
-        } catch (error) {
-          console.error('Error subiendo foto de cámara:', error);
-          toast({
-            title: 'Error',
-            description: 'No se pudo subir la foto tomada',
-            variant: 'destructive',
-          });
-        } finally {
-          setUploadingPhoto(false);
-        }
-      },
-      'image/jpeg',
-      0.9
-    );
+    
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, 'image/jpeg', 0.9);
+      });
+
+      if (!blob) {
+        throw new Error('No se pudo crear la imagen');
+      }
+
+      await uploadBlobPhoto(cameraPhotoType, blob);
+      closeCamera();
+    } catch (error) {
+      console.error('Error subiendo foto de cámara:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudo subir la foto tomada',
+        variant: 'destructive',
+      });
+    } finally {
+      setUploadingPhoto(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
