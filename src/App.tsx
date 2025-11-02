@@ -46,6 +46,7 @@ import CreditoModernaPage from "./pages/CreditoModernaPage";
 import AssemblyPage from "./pages/AssemblyPage";
 import ArmadoresPage from "./pages/ArmadoresPage";
 import WooCommerceConfigPage from "./pages/WooCommerceConfigPage";
+import WooCommerceReviewPage from "./pages/WooCommerceReviewPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -111,6 +112,7 @@ function App() {
             <Route path="/assembly" element={<ProtectedRoute><AssemblyPage /></ProtectedRoute>} />
             <Route path="/armadores" element={<ProtectedRoute><ArmadoresPage /></ProtectedRoute>} />
             <Route path="/woocommerce-config" element={<ProtectedRoute><WooCommerceConfigPage /></ProtectedRoute>} />
+            <Route path="/woocommerce-review" element={<ProtectedRoute><WooCommerceReviewPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
