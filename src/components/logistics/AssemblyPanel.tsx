@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,6 +53,11 @@ export const AssemblyPanel = () => {
   const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
+  const [showCameraDialog, setShowCameraDialog] = useState(false);
+  const [cameraPhotoType, setCameraPhotoType] = useState<'progreso' | 'completado' | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -250,58 +255,66 @@ export const AssemblyPanel = () => {
     }
   };
 
-  const handleUploadPhoto = async (event: React.ChangeEvent<HTMLInputElement>, photoType: 'progreso' | 'completado') => {
+  const uploadBlobPhoto = async (
+    photoType: 'progreso' | 'completado',
+    file: Blob
+  ) => {
+    if (!selectedOrder) return;
+
+    const fileName = `${selectedOrder.id}-${Date.now()}.jpg`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('assembly-photos')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from('assembly-photos').getPublicUrl(filePath);
+
+    const { error: dbError } = await supabase.from('assembly_photos').insert({
+      order_id: selectedOrder.id,
+      photo_url: publicUrl,
+      photo_type: photoType,
+      uploaded_by: profile?.user_id,
+    });
+
+    if (dbError) throw dbError;
+
+    if (photoType === 'completado') {
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          armado_estado: 'completado',
+          armado_completado_at: new Date().toISOString(),
+        })
+        .eq('id', selectedOrder.id);
+
+      if (updateError) throw updateError;
+    }
+
+    toast({
+      title: 'Foto subida',
+      description: 'La foto se subió correctamente',
+    });
+
+    fetchPhotos(selectedOrder.id);
+    fetchOrders();
+  };
+
+  const handleUploadPhoto = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    photoType: 'progreso' | 'completado'
+  ) => {
     if (!selectedOrder || !event.target.files || event.target.files.length === 0) return;
 
     const file = event.target.files[0];
     setUploadingPhoto(true);
 
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${selectedOrder.id}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('assembly-photos')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('assembly-photos')
-        .getPublicUrl(filePath);
-
-      const { error: dbError } = await supabase
-        .from('assembly_photos')
-        .insert({
-          order_id: selectedOrder.id,
-          photo_url: publicUrl,
-          photo_type: photoType,
-          uploaded_by: profile?.user_id,
-        });
-
-      if (dbError) throw dbError;
-
-      // Si es foto de completado, actualizar el estado del pedido
-      if (photoType === 'completado') {
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({
-            armado_estado: 'completado',
-            armado_completado_at: new Date().toISOString(),
-          })
-          .eq('id', selectedOrder.id);
-
-        if (updateError) throw updateError;
-      }
-
-      toast({
-        title: 'Foto subida',
-        description: 'La foto se subió correctamente',
-      });
-
-      fetchPhotos(selectedOrder.id);
-      fetchOrders();
+      await uploadBlobPhoto(photoType, file);
     } catch (error) {
       console.error('Error uploading photo:', error);
       toast({
@@ -312,6 +325,78 @@ export const AssemblyPanel = () => {
     } finally {
       setUploadingPhoto(false);
     }
+  };
+
+  const openCamera = async (type: 'progreso' | 'completado') => {
+    setCameraPhotoType(type);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      });
+      setCameraStream(stream);
+      setShowCameraDialog(true);
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+      }, 0);
+    } catch (error) {
+      console.error('Error accediendo a la cámara:', error);
+      toast({
+        title: 'Cámara no disponible',
+        description: 'No se pudo acceder a la cámara. Revisa permisos del navegador.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const closeCamera = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach((t) => t.stop());
+    }
+    setCameraStream(null);
+    setShowCameraDialog(false);
+    setCameraPhotoType(null);
+  };
+
+  const captureAndUpload = async () => {
+    if (!videoRef.current || !canvasRef.current || !cameraPhotoType) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    setUploadingPhoto(true);
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob) {
+          setUploadingPhoto(false);
+          return;
+        }
+        try {
+          await uploadBlobPhoto(cameraPhotoType, blob);
+          closeCamera();
+        } catch (error) {
+          console.error('Error subiendo foto de cámara:', error);
+          toast({
+            title: 'Error',
+            description: 'No se pudo subir la foto tomada',
+            variant: 'destructive',
+          });
+        } finally {
+          setUploadingPhoto(false);
+        }
+      },
+      'image/jpeg',
+      0.9
+    );
   };
 
   const getStatusBadge = (status: string) => {
@@ -502,15 +587,16 @@ export const AssemblyPanel = () => {
                 <div className="space-y-3">
                   <Label>Fotos del Progreso</Label>
                   <div className="flex gap-2 flex-wrap">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => handleUploadPhoto(e, 'progreso')}
-                      className="hidden"
-                      id="progress-photo-camera"
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
                       disabled={uploadingPhoto}
-                    />
+                      onClick={() => openCamera('progreso')}
+                    >
+                      <Camera className="h-4 w-4 mr-2" />
+                      Tomar Foto
+                    </Button>
                     <input
                       type="file"
                       accept="image/*"
@@ -519,20 +605,6 @@ export const AssemblyPanel = () => {
                       id="progress-photo-file"
                       disabled={uploadingPhoto}
                     />
-                    <label htmlFor="progress-photo-camera">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={uploadingPhoto}
-                        asChild
-                      >
-                        <span>
-                          <Camera className="h-4 w-4 mr-2" />
-                          Tomar Foto
-                        </span>
-                      </Button>
-                    </label>
                     <label htmlFor="progress-photo-file">
                       <Button
                         type="button"
@@ -554,15 +626,15 @@ export const AssemblyPanel = () => {
                 <div className="space-y-3">
                   <Label>Finalizar Armado</Label>
                   <div className="flex gap-2 flex-wrap">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => handleUploadPhoto(e, 'completado')}
-                      className="hidden"
-                      id="complete-photo-camera"
+                    <Button
+                      type="button"
+                      size="sm"
                       disabled={uploadingPhoto}
-                    />
+                      onClick={() => openCamera('completado')}
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Tomar Foto y Finalizar
+                    </Button>
                     <input
                       type="file"
                       accept="image/*"
@@ -571,19 +643,6 @@ export const AssemblyPanel = () => {
                       id="complete-photo-file"
                       disabled={uploadingPhoto}
                     />
-                    <label htmlFor="complete-photo-camera">
-                      <Button
-                        type="button"
-                        size="sm"
-                        disabled={uploadingPhoto}
-                        asChild
-                      >
-                        <span>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Tomar Foto y Finalizar
-                        </span>
-                      </Button>
-                    </label>
                     <label htmlFor="complete-photo-file">
                       <Button
                         type="button"
@@ -696,6 +755,42 @@ export const AssemblyPanel = () => {
                 <div className="text-xs text-muted-foreground">Se asignará un cadete para la entrega</div>
               </div>
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Cámara */}
+      <Dialog
+        open={showCameraDialog}
+        onOpenChange={(open) => {
+          if (!open) closeCamera();
+          setShowCameraDialog(open);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {cameraPhotoType === 'completado' ? 'Tomar foto y finalizar' : 'Tomar foto de progreso'}
+            </DialogTitle>
+            <DialogDescription>
+              Se abrirá tu cámara. Asegúrate de permitir el acceso.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full rounded bg-black aspect-video"
+            />
+            <canvas ref={canvasRef} className="hidden" />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={closeCamera}>Cancelar</Button>
+              <Button onClick={captureAndUpload} disabled={uploadingPhoto}>
+                {cameraPhotoType === 'completado' ? 'Tomar y Finalizar' : 'Tomar Foto'}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
