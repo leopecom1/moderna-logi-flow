@@ -289,6 +289,7 @@ export const AssemblyPanel = () => {
         .update({
           armado_estado: 'completado',
           armado_completado_at: new Date().toISOString(),
+          status: 'entregado',
         })
         .eq('id', selectedOrder.id);
 

@@ -140,7 +140,7 @@ const OrdersPage = () => {
       case 'en_ruta':
         return { variant: 'progress', label: 'En Ruta' };
       case 'entregado':
-        return { variant: 'completed', label: 'Entregado' };
+        return { variant: 'completed', label: 'Finalizado' };
       case 'cancelado':
         return { variant: 'cancelled', label: 'Cancelado' };
       case 'pago_ingresado':
