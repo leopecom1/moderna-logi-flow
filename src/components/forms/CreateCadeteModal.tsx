@@ -99,14 +99,17 @@ export const CreateCadeteModal = ({ open, onOpenChange, onCadeteCreated }: Creat
 
       console.log('📋 Respuesta de función edge:', { data, error });
 
+      // Check for function invocation error
       if (error) {
         console.error('❌ Error de función edge:', error);
-        throw error;
+        throw new Error('Error al comunicarse con el servidor');
       }
 
-      if (data?.error) {
-        console.error('❌ Error en respuesta:', data.error);
-        throw new Error(data.error);
+      // Check if the operation failed (success: false in response)
+      if (!data?.success) {
+        const errorMessage = data?.error || 'Error al crear el cadete';
+        console.error('❌ Error en respuesta:', errorMessage);
+        throw new Error(errorMessage);
       }
 
       console.log('✅ Cadete creado exitosamente');
@@ -122,13 +125,7 @@ export const CreateCadeteModal = ({ open, onOpenChange, onCadeteCreated }: Creat
     } catch (error) {
       console.error('❌ Error creating cadete:', error);
       
-      let errorMessage = 'No se pudo crear el cadete';
-      
-      if (error.message?.includes('already registered')) {
-        errorMessage = 'Este email ya está registrado';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
+      const errorMessage = error instanceof Error ? error.message : 'No se pudo crear el cadete';
       
       toast({
         title: 'Error',
