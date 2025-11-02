@@ -1321,6 +1321,7 @@ export type Database = {
           armado_estado: string | null
           armado_fecha: string | null
           armado_horario: string | null
+          armador_entrega_mercaderia: boolean | null
           branch_id: string | null
           cadete_id: string | null
           created_at: string
@@ -1355,6 +1356,7 @@ export type Database = {
           armado_estado?: string | null
           armado_fecha?: string | null
           armado_horario?: string | null
+          armador_entrega_mercaderia?: boolean | null
           branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
@@ -1389,6 +1391,7 @@ export type Database = {
           armado_estado?: string | null
           armado_fecha?: string | null
           armado_horario?: string | null
+          armador_entrega_mercaderia?: boolean | null
           branch_id?: string | null
           cadete_id?: string | null
           created_at?: string

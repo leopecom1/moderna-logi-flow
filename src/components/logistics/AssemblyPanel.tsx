@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Camera, CheckCircle, Calendar, Clock, User, Phone, MapPin, Package } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Camera, CheckCircle, Calendar, Clock, User, Phone, MapPin, Package, Truck, Wrench, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -29,6 +30,7 @@ interface AssemblyOrder {
   notes?: string;
   armado_confirmado_at?: string;
   armado_completado_at?: string;
+  armador_entrega_mercaderia: boolean;
 }
 
 interface AssemblyPhoto {
@@ -48,6 +50,7 @@ export const AssemblyPanel = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [changeDateModal, setChangeDateModal] = useState(false);
+  const [showDeliveryDialog, setShowDeliveryDialog] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
 
@@ -96,6 +99,7 @@ export const AssemblyPanel = () => {
         notes: order.notes,
         armado_confirmado_at: order.armado_confirmado_at,
         armado_completado_at: order.armado_completado_at,
+        armador_entrega_mercaderia: order.armador_entrega_mercaderia || false,
       }));
 
       setOrders(formattedOrders);
@@ -132,7 +136,18 @@ export const AssemblyPanel = () => {
     setShowDetailModal(true);
   };
 
-  const handleConfirmAssembly = async (orderId: string) => {
+  const handleConfirmAssemblyClick = async (order: AssemblyOrder) => {
+    // Si el estado es pendiente, preguntar quién entregará
+    if (order.armado_estado === 'pendiente') {
+      setSelectedOrder(order);
+      setShowDeliveryDialog(true);
+    } else {
+      // Si ya está confirmado o en otro estado, solo confirmar
+      await handleConfirmAssembly(order.id, false);
+    }
+  };
+
+  const handleConfirmAssembly = async (orderId: string, armadorEntrega: boolean) => {
     try {
       const { error } = await supabase
         .from('orders')
@@ -140,6 +155,7 @@ export const AssemblyPanel = () => {
           armado_estado: 'confirmado',
           armado_confirmado_por: profile?.user_id,
           armado_confirmado_at: new Date().toISOString(),
+          armador_entrega_mercaderia: armadorEntrega,
         })
         .eq('id', orderId);
 
@@ -147,9 +163,13 @@ export const AssemblyPanel = () => {
 
       toast({
         title: 'Confirmado',
-        description: 'Asistencia confirmada para este armado',
+        description: armadorEntrega 
+          ? 'Asistencia confirmada. Deberás llevar la mercadería.' 
+          : 'Asistencia confirmada para este armado',
       });
 
+      setShowDeliveryDialog(false);
+      setSelectedOrder(null);
       fetchOrders();
     } catch (error) {
       console.error('Error confirming assembly:', error);
@@ -323,6 +343,16 @@ export const AssemblyPanel = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Alerta si el armador debe llevar la mercadería */}
+              {order.armador_entrega_mercaderia && (
+                <Alert className="bg-yellow-50 border-yellow-200">
+                  <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                  <AlertDescription className="text-yellow-800">
+                    Debes llevar la mercadería a este armado
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4" />
                 <span>{format(new Date(order.armado_fecha), 'dd/MM/yyyy', { locale: es })}</span>
@@ -356,7 +386,7 @@ export const AssemblyPanel = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => handleConfirmAssembly(order.id)}
+                    onClick={() => handleConfirmAssemblyClick(order)}
                     className="w-full"
                   >
                     Confirmar Asistencia
@@ -585,6 +615,41 @@ export const AssemblyPanel = () => {
                 Guardar Cambios
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog para preguntar quién entrega */}
+      <Dialog open={showDeliveryDialog} onOpenChange={setShowDeliveryDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Quién entregará el pedido?</DialogTitle>
+            <DialogDescription>
+              Al confirmar tu asistencia, selecciona quién se encargará de la entrega del pedido.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Button
+              className="w-full h-auto py-4 flex flex-col items-center gap-2"
+              onClick={() => selectedOrder && handleConfirmAssembly(selectedOrder.id, true)}
+            >
+              <Wrench className="h-6 w-6" />
+              <div>
+                <div className="font-semibold">Yo llevaré la mercadería</div>
+                <div className="text-xs text-muted-foreground">Entregaré después del armado</div>
+              </div>
+            </Button>
+            <Button
+              className="w-full h-auto py-4 flex flex-col items-center gap-2"
+              variant="outline"
+              onClick={() => selectedOrder && handleConfirmAssembly(selectedOrder.id, false)}
+            >
+              <Truck className="h-6 w-6" />
+              <div>
+                <div className="font-semibold">Enviar por logística</div>
+                <div className="text-xs text-muted-foreground">Se asignará un cadete para la entrega</div>
+              </div>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
