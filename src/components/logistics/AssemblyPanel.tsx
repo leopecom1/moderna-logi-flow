@@ -501,17 +501,25 @@ export const AssemblyPanel = () => {
               {selectedOrder.armado_estado === 'en_progreso' && (
                 <div className="space-y-3">
                   <Label>Fotos del Progreso</Label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <input
                       type="file"
                       accept="image/*"
                       capture="environment"
                       onChange={(e) => handleUploadPhoto(e, 'progreso')}
                       className="hidden"
-                      id="progress-photo"
+                      id="progress-photo-camera"
                       disabled={uploadingPhoto}
                     />
-                    <label htmlFor="progress-photo">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleUploadPhoto(e, 'progreso')}
+                      className="hidden"
+                      id="progress-photo-file"
+                      disabled={uploadingPhoto}
+                    />
+                    <label htmlFor="progress-photo-camera">
                       <Button
                         type="button"
                         variant="outline"
@@ -521,7 +529,20 @@ export const AssemblyPanel = () => {
                       >
                         <span>
                           <Camera className="h-4 w-4 mr-2" />
-                          Subir Foto de Progreso
+                          Tomar Foto
+                        </span>
+                      </Button>
+                    </label>
+                    <label htmlFor="progress-photo-file">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploadingPhoto}
+                        asChild
+                      >
+                        <span>
+                          Seleccionar Archivo
                         </span>
                       </Button>
                     </label>
@@ -532,17 +553,25 @@ export const AssemblyPanel = () => {
               {(selectedOrder.armado_estado === 'en_progreso' || selectedOrder.armado_estado === 'confirmado') && (
                 <div className="space-y-3">
                   <Label>Finalizar Armado</Label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <input
                       type="file"
                       accept="image/*"
                       capture="environment"
                       onChange={(e) => handleUploadPhoto(e, 'completado')}
                       className="hidden"
-                      id="complete-photo"
+                      id="complete-photo-camera"
                       disabled={uploadingPhoto}
                     />
-                    <label htmlFor="complete-photo">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleUploadPhoto(e, 'completado')}
+                      className="hidden"
+                      id="complete-photo-file"
+                      disabled={uploadingPhoto}
+                    />
+                    <label htmlFor="complete-photo-camera">
                       <Button
                         type="button"
                         size="sm"
@@ -551,7 +580,20 @@ export const AssemblyPanel = () => {
                       >
                         <span>
                           <CheckCircle className="h-4 w-4 mr-2" />
-                          Finalizar con Foto
+                          Tomar Foto y Finalizar
+                        </span>
+                      </Button>
+                    </label>
+                    <label htmlFor="complete-photo-file">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={uploadingPhoto}
+                        asChild
+                      >
+                        <span>
+                          Seleccionar Archivo y Finalizar
                         </span>
                       </Button>
                     </label>
