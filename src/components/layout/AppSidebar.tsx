@@ -120,6 +120,7 @@ export const AppSidebar = () => {
         { title: 'Usuarios', url: '/user-management', icon: Crown },
         { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
         { title: 'Vehículos', url: '/vehiculos', icon: Car },
+        { title: 'Armadores', url: '/armadores', icon: Wrench },
       ]
     },
     {

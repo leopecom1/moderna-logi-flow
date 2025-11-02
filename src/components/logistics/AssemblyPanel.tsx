@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -44,6 +45,8 @@ interface AssemblyPhoto {
 export const AssemblyPanel = () => {
   const { profile } = useAuth();
   const [orders, setOrders] = useState<AssemblyOrder[]>([]);
+  const [armadores, setArmadores] = useState<any[]>([]);
+  const [selectedArmador, setSelectedArmador] = useState('');
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<AssemblyOrder | null>(null);
   const [photos, setPhotos] = useState<AssemblyPhoto[]>([]);
@@ -61,6 +64,7 @@ export const AssemblyPanel = () => {
 
   useEffect(() => {
     fetchOrders();
+    fetchArmadores();
     const subscription = supabase
       .channel('assembly_orders')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
@@ -80,6 +84,9 @@ export const AssemblyPanel = () => {
         .select(`
           *,
           customers (
+            name
+          ),
+          armadores (
             name
           )
         `)
@@ -120,6 +127,26 @@ export const AssemblyPanel = () => {
     }
   };
 
+  const fetchArmadores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('armadores')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setArmadores(data || []);
+    } catch (error) {
+      console.error('Error fetching armadores:', error);
+      toast({
+        title: 'Error',
+        description: 'No se pudieron cargar los armadores',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const fetchPhotos = async (orderId: string) => {
     try {
       const { data, error } = await supabase
@@ -145,6 +172,7 @@ export const AssemblyPanel = () => {
     // Si el estado es pendiente, preguntar quién entregará
     if (order.armado_estado === 'pendiente') {
       setSelectedOrder(order);
+      setSelectedArmador('');
       setShowDeliveryDialog(true);
     } else {
       // Si ya está confirmado o en otro estado, solo confirmar
@@ -153,6 +181,15 @@ export const AssemblyPanel = () => {
   };
 
   const handleConfirmAssembly = async (orderId: string, armadorEntrega: boolean) => {
+    if (!selectedArmador) {
+      toast({
+        title: 'Error',
+        description: 'Debes seleccionar un armador',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('orders')
@@ -161,6 +198,7 @@ export const AssemblyPanel = () => {
           armado_confirmado_por: profile?.user_id,
           armado_confirmado_at: new Date().toISOString(),
           armador_entrega_mercaderia: armadorEntrega,
+          armador_id: selectedArmador,
           status: 'armado', // Cambiar estado principal a armado
         })
         .eq('id', orderId);
@@ -176,6 +214,7 @@ export const AssemblyPanel = () => {
 
       setShowDeliveryDialog(false);
       setSelectedOrder(null);
+      setSelectedArmador('');
       fetchOrders();
     } catch (error) {
       console.error('Error confirming assembly:', error);
@@ -728,33 +767,56 @@ export const AssemblyPanel = () => {
       <Dialog open={showDeliveryDialog} onOpenChange={setShowDeliveryDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>¿Quién entregará el pedido?</DialogTitle>
+            <DialogTitle>Confirmar Asistencia de Armado</DialogTitle>
             <DialogDescription>
-              Al confirmar tu asistencia, selecciona quién se encargará de la entrega del pedido.
+              Selecciona el armador y quién entregará el pedido.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <Button
-              className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              onClick={() => selectedOrder && handleConfirmAssembly(selectedOrder.id, true)}
-            >
-              <Wrench className="h-6 w-6" />
-              <div>
-                <div className="font-semibold">Yo llevaré la mercadería</div>
-                <div className="text-xs text-muted-foreground">Entregaré después del armado</div>
+            <div className="space-y-2">
+              <Label htmlFor="armador">Armador *</Label>
+              <Select value={selectedArmador} onValueChange={setSelectedArmador}>
+                <SelectTrigger id="armador">
+                  <SelectValue placeholder="Selecciona un armador..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {armadores.map((armador) => (
+                    <SelectItem key={armador.id} value={armador.id}>
+                      {armador.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <Label>¿Quién entregará la mercadería?</Label>
+              <div className="space-y-2">
+                <Button
+                  className="w-full h-auto py-3 flex items-center gap-2 justify-start"
+                  onClick={() => selectedOrder && handleConfirmAssembly(selectedOrder.id, true)}
+                  disabled={!selectedArmador}
+                >
+                  <Wrench className="h-5 w-5" />
+                  <div className="text-left">
+                    <div className="font-semibold">El armador entregará</div>
+                    <div className="text-xs opacity-80">Se entregará después del armado</div>
+                  </div>
+                </Button>
+                <Button
+                  className="w-full h-auto py-3 flex items-center gap-2 justify-start"
+                  variant="outline"
+                  onClick={() => selectedOrder && handleConfirmAssembly(selectedOrder.id, false)}
+                  disabled={!selectedArmador}
+                >
+                  <Truck className="h-5 w-5" />
+                  <div className="text-left">
+                    <div className="font-semibold">Enviar por logística</div>
+                    <div className="text-xs opacity-80">Se asignará un cadete</div>
+                  </div>
+                </Button>
               </div>
-            </Button>
-            <Button
-              className="w-full h-auto py-4 flex flex-col items-center gap-2"
-              variant="outline"
-              onClick={() => selectedOrder && handleConfirmAssembly(selectedOrder.id, false)}
-            >
-              <Truck className="h-6 w-6" />
-              <div>
-                <div className="font-semibold">Enviar por logística</div>
-                <div className="text-xs text-muted-foreground">Se asignará un cadete para la entrega</div>
-              </div>
-            </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

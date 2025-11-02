@@ -64,6 +64,36 @@ export type Database = {
           },
         ]
       }
+      armadores: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       assembly_photos: {
         Row: {
           created_at: string | null
@@ -1322,6 +1352,7 @@ export type Database = {
           armado_fecha: string | null
           armado_horario: string | null
           armador_entrega_mercaderia: boolean | null
+          armador_id: string | null
           branch_id: string | null
           cadete_id: string | null
           created_at: string
@@ -1357,6 +1388,7 @@ export type Database = {
           armado_fecha?: string | null
           armado_horario?: string | null
           armador_entrega_mercaderia?: boolean | null
+          armador_id?: string | null
           branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
@@ -1392,6 +1424,7 @@ export type Database = {
           armado_fecha?: string | null
           armado_horario?: string | null
           armador_entrega_mercaderia?: boolean | null
+          armador_id?: string | null
           branch_id?: string | null
           cadete_id?: string | null
           created_at?: string
@@ -1418,6 +1451,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_armador_id_fkey"
+            columns: ["armador_id"]
+            isOneToOne: false
+            referencedRelation: "armadores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_branch_id_fkey"
             columns: ["branch_id"]

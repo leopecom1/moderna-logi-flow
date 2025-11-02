@@ -44,6 +44,7 @@ import RoutesManagementPage from "./pages/RoutesManagementPage";
 import RoutesViewPage from "./pages/RoutesViewPage";
 import CreditoModernaPage from "./pages/CreditoModernaPage";
 import AssemblyPage from "./pages/AssemblyPage";
+import ArmadoresPage from "./pages/ArmadoresPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -107,6 +108,7 @@ function App() {
             <Route path="/routes-management" element={<ProtectedRoute><RoutesManagementPage /></ProtectedRoute>} />
             <Route path="/routes-view" element={<ProtectedRoute><RoutesViewPage /></ProtectedRoute>} />
             <Route path="/assembly" element={<ProtectedRoute><AssemblyPage /></ProtectedRoute>} />
+            <Route path="/armadores" element={<ProtectedRoute><ArmadoresPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
