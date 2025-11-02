@@ -505,6 +505,7 @@ export const AssemblyPanel = () => {
                     <input
                       type="file"
                       accept="image/*"
+                      capture="environment"
                       onChange={(e) => handleUploadPhoto(e, 'progreso')}
                       className="hidden"
                       id="progress-photo"
@@ -535,6 +536,7 @@ export const AssemblyPanel = () => {
                     <input
                       type="file"
                       accept="image/*"
+                      capture="environment"
                       onChange={(e) => handleUploadPhoto(e, 'completado')}
                       className="hidden"
                       id="complete-photo"
