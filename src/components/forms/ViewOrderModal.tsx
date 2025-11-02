@@ -2,9 +2,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Calendar, Clock, User, Phone, MapPin, Package, Wrench } from 'lucide-react';
+import { Calendar, Clock, User, Phone, MapPin, Package, Wrench, Camera } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface AssemblyPhoto {
+  id: string;
+  photo_url: string;
+  photo_type: string;
+  created_at: string;
+  notes?: string;
+}
 
 interface ViewOrderModalProps {
   open: boolean;
@@ -13,6 +23,31 @@ interface ViewOrderModalProps {
 }
 
 export const ViewOrderModal = ({ open, onOpenChange, order }: ViewOrderModalProps) => {
+  const [assemblyPhotos, setAssemblyPhotos] = useState<AssemblyPhoto[]>([]);
+
+  useEffect(() => {
+    if (open && order?.id && order?.requiere_armado) {
+      fetchAssemblyPhotos();
+    }
+  }, [open, order?.id]);
+
+  const fetchAssemblyPhotos = async () => {
+    if (!order?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('assembly_photos')
+        .select('*')
+        .eq('order_id', order.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setAssemblyPhotos(data || []);
+    } catch (error) {
+      console.error('Error fetching assembly photos:', error);
+    }
+  };
+
   if (!order) return null;
 
   const getStatusConfig = (status: string) => {
@@ -200,6 +235,34 @@ export const ViewOrderModal = ({ open, onOpenChange, order }: ViewOrderModalProp
                     <p className="text-sm">
                       {format(new Date(order.armado_completado_at), 'dd/MM/yyyy HH:mm', { locale: es })}
                     </p>
+                  </div>
+                )}
+                
+                {/* Fotos de Armado */}
+                {assemblyPhotos.length > 0 && (
+                  <div className="mt-4">
+                    <Label className="text-muted-foreground flex items-center gap-2 mb-3">
+                      <Camera className="h-4 w-4" />
+                      Fotos del Armado
+                    </Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {assemblyPhotos.map((photo) => (
+                        <div key={photo.id} className="relative group">
+                          <img
+                            src={photo.photo_url}
+                            alt="Foto de armado"
+                            className="w-full h-32 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(photo.photo_url, '_blank')}
+                          />
+                          <Badge
+                            className="absolute top-1 right-1 text-xs"
+                            variant={photo.photo_type === 'completado' ? 'default' : 'secondary'}
+                          >
+                            {photo.photo_type === 'completado' ? 'Completado' : 'Progreso'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
