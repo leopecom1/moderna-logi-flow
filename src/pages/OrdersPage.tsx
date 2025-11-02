@@ -5,7 +5,7 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Search, Edit3, Building2, Trash2, Eye, Wrench, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Package, Plus, Search, Edit3, Building2, Trash2, Eye, Wrench, CheckCircle, Clock, AlertTriangle, Download } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
 import { EditOrderModal } from '@/components/forms/EditOrderModal';
@@ -49,6 +49,7 @@ const OrdersPage = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [importingWC, setImportingWC] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -142,6 +143,99 @@ const OrdersPage = () => {
     }
   };
 
+  const importWooCommerceOrders = async () => {
+    setImportingWC(true);
+    try {
+      // Get WooCommerce config
+      const { data: config, error: configError } = await supabase
+        .from('woocommerce_config')
+        .select('*')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (configError) throw configError;
+      if (!config) {
+        toast({
+          title: 'Error',
+          description: 'No hay configuración de WooCommerce activa',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Importando...',
+        description: 'Obteniendo pedidos de WooCommerce',
+      });
+
+      // Fetch orders from WooCommerce API
+      const response = await fetch(
+        `${config.store_url}/wp-json/wc/v3/orders`,
+        {
+          headers: {
+            Authorization: `Basic ${btoa(`${config.consumer_key}:${config.consumer_secret}`)}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('No se pudo conectar con WooCommerce');
+      }
+
+      const wcOrders = await response.json();
+
+      if (!Array.isArray(wcOrders) || wcOrders.length === 0) {
+        toast({
+          title: 'Sin pedidos',
+          description: 'No se encontraron pedidos en WooCommerce',
+        });
+        return;
+      }
+
+      // Process each order through the webhook function
+      let imported = 0;
+      let skipped = 0;
+
+      for (const wcOrder of wcOrders) {
+        try {
+          const { data, error } = await supabase.functions.invoke('woocommerce-webhook', {
+            body: wcOrder,
+          });
+
+          if (error) {
+            console.error(`Error importing order ${wcOrder.id}:`, error);
+            skipped++;
+          } else if (data?.success) {
+            imported++;
+          } else {
+            skipped++;
+          }
+        } catch (err) {
+          console.error(`Error processing order ${wcOrder.id}:`, err);
+          skipped++;
+        }
+      }
+
+      toast({
+        title: 'Importación completada',
+        description: `${imported} pedidos importados, ${skipped} omitidos`,
+      });
+
+      // Refresh orders list
+      fetchOrders();
+
+    } catch (error: any) {
+      console.error('Error importing WooCommerce orders:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudieron importar los pedidos',
+        variant: 'destructive',
+      });
+    } finally {
+      setImportingWC(false);
+    }
+  };
+
   const getStatusConfig = (status: string): { variant: any; label: string } => {
     switch (status) {
       case 'pendiente':
@@ -196,12 +290,33 @@ const OrdersPage = () => {
             <h1 className="text-3xl font-bold">Ventas</h1>
             <p className="text-muted-foreground">Gestiona todas las ventas del sistema</p>
           </div>
-          {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Venta
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {profile?.role === 'gerencia' && (
+              <Button 
+                variant="outline" 
+                onClick={importWooCommerceOrders}
+                disabled={importingWC}
+              >
+                {importingWC ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2 animate-spin" />
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Importar de WooCommerce
+                  </>
+                )}
+              </Button>
+            )}
+            {(profile?.role === 'gerencia' || profile?.role === 'vendedor') && (
+              <Button onClick={() => setShowCreateModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva Venta
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center space-x-2">
