@@ -5,8 +5,10 @@ import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Search, Edit3, Building2, Trash2, Eye, Wrench, CheckCircle, Clock, AlertTriangle, Download } from 'lucide-react';
+import { Package, Plus, Search, Edit3, Building2, Trash2, Eye, Wrench, CheckCircle, Clock, AlertTriangle, Download, ShoppingCart } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Link } from 'react-router-dom';
 import { CreateOrderModal } from '@/components/forms/CreateOrderModal';
 import { EditOrderModal } from '@/components/forms/EditOrderModal';
 import { ViewOrderModal } from '@/components/forms/ViewOrderModal';
@@ -50,11 +52,13 @@ const OrdersPage = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string>('');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [importingWC, setImportingWC] = useState(false);
+  const [pendingWCCount, setPendingWCCount] = useState(0);
 
   useEffect(() => {
     fetchOrders();
     fetchBranches();
     updateCompletedAssemblyOrders();
+    fetchPendingWCOrders();
   }, []);
 
   const updateCompletedAssemblyOrders = async () => {
@@ -88,10 +92,32 @@ const OrdersPage = () => {
             name
           )
         `)
+        .not('order_number', 'like', 'WC-%')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrders(data || []);
+      
+      // Also fetch reviewed WooCommerce orders
+      const { data: wcData, error: wcError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          branches (
+            id,
+            name
+          ),
+          customers (
+            id,
+            name
+          )
+        `)
+        .like('order_number', 'WC-%')
+        .neq('status', 'pendiente')
+        .order('created_at', { ascending: false });
+
+      if (wcError) throw wcError;
+
+      setOrders([...(data || []), ...(wcData || [])]);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -101,6 +127,21 @@ const OrdersPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPendingWCOrders = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .like('order_number', 'WC-%')
+        .eq('status', 'pendiente');
+
+      if (error) throw error;
+      setPendingWCCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching pending WC orders:', error);
     }
   };
 
@@ -223,6 +264,7 @@ const OrdersPage = () => {
 
       // Refresh orders list
       fetchOrders();
+      fetchPendingWCOrders();
 
     } catch (error: any) {
       console.error('Error importing WooCommerce orders:', error);
@@ -318,6 +360,22 @@ const OrdersPage = () => {
             )}
           </div>
         </div>
+
+        {pendingWCCount > 0 && (
+          <Alert className="border-orange-500 bg-orange-50 dark:bg-orange-950/20">
+            <ShoppingCart className="h-4 w-4 text-orange-500" />
+            <AlertDescription className="flex items-center justify-between">
+              <span className="text-orange-900 dark:text-orange-100">
+                Hay {pendingWCCount} {pendingWCCount === 1 ? 'pedido' : 'pedidos'} de WooCommerce pendiente{pendingWCCount === 1 ? '' : 's'} de revisión
+              </span>
+              <Button asChild variant="outline" size="sm" className="ml-4">
+                <Link to="/woocommerce-review">
+                  Revisar pedidos
+                </Link>
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <div className="flex items-center space-x-2">
           <Search className="h-4 w-4 text-muted-foreground" />
