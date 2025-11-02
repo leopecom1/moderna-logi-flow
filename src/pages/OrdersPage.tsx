@@ -239,9 +239,17 @@ const OrdersPage = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusConfig(order.status).variant}>
-                      {getStatusConfig(order.status).label}
-                    </Badge>
+                    {(() => {
+                      const effectiveStatus = (order.requiere_armado && order.armado_estado === 'completado')
+                        ? 'entregado'
+                        : order.status;
+                      const cfg = getStatusConfig(effectiveStatus);
+                      return (
+                        <Badge variant={cfg.variant}>
+                          {cfg.label}
+                        </Badge>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     {order.branches ? (
