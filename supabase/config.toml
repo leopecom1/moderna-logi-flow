@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.create-cadete]
 verify_jwt = true
+
+[functions.woocommerce-webhook]
+verify_jwt = false

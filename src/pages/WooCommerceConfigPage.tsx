@@ -293,19 +293,67 @@ export default function WooCommerceConfigPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Cómo configurar WooCommerce</CardTitle>
+            <CardTitle>Paso 1: Configurar API REST</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
               <li>Accede a tu panel de administración de WooCommerce</li>
-              <li>Ve a Ajustes → Avanzado → API REST</li>
+              <li>Ve a <strong>WooCommerce → Ajustes → Avanzado → API REST</strong></li>
               <li>Haz clic en "Añadir clave"</li>
               <li>Dale un nombre descriptivo (ej: "Moderna Integration")</li>
-              <li>Selecciona permisos de "Lectura/Escritura"</li>
+              <li>Selecciona permisos de <strong>"Lectura/Escritura"</strong></li>
               <li>Genera la clave y copia el Consumer Key y Consumer Secret</li>
-              <li>Pega las credenciales en los campos de arriba</li>
-              <li>Configura un webhook en WooCommerce que apunte a tu servidor</li>
+              <li>Pega las credenciales en los campos de arriba y guarda</li>
             </ol>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Paso 2: Configurar Webhook para Sincronización</CardTitle>
+            <CardDescription>
+              Los pedidos se sincronizarán automáticamente cuando configures este webhook
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+              <li>En tu panel de WooCommerce, ve a <strong>WooCommerce → Ajustes → Avanzado → Webhooks</strong></li>
+              <li>Haz clic en "Añadir webhook"</li>
+              <li>Completa los siguientes campos:</li>
+            </ol>
+            
+            <div className="mt-4 p-4 bg-muted rounded-lg space-y-2">
+              <div>
+                <Label className="text-xs">Nombre</Label>
+                <p className="text-sm font-mono">Moderna Orders Sync</p>
+              </div>
+              <div>
+                <Label className="text-xs">Estado</Label>
+                <p className="text-sm font-mono">Activo</p>
+              </div>
+              <div>
+                <Label className="text-xs">Tema</Label>
+                <p className="text-sm font-mono">Order created</p>
+              </div>
+              <div>
+                <Label className="text-xs">URL de entrega</Label>
+                <p className="text-sm font-mono break-all">
+                  https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-webhook
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Versión de API</Label>
+                <p className="text-sm font-mono">WP REST API Integration v3</p>
+              </div>
+            </div>
+
+            <div className="mt-4 text-sm">
+              <p className="font-semibold">Repite el proceso creando webhooks adicionales para:</p>
+              <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
+                <li>Order updated (para actualizar el estado)</li>
+                <li>Order deleted (opcional)</li>
+              </ul>
+            </div>
           </CardContent>
         </Card>
       </div>
