@@ -3,44 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { WooCommerceProduct, WooCommerceProductCreate } from '@/types/woocommerce';
 import { toast } from '@/hooks/use-toast';
 
-const EDGE_FUNCTION_URL = 'https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products';
-
-async function callWooCommerceAPI(endpoint: string, method: string = 'GET', body?: any) {
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session) {
-    throw new Error('No authenticated session');
-  }
-
-  const options: RequestInit = {
-    method,
-    headers: {
-      'Authorization': `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-  };
-
-  if (body && method !== 'GET') {
-    options.body = JSON.stringify(body);
-  }
-
+async function callWooCommerceAPI(endpoint: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', body?: any) {
   console.log(`[WooCommerce] ${method} ${endpoint}`, body);
 
   try {
-    const response = await fetch(`${EDGE_FUNCTION_URL}${endpoint}`, options);
+    const { data, error } = await supabase.functions.invoke('woocommerce-products' + endpoint, {
+      method,
+      body: body || undefined,
+    });
 
-    if (!response.ok) {
-      let errorMessage = 'WooCommerce API error';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorMessage;
-      } catch {
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      }
-      throw new Error(errorMessage);
+    if (error) {
+      console.error('[WooCommerce] API call failed:', error);
+      throw new Error(error.message || 'WooCommerce API error');
     }
 
-    return await response.json();
+    return data;
   } catch (error: any) {
     console.error('[WooCommerce] API call failed:', error);
     throw error;
@@ -157,25 +134,16 @@ export function useUploadWooCommerceImage() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error('No authenticated session');
-      }
-
-      const response = await fetch(`${EDGE_FUNCTION_URL}/media`, {
+      const { data, error } = await supabase.functions.invoke('woocommerce-products/media', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
         body: formData,
       });
 
-      if (!response.ok) {
+      if (error) {
         throw new Error('Error uploading image');
       }
 
-      return await response.json();
+      return data;
     },
     onError: (error: Error) => {
       toast({
