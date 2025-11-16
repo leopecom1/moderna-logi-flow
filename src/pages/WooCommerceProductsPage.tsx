@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MainLayout } from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -164,7 +165,8 @@ export default function WooCommerceProductsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <MainLayout>
+      <div className="container mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <PackageOpen className="h-8 w-8 text-primary" />
@@ -547,6 +549,7 @@ export default function WooCommerceProductsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </MainLayout>
   );
 }
