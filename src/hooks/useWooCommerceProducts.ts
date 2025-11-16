@@ -24,14 +24,27 @@ async function callWooCommerceAPI(endpoint: string, method: string = 'GET', body
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${EDGE_FUNCTION_URL}${endpoint}`, options);
+  console.log(`[WooCommerce] ${method} ${endpoint}`, body);
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.error || 'WooCommerce API error');
+  try {
+    const response = await fetch(`${EDGE_FUNCTION_URL}${endpoint}`, options);
+
+    if (!response.ok) {
+      let errorMessage = 'WooCommerce API error';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    console.error('[WooCommerce] API call failed:', error);
+    throw error;
   }
-
-  return await response.json();
 }
 
 export function useWooCommerceProducts(

@@ -73,23 +73,40 @@ export default function WooCommerceProductsPage() {
       return;
     }
 
-    try {
-      for (const [productId, changes] of changesArray) {
+    const errors: string[] = [];
+    let successCount = 0;
+
+    for (const [productId, changes] of changesArray) {
+      try {
         await updateMutation.mutateAsync({
           id: parseInt(productId),
           data: changes as any
         });
+        successCount++;
+      } catch (error: any) {
+        console.error(`Error updating product ${productId}:`, error);
+        const productName = products?.find((p: WooCommerceProduct) => p.id === parseInt(productId))?.name || productId;
+        errors.push(`${productName}: ${error.message || 'Error desconocido'}`);
       }
-      
-      setPendingChanges({});
+    }
+    
+    setPendingChanges({});
+    
+    if (errors.length === 0) {
       toast({
         title: 'Cambios guardados',
-        description: `Se actualizaron ${changesArray.length} productos correctamente`,
+        description: `Se actualizaron ${successCount} productos correctamente`,
       });
-    } catch (error) {
+    } else if (successCount > 0) {
+      toast({
+        title: 'Guardado parcial',
+        description: `${successCount} productos actualizados. ${errors.length} fallaron: ${errors.join(', ')}`,
+        variant: 'destructive',
+      });
+    } else {
       toast({
         title: 'Error',
-        description: 'Hubo un error al guardar algunos cambios',
+        description: `No se pudo guardar ningún producto. Errores: ${errors.join(', ')}`,
         variant: 'destructive',
       });
     }
