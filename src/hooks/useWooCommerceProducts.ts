@@ -39,7 +39,16 @@ export function useWooCommerceProducts(
       if (category) endpoint += `&category=${category}`;
       if (status) endpoint += `&status=${status}`;
       
-      return await callWooCommerceAPI(endpoint);
+      const response = await supabase.functions.invoke('woocommerce-products' + endpoint, {
+        method: 'GET',
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'WooCommerce API error');
+      }
+
+      // Response now includes pagination metadata in the body
+      return response.data;
     },
   });
 }

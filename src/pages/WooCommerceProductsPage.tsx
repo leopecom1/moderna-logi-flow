@@ -7,7 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { PackageOpen, Plus, Search, Edit2, Trash2, RefreshCw, Tag, Loader2, Save } from 'lucide-react';
+import { PackageOpen, Plus, Search, Edit2, Trash2, RefreshCw, Tag, Loader2, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
 import { useWooCommerceProducts, useUpdateWooCommerceProduct, useDeleteWooCommerceProduct } from '@/hooks/useWooCommerceProducts';
 import { useWooCommerceCategories } from '@/hooks/useWooCommerceCategories';
 import { ProductWooCommerceModal } from '@/components/forms/ProductWooCommerceModal';
@@ -36,14 +46,19 @@ export default function WooCommerceProductsPage() {
   const [bulkEditMode, setBulkEditMode] = useState(false);
   const [pendingChanges, setPendingChanges] = useState<Record<number, Partial<WooCommerceProduct>>>({});
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveProgress, setSaveProgress] = useState(0);
 
-  const { data: products, isLoading, refetch } = useWooCommerceProducts(
+  const { data, isLoading, refetch } = useWooCommerceProducts(
     page,
     20,
     search,
     categoryFilter === 'all' ? undefined : categoryFilter,
     statusFilter === 'all' ? undefined : statusFilter
   );
+  
+  const products = data?.products || [];
+  const totalPages = data?.totalPages || 1;
   const { data: categories } = useWooCommerceCategories();
   const updateMutation = useUpdateWooCommerceProduct();
   const deleteMutation = useDeleteWooCommerceProduct();
@@ -73,10 +88,14 @@ export default function WooCommerceProductsPage() {
       return;
     }
 
+    setIsSaving(true);
+    setSaveProgress(0);
     const errors: string[] = [];
     let successCount = 0;
+    const total = changesArray.length;
 
-    for (const [productId, changes] of changesArray) {
+    for (let i = 0; i < changesArray.length; i++) {
+      const [productId, changes] = changesArray[i];
       try {
         await updateMutation.mutateAsync({
           id: parseInt(productId),
@@ -88,8 +107,12 @@ export default function WooCommerceProductsPage() {
         const productName = products?.find((p: WooCommerceProduct) => p.id === parseInt(productId))?.name || productId;
         errors.push(`${productName}: ${error.message || 'Error desconocido'}`);
       }
+      
+      // Update progress
+      setSaveProgress(((i + 1) / total) * 100);
     }
     
+    setIsSaving(false);
     setPendingChanges({});
     
     if (errors.length === 0) {
@@ -167,8 +190,17 @@ export default function WooCommerceProductsPage() {
             </Label>
           </div>
           {bulkEditMode && Object.keys(pendingChanges).length > 0 && (
-            <Button onClick={handleSaveBulkChanges} variant="default" className="mr-2">
-              <Save className="h-4 w-4 mr-2" />
+            <Button 
+              onClick={handleSaveBulkChanges} 
+              variant="default" 
+              className="mr-2"
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
               Guardar ({Object.keys(pendingChanges).length})
             </Button>
           )}
@@ -188,6 +220,16 @@ export default function WooCommerceProductsPage() {
       </div>
 
       <Card className="p-6">
+        {isSaving && (
+          <div className="mb-4 space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span>Guardando cambios...</span>
+              <span>{Math.round(saveProgress)}%</span>
+            </div>
+            <Progress value={saveProgress} className="h-2" />
+          </div>
+        )}
+        
         <div className="flex gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -394,6 +436,86 @@ export default function WooCommerceProductsPage() {
               <Plus className="h-4 w-4 mr-2" />
               Crear Producto
             </Button>
+          </div>
+        )}
+
+        {!isLoading && products && products.length > 0 && totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-between">
+            <div className="text-sm text-muted-foreground">
+              Página {page} de {totalPages}
+              {Object.keys(pendingChanges).length > 0 && (
+                <span className="ml-2 text-primary font-medium">
+                  • {Object.keys(pendingChanges).length} cambios pendientes
+                </span>
+              )}
+            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Anterior
+                  </Button>
+                </PaginationItem>
+                
+                {page > 2 && (
+                  <>
+                    <PaginationItem>
+                      <PaginationLink onClick={() => setPage(1)}>1</PaginationLink>
+                    </PaginationItem>
+                    {page > 3 && <PaginationEllipsis />}
+                  </>
+                )}
+                
+                {page > 1 && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setPage(page - 1)}>
+                      {page - 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                <PaginationItem>
+                  <PaginationLink isActive>{page}</PaginationLink>
+                </PaginationItem>
+                
+                {page < totalPages && (
+                  <PaginationItem>
+                    <PaginationLink onClick={() => setPage(page + 1)}>
+                      {page + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                )}
+                
+                {page < totalPages - 1 && (
+                  <>
+                    {page < totalPages - 2 && <PaginationEllipsis />}
+                    <PaginationItem>
+                      <PaginationLink onClick={() => setPage(totalPages)}>
+                        {totalPages}
+                      </PaginationLink>
+                    </PaginationItem>
+                  </>
+                )}
+                
+                <PaginationItem>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Siguiente
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </Card>
