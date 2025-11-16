@@ -3,15 +3,17 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { PackageOpen, Plus, Search, Edit2, Trash2, RefreshCw, Tag, Loader2 } from 'lucide-react';
+import { PackageOpen, Plus, Search, Edit2, Trash2, RefreshCw, Tag, Loader2, Save } from 'lucide-react';
 import { useWooCommerceProducts, useUpdateWooCommerceProduct, useDeleteWooCommerceProduct } from '@/hooks/useWooCommerceProducts';
 import { useWooCommerceCategories } from '@/hooks/useWooCommerceCategories';
 import { ProductWooCommerceModal } from '@/components/forms/ProductWooCommerceModal';
 import { CategoriesWooCommerceModal } from '@/components/forms/CategoriesWooCommerceModal';
 import { WooCommerceProduct } from '@/types/woocommerce';
+import { toast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +33,8 @@ export default function WooCommerceProductsPage() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<WooCommerceProduct | null>(null);
+  const [bulkEditMode, setBulkEditMode] = useState(false);
+  const [pendingChanges, setPendingChanges] = useState<Record<number, Partial<WooCommerceProduct>>>({});
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const { data: products, isLoading, refetch } = useWooCommerceProducts(
@@ -47,6 +51,55 @@ export default function WooCommerceProductsPage() {
   const handleEdit = (product: WooCommerceProduct) => {
     setSelectedProduct(product);
     setShowProductModal(true);
+  };
+
+  const handleCellChange = (productId: number, field: string, value: any) => {
+    setPendingChanges(prev => ({
+      ...prev,
+      [productId]: {
+        ...prev[productId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSaveBulkChanges = async () => {
+    const changesArray = Object.entries(pendingChanges);
+    if (changesArray.length === 0) {
+      toast({
+        title: 'Sin cambios',
+        description: 'No hay cambios pendientes para guardar',
+      });
+      return;
+    }
+
+    try {
+      for (const [productId, changes] of changesArray) {
+        await updateMutation.mutateAsync({
+          id: parseInt(productId),
+          data: changes as any
+        });
+      }
+      
+      setPendingChanges({});
+      toast({
+        title: 'Cambios guardados',
+        description: `Se actualizaron ${changesArray.length} productos correctamente`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Hubo un error al guardar algunos cambios',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getCellValue = (product: WooCommerceProduct, field: string): any => {
+    if (pendingChanges[product.id]?.[field] !== undefined) {
+      return pendingChanges[product.id][field];
+    }
+    return (product as any)[field];
   };
 
   const handleCreate = () => {
@@ -82,7 +135,26 @@ export default function WooCommerceProductsPage() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-2 px-3 py-2 bg-secondary rounded-lg mr-2">
+            <Switch
+              checked={bulkEditMode}
+              onCheckedChange={(checked) => {
+                setBulkEditMode(checked);
+                if (!checked) setPendingChanges({});
+              }}
+              id="bulk-edit"
+            />
+            <Label htmlFor="bulk-edit" className="text-sm cursor-pointer">
+              Edición masiva
+            </Label>
+          </div>
+          {bulkEditMode && Object.keys(pendingChanges).length > 0 && (
+            <Button onClick={handleSaveBulkChanges} variant="default" className="mr-2">
+              <Save className="h-4 w-4 mr-2" />
+              Guardar ({Object.keys(pendingChanges).length})
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setShowCategoriesModal(true)}>
             <Tag className="h-4 w-4 mr-2" />
             Categorías
@@ -146,12 +218,12 @@ export default function WooCommerceProductsPage() {
                   <TableHead className="w-20">Imagen</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>SKU</TableHead>
-                  <TableHead className="text-right">Precio Regular</TableHead>
-                  <TableHead className="text-right">Precio Oferta</TableHead>
+                  <TableHead className="text-right w-[140px]">Precio Regular</TableHead>
+                  <TableHead className="text-right w-[140px]">Precio Oferta</TableHead>
                   <TableHead className="text-center">Stock</TableHead>
-                  <TableHead>Categorías</TableHead>
+                  <TableHead className="w-[200px]">Categorías</TableHead>
                   <TableHead className="text-center">Estado</TableHead>
-                  <TableHead className="w-32">Acciones</TableHead>
+                  {!bulkEditMode && <TableHead className="w-32">Acciones</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -181,16 +253,37 @@ export default function WooCommerceProductsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{product.sku || '-'}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      ${product.regular_price}
+                    <TableCell className="text-right">
+                      {bulkEditMode ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={getCellValue(product, 'regular_price')}
+                          onChange={(e) => handleCellChange(product.id, 'regular_price', e.target.value)}
+                          className="w-full text-right"
+                        />
+                      ) : (
+                        <span className="font-medium">${product.regular_price}</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
-                      {product.on_sale ? (
-                        <span className="text-destructive font-medium">
-                          ${product.sale_price}
-                        </span>
+                      {bulkEditMode ? (
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={getCellValue(product, 'sale_price') || ''}
+                          onChange={(e) => handleCellChange(product.id, 'sale_price', e.target.value)}
+                          className="w-full text-right"
+                          placeholder="Sin oferta"
+                        />
                       ) : (
-                        '-'
+                        product.on_sale ? (
+                          <span className="text-destructive font-medium">
+                            ${product.sale_price}
+                          </span>
+                        ) : (
+                          '-'
+                        )
                       )}
                     </TableCell>
                     <TableCell className="text-center">
@@ -204,43 +297,69 @@ export default function WooCommerceProductsPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {product.categories.slice(0, 2).map((cat) => (
-                          <Badge key={cat.id} variant="outline" className="text-xs">
-                            {cat.name}
-                          </Badge>
-                        ))}
-                        {product.categories.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{product.categories.length - 2}
-                          </Badge>
-                        )}
-                      </div>
+                      {bulkEditMode ? (
+                        <Select
+                          value={getCellValue(product, 'categories')?.[0]?.id?.toString() || ''}
+                          onValueChange={(value) => {
+                            const selectedCat = categories?.find((c: any) => c.id.toString() === value);
+                            if (selectedCat) {
+                              handleCellChange(product.id, 'categories', [{ id: selectedCat.id, name: selectedCat.name }]);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Seleccionar..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categories?.map((cat: any) => (
+                              <SelectItem key={cat.id} value={cat.id.toString()}>
+                                {cat.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {product.categories.slice(0, 2).map((cat) => (
+                            <Badge key={cat.id} variant="outline" className="text-xs">
+                              {cat.name}
+                            </Badge>
+                          ))}
+                          {product.categories.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{product.categories.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       <Switch
                         checked={product.status === 'publish'}
                         onCheckedChange={() => handleToggleStatus(product)}
+                        disabled={bulkEditMode}
                       />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(product)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(product.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+                    {!bulkEditMode && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(product)}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(product.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
