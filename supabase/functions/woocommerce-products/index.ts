@@ -100,18 +100,24 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    console.log('Auth header present:', !!authHeader);
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader! },
         },
       }
     );
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    if (!user) {
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    console.log('User auth result:', { user: !!user, error: userError?.message });
+    
+    if (userError || !user) {
+      console.error('User authentication failed:', userError);
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -119,7 +125,10 @@ serve(async (req) => {
     }
 
     const config = await getWooCommerceConfig(supabaseClient);
+    console.log('WooCommerce config loaded:', !!config);
+    
     if (!config) {
+      console.error('No active WooCommerce configuration found');
       return new Response(JSON.stringify({ error: 'WooCommerce not configured' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
