@@ -83,7 +83,16 @@ async function makeWooCommerceRequest(
     throw new Error(`WooCommerce API error: ${response.status} ${errorText}`);
   }
 
-  return await response.json();
+  const data = await response.json();
+  
+  // Return both data and pagination headers
+  return {
+    data,
+    headers: {
+      'X-WP-Total': response.headers.get('X-WP-Total') || '0',
+      'X-WP-TotalPages': response.headers.get('X-WP-TotalPages') || '1',
+    }
+  };
 }
 
 serve(async (req) => {
@@ -233,7 +242,21 @@ serve(async (req) => {
     const result = await makeWooCommerceRequest(config, endpoint, wooMethod, body);
     console.log('[Success] Request completed');
 
-    return new Response(JSON.stringify(result), {
+    // For GET /products requests, include pagination metadata
+    if (wooMethod === 'GET' && endpoint.includes('/products?')) {
+      const responseBody = {
+        products: result.data,
+        total: parseInt(result.headers['X-WP-Total'] || '0'),
+        totalPages: parseInt(result.headers['X-WP-TotalPages'] || '1'),
+      };
+      
+      return new Response(JSON.stringify(responseBody), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // For other requests, return data directly
+    return new Response(JSON.stringify(result.data), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
