@@ -90,6 +90,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log(`[Request] ${req.method} ${req.url}`);
+    
     const authHeader = req.headers.get('Authorization') || '';
     console.log('Auth header present:', !!authHeader);
 
@@ -125,12 +127,22 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
+    console.log('[URL] Full URL:', req.url);
+    console.log('[URL] Pathname:', url.pathname);
+    
     const path = url.pathname.replace('/woocommerce-products', '');
+    console.log('[URL] Extracted path:', path);
+    
     const method = req.method;
 
     let body = null;
     if (method !== 'GET' && method !== 'DELETE') {
-      body = await req.json();
+      try {
+        body = await req.json();
+        console.log('[Body]', JSON.stringify(body));
+      } catch (e) {
+        console.error('[Body] Failed to parse JSON:', e);
+      }
     }
 
     let endpoint = '';
@@ -208,24 +220,28 @@ serve(async (req) => {
     }
 
     if (!endpoint) {
+      console.error('[Endpoint] No valid endpoint found for path:', path);
       return new Response(JSON.stringify({ error: 'Invalid endpoint' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
+    console.log(`[WooCommerce] Calling ${wooMethod} ${endpoint}`);
     const result = await makeWooCommerceRequest(config, endpoint, wooMethod, body);
+    console.log('[Success] Request completed');
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error: any) {
-    console.error('Error in woocommerce-products function:', error);
+    console.error('[Error] Function failed:', error);
+    console.error('[Error] Stack:', error.stack);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error' }),
       {
-        status: 500,
+        status: error.status || 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
