@@ -53,35 +53,25 @@ async function makeWooCommerceRequest(
   method: string = 'GET',
   body?: any
 ): Promise<any> {
-  const url = `${config.store_url}/wp-json/wc/v3${endpoint}`;
-  
-  const oauthParams: Record<string, string> = {
-    oauth_consumer_key: config.consumer_key,
-    oauth_nonce: Math.random().toString(36).substring(7),
-    oauth_signature_method: 'HMAC-SHA256',
-    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-    oauth_version: '1.0',
-  };
-
-  const signature = generateOAuthSignature(method, url, oauthParams, config.consumer_secret);
-  oauthParams.oauth_signature = signature;
-
-  const authHeader = 'OAuth ' + Object.keys(oauthParams)
-    .map(key => `${key}="${encodeURIComponent(oauthParams[key])}"`)
-    .join(', ');
+  // Use query string auth (recommended over OAuth header for HTTPS)
+  const baseUrl = `${config.store_url.replace(/\/$/, '')}/wp-json/wc/v3`;
+  const urlObj = new URL(baseUrl + endpoint);
+  // Append WooCommerce credentials
+  urlObj.searchParams.set('consumer_key', config.consumer_key);
+  urlObj.searchParams.set('consumer_secret', config.consumer_secret);
 
   const options: RequestInit = {
     method,
     headers: {
-      'Authorization': authHeader,
       'Content-Type': 'application/json',
     },
   };
 
-  if (body && method !== 'GET') {
+  if (body && method !== 'GET' && method !== 'DELETE') {
     options.body = JSON.stringify(body);
   }
 
+  const url = urlObj.toString();
   console.log(`Making ${method} request to WooCommerce:`, url);
   const response = await fetch(url, options);
   
