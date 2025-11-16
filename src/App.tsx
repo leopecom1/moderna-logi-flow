@@ -47,6 +47,7 @@ import AssemblyPage from "./pages/AssemblyPage";
 import ArmadoresPage from "./pages/ArmadoresPage";
 import WooCommerceConfigPage from "./pages/WooCommerceConfigPage";
 import WooCommerceReviewPage from "./pages/WooCommerceReviewPage";
+import WooCommerceProductsPage from "./pages/WooCommerceProductsPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -111,9 +112,10 @@ function App() {
             <Route path="/routes-view" element={<ProtectedRoute><RoutesViewPage /></ProtectedRoute>} />
             <Route path="/assembly" element={<ProtectedRoute><AssemblyPage /></ProtectedRoute>} />
             <Route path="/armadores" element={<ProtectedRoute><ArmadoresPage /></ProtectedRoute>} />
-            <Route path="/woocommerce-config" element={<ProtectedRoute><WooCommerceConfigPage /></ProtectedRoute>} />
-            <Route path="/woocommerce-review" element={<ProtectedRoute><WooCommerceReviewPage /></ProtectedRoute>} />
-            <Route path="*" element={<NotFound />} />
+          <Route path="/woocommerce-config" element={<ProtectedRoute><WooCommerceConfigPage /></ProtectedRoute>} />
+          <Route path="/woocommerce-review" element={<ProtectedRoute><WooCommerceReviewPage /></ProtectedRoute>} />
+          <Route path="/woocommerce-products" element={<ProtectedRoute><WooCommerceProductsPage /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
       </TooltipProvider>

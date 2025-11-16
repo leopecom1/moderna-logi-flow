@@ -1,0 +1,294 @@
+import { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { PackageOpen, Plus, Search, Edit2, Trash2, RefreshCw, Tag, Loader2 } from 'lucide-react';
+import { useWooCommerceProducts, useUpdateWooCommerceProduct, useDeleteWooCommerceProduct } from '@/hooks/useWooCommerceProducts';
+import { useWooCommerceCategories } from '@/hooks/useWooCommerceCategories';
+import { ProductWooCommerceModal } from '@/components/forms/ProductWooCommerceModal';
+import { CategoriesWooCommerceModal } from '@/components/forms/CategoriesWooCommerceModal';
+import { WooCommerceProduct } from '@/types/woocommerce';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+
+export default function WooCommerceProductsPage() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<WooCommerceProduct | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  const { data: products, isLoading, refetch } = useWooCommerceProducts(
+    page,
+    20,
+    search,
+    categoryFilter,
+    statusFilter
+  );
+  const { data: categories } = useWooCommerceCategories();
+  const updateMutation = useUpdateWooCommerceProduct();
+  const deleteMutation = useDeleteWooCommerceProduct();
+
+  const handleEdit = (product: WooCommerceProduct) => {
+    setSelectedProduct(product);
+    setShowProductModal(true);
+  };
+
+  const handleCreate = () => {
+    setSelectedProduct(null);
+    setShowProductModal(true);
+  };
+
+  const handleToggleStatus = async (product: WooCommerceProduct) => {
+    await updateMutation.mutateAsync({
+      id: product.id,
+      data: {
+        status: product.status === 'publish' ? 'draft' : 'publish',
+      },
+    });
+  };
+
+  const handleDelete = async () => {
+    if (deleteId) {
+      await deleteMutation.mutateAsync(deleteId);
+      setDeleteId(null);
+    }
+  };
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <PackageOpen className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold">Productos Online</h1>
+            <p className="text-muted-foreground">
+              Gestión completa de productos WooCommerce
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowCategoriesModal(true)}>
+            <Tag className="h-4 w-4 mr-2" />
+            Categorías
+          </Button>
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sincronizar
+          </Button>
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nuevo Producto
+          </Button>
+        </div>
+      </div>
+
+      <Card className="p-6">
+        <div className="flex gap-4 mb-6">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar productos por nombre o SKU..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Todas las categorías" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todas las categorías</SelectItem>
+              {categories?.map((cat: any) => (
+                <SelectItem key={cat.id} value={cat.id.toString()}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Todos los estados" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="publish">Publicados</SelectItem>
+              <SelectItem value="draft">Borradores</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-20">Imagen</TableHead>
+                  <TableHead>Producto</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead className="text-right">Precio Regular</TableHead>
+                  <TableHead className="text-right">Precio Oferta</TableHead>
+                  <TableHead className="text-center">Stock</TableHead>
+                  <TableHead>Categorías</TableHead>
+                  <TableHead className="text-center">Estado</TableHead>
+                  <TableHead className="w-32">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products?.map((product: WooCommerceProduct) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      {product.images[0] ? (
+                        <img
+                          src={product.images[0].src}
+                          alt={product.name}
+                          className="h-12 w-12 object-cover rounded border"
+                        />
+                      ) : (
+                        <div className="h-12 w-12 bg-muted rounded border flex items-center justify-center">
+                          <PackageOpen className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{product.name}</div>
+                        {product.featured && (
+                          <Badge variant="secondary" className="mt-1">
+                            Destacado
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{product.sku || '-'}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      ${product.regular_price}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {product.on_sale ? (
+                        <span className="text-destructive font-medium">
+                          ${product.sale_price}
+                        </span>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant={product.stock_status === 'instock' ? 'default' : 'destructive'}>
+                        {product.stock_status === 'instock' ? 'En Stock' : 'Sin Stock'}
+                      </Badge>
+                      {product.manage_stock && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          Cant: {product.stock_quantity}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {product.categories.slice(0, 2).map((cat) => (
+                          <Badge key={cat.id} variant="outline" className="text-xs">
+                            {cat.name}
+                          </Badge>
+                        ))}
+                        {product.categories.length > 2 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{product.categories.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Switch
+                        checked={product.status === 'publish'}
+                        onCheckedChange={() => handleToggleStatus(product)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(product)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(product.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {!isLoading && products && products.length === 0 && (
+          <div className="text-center py-12">
+            <PackageOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">
+              No se encontraron productos. Crea tu primer producto.
+            </p>
+            <Button onClick={handleCreate} className="mt-4">
+              <Plus className="h-4 w-4 mr-2" />
+              Crear Producto
+            </Button>
+          </div>
+        )}
+      </Card>
+
+      <ProductWooCommerceModal
+        open={showProductModal}
+        onOpenChange={setShowProductModal}
+        product={selectedProduct}
+      />
+
+      <CategoriesWooCommerceModal
+        open={showCategoriesModal}
+        onOpenChange={setShowCategoriesModal}
+      />
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar producto?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. El producto será eliminado permanentemente de WooCommerce.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

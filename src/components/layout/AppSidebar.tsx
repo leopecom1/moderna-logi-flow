@@ -44,7 +44,8 @@ import {
   Calculator,
   ClipboardList,
   Wrench,
-  ShoppingBag
+  ShoppingBag,
+  PackageOpen
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -129,6 +130,7 @@ export const AppSidebar = () => {
       items: [
         { title: 'Tienda Online', url: '/woocommerce-config', icon: ShoppingBag },
         { title: 'Pedidos Online', url: '/woocommerce-review', icon: ClipboardList },
+        { title: 'Productos Online', url: '/woocommerce-products', icon: PackageOpen },
         { title: 'Analytics & ML', url: '/analytics', icon: Brain },
         { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
         { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },
