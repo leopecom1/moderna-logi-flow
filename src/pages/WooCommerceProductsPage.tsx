@@ -26,8 +26,8 @@ import {
 export default function WooCommerceProductsPage() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<WooCommerceProduct | null>(null);
@@ -37,8 +37,8 @@ export default function WooCommerceProductsPage() {
     page,
     20,
     search,
-    categoryFilter,
-    statusFilter
+    categoryFilter === 'all' ? undefined : categoryFilter,
+    statusFilter === 'all' ? undefined : statusFilter
   );
   const { data: categories } = useWooCommerceCategories();
   const updateMutation = useUpdateWooCommerceProduct();
@@ -114,7 +114,7 @@ export default function WooCommerceProductsPage() {
               <SelectValue placeholder="Todas las categorías" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas las categorías</SelectItem>
+              <SelectItem value="all">Todas las categorías</SelectItem>
               {categories?.map((cat: any) => (
                 <SelectItem key={cat.id} value={cat.id.toString()}>
                   {cat.name}
@@ -127,7 +127,7 @@ export default function WooCommerceProductsPage() {
               <SelectValue placeholder="Todos los estados" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todos</SelectItem>
+              <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="publish">Publicados</SelectItem>
               <SelectItem value="draft">Borradores</SelectItem>
             </SelectContent>
