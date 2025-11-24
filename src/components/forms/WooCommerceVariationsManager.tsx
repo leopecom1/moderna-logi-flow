@@ -377,10 +377,10 @@ export function WooCommerceVariationsManager({
               />
             </div>
             <div className="flex items-end">
-              <Button onClick={addAttribute} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Agregar Atributo
-              </Button>
+            <Button type="button" onClick={addAttribute} className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar Atributo
+            </Button>
             </div>
           </div>
 
@@ -398,13 +398,14 @@ export function WooCommerceVariationsManager({
                       ))}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeAttribute(index)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeAttribute(index)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
                 </div>
               ))}
             </div>
@@ -436,10 +437,10 @@ export function WooCommerceVariationsManager({
                 </p>
               </div>
               {mode === 'edit' && attributes.length > 0 && (
-                <Button onClick={addNewVariationToExisting} variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nueva Variación
-                </Button>
+            <Button type="button" onClick={addNewVariationToExisting} variant="outline" size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Variación
+            </Button>
               )}
             </div>
           </CardHeader>
