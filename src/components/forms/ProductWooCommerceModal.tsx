@@ -19,6 +19,17 @@ import { Badge } from '@/components/ui/badge';
 import { CategoriesWooCommerceModal } from './CategoriesWooCommerceModal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 interface ProductWooCommerceModalProps {
   open: boolean;
@@ -27,7 +38,10 @@ interface ProductWooCommerceModalProps {
 }
 
 export function ProductWooCommerceModal({ open, onOpenChange, product }: ProductWooCommerceModalProps) {
+  const { toast } = useToast();
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
+  const [showTypeChangeConfirm, setShowTypeChangeConfirm] = useState(false);
+  const [pendingTypeChange, setPendingTypeChange] = useState<'simple' | 'variable' | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     type: 'simple' as 'simple' | 'variable',
@@ -101,8 +115,107 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
     });
   };
 
+  const handleTypeChange = (newType: 'simple' | 'variable') => {
+    // Si está editando y cambiando de variable a simple, pedir confirmación
+    if (product && product.type === 'variable' && newType === 'simple') {
+      setPendingTypeChange(newType);
+      setShowTypeChangeConfirm(true);
+      return;
+    }
+    
+    // Aplicar cambio directamente en otros casos
+    applyTypeChange(newType);
+  };
+
+  const confirmTypeChange = () => {
+    if (pendingTypeChange) {
+      applyTypeChange(pendingTypeChange);
+    }
+    setShowTypeChangeConfirm(false);
+    setPendingTypeChange(null);
+  };
+
+  const applyTypeChange = (newType: 'simple' | 'variable') => {
+    // Si cambia de variable a simple, limpiar atributos y variaciones
+    if (newType === 'simple' && formData.type === 'variable') {
+      setFormData(prev => ({
+        ...prev,
+        type: 'simple',
+        attributes: [],
+        variations: [],
+        // Mantener los precios si existen, sino usar valores por defecto
+        regular_price: prev.regular_price || '',
+        sale_price: prev.sale_price || '',
+        manage_stock: prev.manage_stock || false,
+        stock_quantity: prev.stock_quantity || 0,
+        stock_status: prev.stock_status || 'instock',
+      }));
+    }
+    
+    // Si cambia de simple a variable, limpiar precios del producto padre
+    if (newType === 'variable' && formData.type === 'simple') {
+      setFormData(prev => ({
+        ...prev,
+        type: 'variable',
+        // Los productos variables NO tienen precio a nivel padre
+        regular_price: '',
+        sale_price: '',
+        sku: '',
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validación: Simple → Variable
+    if (product?.type === 'simple' && formData.type === 'variable') {
+      if (formData.attributes.length === 0) {
+        toast({
+          title: "Error de validación",
+          description: "Debes agregar al menos un atributo para productos variables",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (formData.variations.length === 0) {
+        toast({
+          title: "Error de validación",
+          description: "Debes generar al menos una variación",
+          variant: "destructive",
+        });
+        return;
+      }
+      const hasInvalidVariation = formData.variations.some(v => !v.regular_price || parseFloat(v.regular_price) <= 0);
+      if (hasInvalidVariation) {
+        toast({
+          title: "Error de validación",
+          description: "Todas las variaciones deben tener un precio regular mayor a 0",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    // Validación: Variable → Simple
+    if (product?.type === 'variable' && formData.type === 'simple') {
+      if (!formData.regular_price || parseFloat(formData.regular_price) <= 0) {
+        toast({
+          title: "Error de validación",
+          description: "Debes configurar un precio regular para productos simples",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (formData.manage_stock && formData.stock_quantity < 0) {
+        toast({
+          title: "Error de validación",
+          description: "La cantidad en stock no puede ser negativa",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     const productData: any = {
       name: formData.name,
@@ -131,10 +244,28 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
     }
 
     if (product) {
+      // Si cambió el tipo de producto, incluir el campo type
+      if (product.type !== formData.type) {
+        productData.type = formData.type;
+        
+        // Si cambió de variable a simple, eliminar atributos
+        if (formData.type === 'simple') {
+          productData.attributes = [];
+        }
+      }
+      
       await updateMutation.mutateAsync({
         id: product.id,
         data: productData,
       });
+      
+      // Si cambió de simple a variable y hay variaciones, crearlas
+      if (product.type === 'simple' && formData.type === 'variable' && formData.variations.length > 0) {
+        await batchVariationsMutation.mutateAsync({
+          productId: product.id,
+          variations: formData.variations,
+        });
+      }
     } else {
       const newProduct = await createMutation.mutateAsync(productData);
       
@@ -196,8 +327,7 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
                 <Label htmlFor="type">Tipo de Producto</Label>
                 <Select
                   value={formData.type}
-                  onValueChange={(value: 'simple' | 'variable') => setFormData({ ...formData, type: value })}
-                  disabled={!!product}
+                  onValueChange={(value: 'simple' | 'variable') => handleTypeChange(value)}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -207,12 +337,30 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
                     <SelectItem value="variable">Producto Variable</SelectItem>
                   </SelectContent>
                 </Select>
-                {product && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    No se puede cambiar el tipo de un producto existente
-                  </p>
+                {product && formData.type !== product.type && (
+                  <>
+                    <Badge variant="outline" className="bg-yellow-100 border-yellow-400 mt-2">
+                      Tipo modificado: {product.type} → {formData.type}
+                    </Badge>
+                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                      <p className="text-sm text-yellow-800">
+                        {formData.type === 'variable' 
+                          ? '⚠️ Cambiarás este producto a Variable. Deberás agregar atributos y variaciones antes de guardar.'
+                          : '⚠️ Cambiarás este producto a Simple. Se eliminarán TODAS las variaciones existentes al guardar.'}
+                      </p>
+                    </div>
+                  </>
                 )}
               </div>
+              
+              {formData.type === 'variable' && product?.type === 'simple' && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-800">
+                    💡 <strong>Consejo:</strong> Los productos variables usan variaciones para manejar precios y stock. 
+                    Agrega atributos (ej: Color, Talla) y genera las combinaciones.
+                  </p>
+                </div>
+              )}
 
               {formData.type === 'simple' && (
                 <div>
@@ -442,6 +590,30 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
         open={showCategoriesModal}
         onOpenChange={setShowCategoriesModal}
       />
+
+      <AlertDialog open={showTypeChangeConfirm} onOpenChange={setShowTypeChangeConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Cambiar a Producto Simple?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Este producto tiene {formData.variations.length} variaciones. 
+              Al convertirlo a producto simple:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Se eliminarán TODAS las variaciones</li>
+                <li>Se eliminarán todos los atributos</li>
+                <li>Deberás configurar el precio e inventario del producto</li>
+              </ul>
+              <p className="mt-3 font-semibold">Esta acción no se puede deshacer.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmTypeChange}>
+              Sí, cambiar a Simple
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
