@@ -54,9 +54,6 @@ export function WooCommerceVariationsManager({
   const [newAttributeOptions, setNewAttributeOptions] = useState('');
   const [variationsWithStatus, setVariationsWithStatus] = useState<VariationWithStatus[]>([]);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
-  const [advancedEditMode, setAdvancedEditMode] = useState(false);
-  const [newValueInputs, setNewValueInputs] = useState<Record<number, string>>({});
-  const [confirmRemoveAttribute, setConfirmRemoveAttribute] = useState<{ index: number; affectedCount: number } | null>(null);
 
   // Load existing variations in edit mode
   const { data: existingVariations, isLoading: loadingVariations } = useWooCommerceVariations(
@@ -322,165 +319,6 @@ export function WooCommerceVariationsManager({
     setVariationsWithStatus([...variationsWithStatus, newVariation]);
   };
 
-  const handleAddAttributeValue = (attrIndex: number) => {
-    const newValue = newValueInputs[attrIndex]?.trim();
-    if (!newValue) return;
-
-    const updatedAttributes = [...attributes];
-    if (!updatedAttributes[attrIndex].options.includes(newValue)) {
-      updatedAttributes[attrIndex].options.push(newValue);
-      onAttributesChange(updatedAttributes);
-      
-      // Generate new variations for this value
-      generateVariationsForNewValue(attrIndex, newValue);
-      
-      setNewValueInputs({...newValueInputs, [attrIndex]: ''});
-      
-      toast({
-        title: "Valor agregado",
-        description: `Se agregó "${newValue}" y se generaron las nuevas variaciones.`,
-      });
-    } else {
-      toast({
-        title: "Valor duplicado",
-        description: "Este valor ya existe para este atributo",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const generateVariationsForNewValue = (attrIndex: number, newValue: string) => {
-    // Get all existing combinations without the modified attribute
-    const otherAttributes = attributes.filter((_, i) => i !== attrIndex);
-    
-    // Generate combinations for other attributes
-    const combinations: WooCommerceVariationCreate[] = [];
-    
-    function generateCombinations(index: number, currentCombination: Array<{ name: string; option: string }>) {
-      if (index === otherAttributes.length) {
-        // Add the new value for the modified attribute
-        combinations.push({
-          status: 'publish',
-          regular_price: '0',
-          stock_status: 'instock',
-          manage_stock: true,
-          stock_quantity: 0,
-          attributes: [
-            ...currentCombination,
-            { name: attributes[attrIndex].name, option: newValue }
-          ],
-        });
-        return;
-      }
-
-      const attr = otherAttributes[index];
-      for (const option of attr.options) {
-        generateCombinations(index + 1, [...currentCombination, { name: attr.name, option }]);
-      }
-    }
-
-    if (otherAttributes.length > 0) {
-      generateCombinations(0, []);
-    } else {
-      // If this is the only attribute, just create one variation
-      combinations.push({
-        status: 'publish',
-        regular_price: '0',
-        stock_status: 'instock',
-        manage_stock: true,
-        stock_quantity: 0,
-        attributes: [{ name: attributes[attrIndex].name, option: newValue }],
-      });
-    }
-    
-    // Add new variations to existing ones
-    const newVariationsWithStatus: VariationWithStatus[] = combinations.map(v => ({
-      ...v,
-      _status: 'new' as const,
-    }));
-    
-    setVariationsWithStatus([...variationsWithStatus, ...newVariationsWithStatus]);
-  };
-
-  const handleRemoveAttributeValue = (attrIndex: number, optIndex: number) => {
-    const updatedAttributes = [...attributes];
-    const removedValue = updatedAttributes[attrIndex].options[optIndex];
-    const attrName = updatedAttributes[attrIndex].name;
-    
-    // Check if any variations use this value
-    const affectedVariations = variationsWithStatus.filter(v =>
-      v.attributes?.some(a => a.name === attrName && a.option === removedValue)
-    );
-    
-    if (affectedVariations.length > 0) {
-      toast({
-        title: "No se puede eliminar",
-        description: `Hay ${affectedVariations.length} variaciones que usan este valor. Elimínalas primero.`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    updatedAttributes[attrIndex].options.splice(optIndex, 1);
-    
-    // If no options left, remove the attribute
-    if (updatedAttributes[attrIndex].options.length === 0) {
-      updatedAttributes.splice(attrIndex, 1);
-    }
-    
-    onAttributesChange(updatedAttributes);
-    
-    toast({
-      title: "Valor eliminado",
-      description: `Se eliminó "${removedValue}" del atributo.`,
-    });
-  };
-
-  const handleRemoveAttributeAdvanced = (attrIndex: number) => {
-    const attrName = attributes[attrIndex].name;
-    
-    // Check how many variations use this attribute
-    const affectedVariations = variationsWithStatus.filter(v =>
-      v.attributes?.some(a => a.name === attrName)
-    );
-    
-    if (affectedVariations.length > 0) {
-      setConfirmRemoveAttribute({ index: attrIndex, affectedCount: affectedVariations.length });
-    } else {
-      // No variations affected, remove directly
-      const updatedAttributes = attributes.filter((_, i) => i !== attrIndex);
-      onAttributesChange(updatedAttributes);
-      toast({
-        title: "Atributo eliminado",
-        description: "El atributo se eliminó correctamente.",
-      });
-    }
-  };
-
-  const confirmRemoveAttributeAction = () => {
-    if (!confirmRemoveAttribute) return;
-    
-    const attrIndex = confirmRemoveAttribute.index;
-    const attrName = attributes[attrIndex].name;
-    
-    // Remove attribute
-    const updatedAttributes = attributes.filter((_, i) => i !== attrIndex);
-    onAttributesChange(updatedAttributes);
-    
-    // Remove all variations that use this attribute
-    const updatedVariations = variationsWithStatus.filter(v =>
-      !v.attributes?.some(a => a.name === attrName)
-    );
-    setVariationsWithStatus(updatedVariations);
-    
-    toast({
-      title: "Atributo eliminado",
-      description: `Se eliminó el atributo y ${confirmRemoveAttribute.affectedCount} variaciones asociadas.`,
-    });
-    
-    setConfirmRemoveAttribute(null);
-  };
-
   const getVariationLabel = (variation: WooCommerceVariationCreate | WooCommerceVariation) => {
     return variation.attributes
       .map(attr => `${attr.name}: ${attr.option}`)
@@ -734,113 +572,36 @@ export function WooCommerceVariationsManager({
         </Card>
       )}
 
-      {/* Attributes Section - Edit Mode */}
+      {/* Attributes display for edit mode */}
       {mode === 'edit' && attributes.length > 0 && (
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">Atributos del Producto</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  {advancedEditMode 
-                    ? '⚠️ Edición Avanzada: Puedes modificar/eliminar atributos y valores'
-                    : 'Agrega nuevos valores o atributos. Para cambios mayores, usa Edición Avanzada.'
-                  }
-                </p>
-              </div>
-              <Button 
-                variant={advancedEditMode ? "default" : "outline"} 
-                size="sm" 
-                onClick={() => setAdvancedEditMode(!advancedEditMode)}
-              >
-                {advancedEditMode ? 'Modo Seguro' : 'Edición Avanzada'}
-              </Button>
-            </div>
+            <CardTitle className="text-lg">Atributos del Producto</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {attributes.map((attr, index) => (
-                <div key={index} className="p-3 border rounded-lg bg-muted/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-medium">{attr.name}</p>
-                    {advancedEditMode && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveAttributeAdvanced(index)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-2">
+                <div key={index} className="flex items-center gap-2">
+                  <span className="font-medium">{attr.name}:</span>
+                  <div className="flex flex-wrap gap-1">
                     {attr.options.map((opt, optIndex) => (
                       <Badge key={optIndex} variant="secondary">
                         {opt}
-                        {advancedEditMode && (
-                          <button
-                            type="button"
-                            className="ml-1 hover:text-destructive"
-                            onClick={() => handleRemoveAttributeValue(index, optIndex)}
-                          >
-                            ×
-                          </button>
-                        )}
                       </Badge>
                     ))}
-                  </div>
-                  {/* Input para agregar nuevo valor */}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Agregar nuevo valor..."
-                      value={newValueInputs[index] || ''}
-                      onChange={(e) => setNewValueInputs({...newValueInputs, [index]: e.target.value})}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddAttributeValue(index);
-                        }
-                      }}
-                      className="flex-1"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => handleAddAttributeValue(index)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* Formulario para agregar NUEVO atributo */}
-            <div className="mt-4 p-3 border rounded-lg bg-background">
-              <Label className="mb-2 block">Agregar Nuevo Atributo</Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <Input
-                  placeholder="Nombre (ej: Material)"
-                  value={newAttributeName}
-                  onChange={(e) => setNewAttributeName(e.target.value)}
-                />
-                <Input
-                  placeholder="Opciones (ej: Madera, Metal)"
-                  value={newAttributeOptions}
-                  onChange={(e) => setNewAttributeOptions(e.target.value)}
-                />
-                <Button type="button" onClick={addAttribute}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agregar
-                </Button>
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              <AlertCircle className="h-3 w-3 inline mr-1" />
+              Los atributos no se pueden editar. Crea nuevas variaciones basadas en estos atributos.
+            </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Delete variation confirmation dialog */}
+      {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -857,33 +618,6 @@ export function WooCommerceVariationsManager({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete attribute confirmation dialog */}
-      <AlertDialog open={!!confirmRemoveAttribute} onOpenChange={(open) => !open && setConfirmRemoveAttribute(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar atributo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Este atributo tiene {confirmRemoveAttribute?.affectedCount || 0} variaciones asociadas.
-              <ul className="list-disc list-inside mt-2 space-y-1 text-destructive">
-                <li>Se eliminarán TODAS estas variaciones</li>
-                <li>Esta acción no se puede deshacer</li>
-                <li>Los datos de precio y stock se perderán</li>
-              </ul>
-              <p className="mt-3 font-semibold">¿Estás seguro de continuar?</p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmRemoveAttributeAction}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Sí, eliminar todo
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
