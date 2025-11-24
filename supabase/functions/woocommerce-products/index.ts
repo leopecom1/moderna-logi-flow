@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
-import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,25 +27,6 @@ async function getWooCommerceConfig(supabase: any): Promise<WooCommerceConfig | 
   }
 
   return data;
-}
-
-function generateOAuthSignature(
-  method: string,
-  url: string,
-  params: Record<string, string>,
-  consumerSecret: string
-): string {
-  const sortedParams = Object.keys(params)
-    .sort()
-    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
-    .join('&');
-
-  const baseString = `${method}&${encodeURIComponent(url)}&${encodeURIComponent(sortedParams)}`;
-  const signingKey = `${encodeURIComponent(consumerSecret)}&`;
-
-  const hmac = createHmac('sha256', signingKey);
-  hmac.update(baseString);
-  return hmac.digest('base64');
 }
 
 async function makeWooCommerceRequest(
@@ -210,38 +190,33 @@ serve(async (req) => {
     }
     // Media upload endpoint
     else if (path === '/media' && method === 'POST') {
-      // Upload to WordPress media library
-      const formData = body;
-      const mediaUrl = `${config.store_url}/wp-json/wp/v2/media`;
+      // Upload to WordPress media library using Basic Auth
+      console.log('[Media Upload] Starting upload to WordPress');
       
-      const oauthParams: Record<string, string> = {
-        oauth_consumer_key: config.consumer_key,
-        oauth_nonce: Math.random().toString(36).substring(7),
-        oauth_signature_method: 'HMAC-SHA256',
-        oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-        oauth_version: '1.0',
-      };
-
-      const signature = generateOAuthSignature('POST', mediaUrl, oauthParams, config.consumer_secret);
-      oauthParams.oauth_signature = signature;
-
-      const authHeader = 'OAuth ' + Object.keys(oauthParams)
-        .map(key => `${key}="${encodeURIComponent(oauthParams[key])}"`)
-        .join(', ');
+      const mediaUrl = `${config.store_url.replace(/\/$/, '')}/wp-json/wp/v2/media`;
+      
+      // Use Basic Authentication with WooCommerce credentials
+      const authString = btoa(`${config.consumer_key}:${config.consumer_secret}`);
+      
+      console.log('[Media Upload] Uploading to:', mediaUrl);
 
       const response = await fetch(mediaUrl, {
         method: 'POST',
         headers: {
-          'Authorization': authHeader,
+          'Authorization': `Basic ${authString}`,
         },
-        body: formData,
+        body: body,
       });
 
       if (!response.ok) {
-        throw new Error(`Media upload error: ${response.status}`);
+        const errorText = await response.text();
+        console.error('[Media Upload] Error response:', response.status, errorText);
+        throw new Error(`Media upload error: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('[Media Upload] Success:', result.id);
+      
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
