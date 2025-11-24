@@ -25,6 +25,7 @@ export interface WooCommerceAttribute {
 
 export interface WooCommerceVariation {
   id: number;
+  status?: 'publish' | 'private';
   sku?: string;
   price: string;
   regular_price: string;
@@ -40,6 +41,7 @@ export interface WooCommerceVariation {
 }
 
 export interface WooCommerceVariationCreate {
+  status?: 'publish' | 'private';
   sku?: string;
   regular_price: string;
   sale_price?: string;
