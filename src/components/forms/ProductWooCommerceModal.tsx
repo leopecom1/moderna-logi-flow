@@ -6,12 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus } from 'lucide-react';
-import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct } from '@/hooks/useWooCommerceProducts';
+import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations } from '@/hooks/useWooCommerceProducts';
 import { useWooCommerceCategories } from '@/hooks/useWooCommerceCategories';
-import { WooCommerceProduct } from '@/types/woocommerce';
+import { WooCommerceProduct, WooCommerceAttribute, WooCommerceVariationCreate } from '@/types/woocommerce';
 import { WooCommerceImageUpload } from './WooCommerceImageUpload';
+import { WooCommerceVariationsManager } from './WooCommerceVariationsManager';
 import { Badge } from '@/components/ui/badge';
 import { CategoriesWooCommerceModal } from './CategoriesWooCommerceModal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ProductWooCommerceModalProps {
   open: boolean;
@@ -23,6 +26,7 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    type: 'simple' as 'simple' | 'variable',
     short_description: '',
     description: '',
     sku: '',
@@ -36,16 +40,20 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
     featured: false,
     categories: [] as number[],
     images: [] as string[],
+    attributes: [] as WooCommerceAttribute[],
+    variations: [] as WooCommerceVariationCreate[],
   });
 
   const { data: categories } = useWooCommerceCategories();
   const createMutation = useCreateWooCommerceProduct();
   const updateMutation = useUpdateWooCommerceProduct();
+  const batchVariationsMutation = useBatchCreateWooCommerceVariations();
 
   useEffect(() => {
     if (product) {
       setFormData({
         name: product.name,
+        type: product.type === 'grouped' ? 'simple' : product.type, // grouped products shown as simple
         short_description: product.short_description,
         description: product.description,
         sku: product.sku,
@@ -59,6 +67,8 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
         featured: product.featured,
         categories: product.categories.map(cat => cat.id),
         images: product.images.map(img => img.src),
+        attributes: product.attributes || [],
+        variations: [],
       });
     } else {
       resetForm();
@@ -68,6 +78,7 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
   const resetForm = () => {
     setFormData({
       name: '',
+      type: 'simple',
       short_description: '',
       description: '',
       sku: '',
@@ -81,27 +92,39 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
       featured: false,
       categories: [],
       images: [],
+      attributes: [],
+      variations: [],
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const productData = {
+    const productData: any = {
       name: formData.name,
+      type: formData.type,
       short_description: formData.short_description,
       description: formData.description,
-      sku: formData.sku,
-      regular_price: formData.regular_price,
-      sale_price: formData.on_sale ? formData.sale_price : '',
-      manage_stock: formData.manage_stock,
-      stock_quantity: formData.manage_stock ? formData.stock_quantity : undefined,
-      stock_status: formData.stock_status,
       status: formData.status,
       featured: formData.featured,
       categories: formData.categories.map(id => ({ id })),
       images: formData.images.map(src => ({ src })),
     };
+
+    // For simple products, include pricing and stock
+    if (formData.type === 'simple') {
+      productData.sku = formData.sku;
+      productData.regular_price = formData.regular_price;
+      productData.sale_price = formData.on_sale ? formData.sale_price : '';
+      productData.manage_stock = formData.manage_stock;
+      productData.stock_quantity = formData.manage_stock ? formData.stock_quantity : undefined;
+      productData.stock_status = formData.stock_status;
+    }
+
+    // For variable products, include attributes
+    if (formData.type === 'variable') {
+      productData.attributes = formData.attributes;
+    }
 
     if (product) {
       await updateMutation.mutateAsync({
@@ -109,7 +132,15 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
         data: productData,
       });
     } else {
-      await createMutation.mutateAsync(productData);
+      const newProduct = await createMutation.mutateAsync(productData);
+      
+      // If variable product with variations, create them
+      if (formData.type === 'variable' && formData.variations.length > 0 && newProduct?.id) {
+        await batchVariationsMutation.mutateAsync({
+          productId: newProduct.id,
+          variations: formData.variations,
+        });
+      }
     }
 
     onOpenChange(false);
@@ -122,6 +153,13 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
       categories: prev.categories.includes(categoryId)
         ? prev.categories.filter(id => id !== categoryId)
         : [...prev.categories, categoryId],
+    }));
+  };
+
+  const handleImageRemoved = (imageUrl: string) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter(img => img !== imageUrl),
     }));
   };
 
@@ -151,13 +189,37 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
               </div>
 
               <div>
-                <Label htmlFor="sku">SKU</Label>
-                <Input
-                  id="sku"
-                  value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                />
+                <Label htmlFor="type">Tipo de Producto</Label>
+                <Select
+                  value={formData.type}
+                  onValueChange={(value: 'simple' | 'variable') => setFormData({ ...formData, type: value })}
+                  disabled={!!product}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="simple">Producto Simple</SelectItem>
+                    <SelectItem value="variable">Producto Variable</SelectItem>
+                  </SelectContent>
+                </Select>
+                {product && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    No se puede cambiar el tipo de un producto existente
+                  </p>
+                )}
               </div>
+
+              {formData.type === 'simple' && (
+                <div>
+                  <Label htmlFor="sku">SKU</Label>
+                  <Input
+                    id="sku"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  />
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="short_description">Descripción Corta</Label>
@@ -180,82 +242,103 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
               </div>
             </div>
 
-            {/* Precios */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Precios</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="regular_price">Precio Regular *</Label>
-                  <Input
-                    id="regular_price"
-                    type="number"
-                    step="0.01"
-                    value={formData.regular_price}
-                    onChange={(e) => setFormData({ ...formData, regular_price: e.target.value })}
-                    required
-                  />
+            {/* Precios e Inventario - Solo para productos simples */}
+            {formData.type === 'simple' && (
+              <>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Precios</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="regular_price">Precio Regular *</Label>
+                      <Input
+                        id="regular_price"
+                        type="number"
+                        step="0.01"
+                        value={formData.regular_price}
+                        onChange={(e) => setFormData({ ...formData, regular_price: e.target.value })}
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="sale_price">Precio en Oferta</Label>
+                      <Input
+                        id="sale_price"
+                        type="number"
+                        step="0.01"
+                        value={formData.sale_price}
+                        onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
+                        disabled={!formData.on_sale}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="on_sale"
+                      checked={formData.on_sale}
+                      onCheckedChange={(checked) => setFormData({ ...formData, on_sale: checked })}
+                    />
+                    <Label htmlFor="on_sale">En Oferta</Label>
+                  </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="sale_price">Precio en Oferta</Label>
-                  <Input
-                    id="sale_price"
-                    type="number"
-                    step="0.01"
-                    value={formData.sale_price}
-                    onChange={(e) => setFormData({ ...formData, sale_price: e.target.value })}
-                    disabled={!formData.on_sale}
-                  />
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Inventario</h3>
+                  
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="manage_stock"
+                      checked={formData.manage_stock}
+                      onCheckedChange={(checked) => setFormData({ ...formData, manage_stock: checked })}
+                    />
+                    <Label htmlFor="manage_stock">Gestionar Stock</Label>
+                  </div>
+
+                  {formData.manage_stock && (
+                    <div>
+                      <Label htmlFor="stock_quantity">Cantidad en Stock</Label>
+                      <Input
+                        id="stock_quantity"
+                        type="number"
+                        value={formData.stock_quantity}
+                        onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) })}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="stock_status"
+                      checked={formData.stock_status === 'instock'}
+                      onCheckedChange={(checked) => 
+                        setFormData({ ...formData, stock_status: checked ? 'instock' : 'outofstock' })
+                      }
+                    />
+                    <Label htmlFor="stock_status">En Stock</Label>
+                  </div>
                 </div>
-              </div>
+              </>
+            )}
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="on_sale"
-                  checked={formData.on_sale}
-                  onCheckedChange={(checked) => setFormData({ ...formData, on_sale: checked })}
-                />
-                <Label htmlFor="on_sale">En Oferta</Label>
-              </div>
-            </div>
+            {/* Variaciones - Solo para productos variables */}
+            {formData.type === 'variable' && !product && (
+              <WooCommerceVariationsManager
+                attributes={formData.attributes}
+                variations={formData.variations}
+                onAttributesChange={(attributes) => setFormData(prev => ({ ...prev, attributes }))}
+                onVariationsChange={(variations) => setFormData(prev => ({ ...prev, variations }))}
+              />
+            )}
 
-            {/* Inventario */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Inventario</h3>
-              
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="manage_stock"
-                  checked={formData.manage_stock}
-                  onCheckedChange={(checked) => setFormData({ ...formData, manage_stock: checked })}
-                />
-                <Label htmlFor="manage_stock">Gestionar Stock</Label>
+            {formData.type === 'variable' && product && (
+              <div className="p-4 border rounded-lg bg-muted/50">
+                <p className="text-sm text-muted-foreground">
+                  Para editar las variaciones de este producto, ve a la página de productos de WooCommerce y edita las variaciones directamente allí.
+                </p>
               </div>
-
-              {formData.manage_stock && (
-                <div>
-                  <Label htmlFor="stock_quantity">Cantidad en Stock</Label>
-                  <Input
-                    id="stock_quantity"
-                    type="number"
-                    value={formData.stock_quantity}
-                    onChange={(e) => setFormData({ ...formData, stock_quantity: parseInt(e.target.value) })}
-                  />
-                </div>
-              )}
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="stock_status"
-                  checked={formData.stock_status === 'instock'}
-                  onCheckedChange={(checked) => 
-                    setFormData({ ...formData, stock_status: checked ? 'instock' : 'outofstock' })
-                  }
-                />
-                <Label htmlFor="stock_status">En Stock</Label>
-              </div>
-            </div>
+            )}
 
             {/* Categorías */}
             <div className="space-y-4">
@@ -288,9 +371,16 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
 
             {/* Imágenes */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Imágenes</h3>
+              <h3 className="text-lg font-semibold">Galería de Imágenes</h3>
+              <p className="text-sm text-muted-foreground">
+                {formData.type === 'simple' 
+                  ? 'Agrega hasta 8 imágenes para tu producto. La primera será la imagen principal.'
+                  : 'Imágenes del producto padre. Las variantes pueden tener sus propias imágenes.'
+                }
+              </p>
               <WooCommerceImageUpload
                 onImageUploaded={(url) => setFormData(prev => ({ ...prev, images: [...prev.images, url] }))}
+                onImageRemoved={handleImageRemoved}
                 maxFiles={8}
                 existingImages={formData.images}
               />

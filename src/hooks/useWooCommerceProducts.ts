@@ -163,3 +163,103 @@ export function useUploadWooCommerceImage() {
     },
   });
 }
+
+// Variations hooks
+export function useWooCommerceVariations(productId: number | null) {
+  return useQuery({
+    queryKey: ['woocommerce-variations', productId],
+    queryFn: async () => {
+      if (!productId) return [];
+      return await callWooCommerceAPI(`/products/${productId}/variations`);
+    },
+    enabled: !!productId,
+  });
+}
+
+export function useCreateWooCommerceVariation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ productId, data }: { productId: number; data: any }) => {
+      return await callWooCommerceAPI(`/products/${productId}/variations`, 'POST', data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-variations', variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-products'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useUpdateWooCommerceVariation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ productId, variationId, data }: { productId: number; variationId: number; data: any }) => {
+      return await callWooCommerceAPI(`/products/${productId}/variations/${variationId}`, 'PUT', data);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-variations', variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-products'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useDeleteWooCommerceVariation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ productId, variationId }: { productId: number; variationId: number }) => {
+      return await callWooCommerceAPI(`/products/${productId}/variations/${variationId}`, 'DELETE');
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-variations', variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-products'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useBatchCreateWooCommerceVariations() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ productId, variations }: { productId: number; variations: any[] }) => {
+      return await callWooCommerceAPI(`/products/${productId}/variations/batch`, 'POST', { create: variations });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-variations', variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-products'] });
+      toast({
+        title: 'Variantes creadas',
+        description: `${variables.variations.length} variantes creadas exitosamente`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}

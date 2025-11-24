@@ -178,6 +178,23 @@ serve(async (req) => {
         const productId = path.split('/')[2];
         endpoint = `/products/${productId}`;
       }
+      // Variations endpoints
+      else if (path.match(/^\/products\/\d+\/variations$/)) {
+        const productId = path.split('/')[2];
+        if (method === 'GET') {
+          endpoint = `/products/${productId}/variations?per_page=100`;
+        } else if (method === 'POST') {
+          endpoint = `/products/${productId}/variations`;
+        }
+      } else if (path.match(/^\/products\/\d+\/variations\/batch$/)) {
+        const productId = path.split('/')[2];
+        endpoint = `/products/${productId}/variations/batch`;
+      } else if (path.match(/^\/products\/\d+\/variations\/\d+$/)) {
+        const parts = path.split('/');
+        const productId = parts[2];
+        const variationId = parts[4];
+        endpoint = `/products/${productId}/variations/${variationId}`;
+      }
     }
     // Categories endpoints
     else if (path.startsWith('/categories')) {
