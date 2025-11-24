@@ -73,17 +73,8 @@ export function WooCommerceVariationsManager({
         _originalData: { ...v },
       }));
       setVariationsWithStatus(withStatus);
-    } else if (mode === 'create') {
-      setVariationsWithStatus(variations.map(v => ({ ...v, _status: 'new' as const })));
     }
   }, [existingVariations, mode]);
-
-  // Sync with parent variations state for create mode
-  useEffect(() => {
-    if (mode === 'create') {
-      setVariationsWithStatus(variations.map(v => ({ ...v, _status: 'new' as const })));
-    }
-  }, [variations, mode]);
 
   const addAttribute = () => {
     if (!newAttributeName.trim()) return;
@@ -143,6 +134,12 @@ export function WooCommerceVariationsManager({
     }
 
     generateCombinations(0, []);
+    
+    // Update local state with status tracking
+    const withStatus = combinations.map(v => ({ ...v, _status: 'new' as const }));
+    setVariationsWithStatus(withStatus);
+    
+    // Update parent state (without status fields)
     onVariationsChange(combinations);
   };
 
@@ -158,9 +155,10 @@ export function WooCommerceVariationsManager({
     
     setVariationsWithStatus(updated);
     
-    // Also update parent state for create mode
+    // Update parent state for create mode (clean version without status fields)
     if (mode === 'create') {
-      onVariationsChange(updated);
+      const cleanVariations = updated.map(({ _status, _originalData, ...v }) => v);
+      onVariationsChange(cleanVariations as WooCommerceVariationCreate[]);
     }
   };
 
@@ -244,7 +242,8 @@ export function WooCommerceVariationsManager({
       const updated = variationsWithStatus.filter((_, i) => i !== index);
       setVariationsWithStatus(updated);
       if (mode === 'create') {
-        onVariationsChange(updated);
+        const cleanVariations = updated.map(({ _status, _originalData, ...v }) => v);
+        onVariationsChange(cleanVariations as WooCommerceVariationCreate[]);
       }
       return;
     }
