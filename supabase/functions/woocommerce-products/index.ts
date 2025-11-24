@@ -188,39 +188,6 @@ serve(async (req) => {
         endpoint = `/products/categories/${categoryId}`;
       }
     }
-    // Media upload endpoint
-    else if (path === '/media' && method === 'POST') {
-      // Upload to WordPress media library using Basic Auth
-      console.log('[Media Upload] Starting upload to WordPress');
-      
-      const mediaUrl = `${config.store_url.replace(/\/$/, '')}/wp-json/wp/v2/media`;
-      
-      // Use Basic Authentication with WooCommerce credentials
-      const authString = btoa(`${config.consumer_key}:${config.consumer_secret}`);
-      
-      console.log('[Media Upload] Uploading to:', mediaUrl);
-
-      const response = await fetch(mediaUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${authString}`,
-        },
-        body: body,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Media Upload] Error response:', response.status, errorText);
-        throw new Error(`Media upload error: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('[Media Upload] Success:', result.id);
-      
-      return new Response(JSON.stringify(result), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     if (!endpoint) {
       console.error('[Endpoint] No valid endpoint found for path:', path);

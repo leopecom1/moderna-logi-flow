@@ -140,19 +140,37 @@ export function useDeleteWooCommerceProduct() {
 export function useUploadWooCommerceImage() {
   return useMutation({
     mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(7);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${timestamp}-${randomString}.${fileExt}`;
+      const filePath = `products/${fileName}`;
 
-      const { data, error } = await supabase.functions.invoke('woocommerce-products/media', {
-        method: 'POST',
-        body: formData,
-      });
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('woocommerce-images')
+        .upload(filePath, file, {
+          contentType: file.type,
+          upsert: false,
+        });
 
       if (error) {
-        throw new Error('Error uploading image');
+        console.error('Storage upload error:', error);
+        throw new Error('Error al subir imagen a Storage');
       }
 
-      return data;
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('woocommerce-images')
+        .getPublicUrl(filePath);
+
+      // Return in WooCommerce format
+      return {
+        id: timestamp,
+        source_url: publicUrl,
+        alt: file.name,
+      };
     },
     onError: (error: Error) => {
       toast({
