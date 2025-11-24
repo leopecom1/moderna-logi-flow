@@ -6,7 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Plus } from 'lucide-react';
-import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations } from '@/hooks/useWooCommerceProducts';
+import { 
+  useCreateWooCommerceProduct, 
+  useUpdateWooCommerceProduct, 
+  useBatchCreateWooCommerceVariations 
+} from '@/hooks/useWooCommerceProducts';
 import { useWooCommerceCategories } from '@/hooks/useWooCommerceCategories';
 import { WooCommerceProduct, WooCommerceAttribute, WooCommerceVariationCreate } from '@/types/woocommerce';
 import { WooCommerceImageUpload } from './WooCommerceImageUpload';
@@ -325,6 +329,7 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
             {/* Variaciones - Solo para productos variables */}
             {formData.type === 'variable' && !product && (
               <WooCommerceVariationsManager
+                mode="create"
                 attributes={formData.attributes}
                 variations={formData.variations}
                 onAttributesChange={(attributes) => setFormData(prev => ({ ...prev, attributes }))}
@@ -333,11 +338,14 @@ export function ProductWooCommerceModal({ open, onOpenChange, product }: Product
             )}
 
             {formData.type === 'variable' && product && (
-              <div className="p-4 border rounded-lg bg-muted/50">
-                <p className="text-sm text-muted-foreground">
-                  Para editar las variaciones de este producto, ve a la página de productos de WooCommerce y edita las variaciones directamente allí.
-                </p>
-              </div>
+              <WooCommerceVariationsManager
+                mode="edit"
+                productId={product.id}
+                attributes={formData.attributes}
+                variations={formData.variations}
+                onAttributesChange={(attributes) => setFormData(prev => ({ ...prev, attributes }))}
+                onVariationsChange={(variations) => setFormData(prev => ({ ...prev, variations }))}
+              />
             )}
 
             {/* Categorías */}
