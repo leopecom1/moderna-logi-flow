@@ -400,7 +400,7 @@ export function WooCommerceVariationsManager({
           )}
 
           {attributes.length > 0 && (
-            <Button onClick={generateVariations} variant="outline" className="w-full">
+            <Button type="button" onClick={generateVariations} variant="outline" className="w-full">
               Generar todas las combinaciones ({attributes.reduce((acc, attr) => acc * attr.options.length, 1)} variantes)
             </Button>
           )}
