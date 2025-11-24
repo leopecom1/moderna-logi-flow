@@ -118,6 +118,7 @@ export function WooCommerceVariationsManager({
     function generateCombinations(attrIndex: number, currentCombination: Array<{ name: string; option: string }>) {
       if (attrIndex === attributes.length) {
         combinations.push({
+          status: 'publish',
           regular_price: '0',
           stock_status: 'instock',
           manage_stock: true,
@@ -136,7 +137,11 @@ export function WooCommerceVariationsManager({
     generateCombinations(0, []);
     
     // Update local state with status tracking
-    const withStatus = combinations.map(v => ({ ...v, _status: 'new' as const }));
+    const withStatus = combinations.map(v => ({ 
+      ...v, 
+      status: 'publish' as const,
+      _status: 'new' as const 
+    }));
     setVariationsWithStatus(withStatus);
     
     // Update parent state (without status fields)
@@ -173,6 +178,7 @@ export function WooCommerceVariationsManager({
         const created = await createVariationMutation.mutateAsync({
           productId,
           data: {
+            status: variation.status,
             sku: variation.sku,
             regular_price: variation.regular_price,
             sale_price: variation.sale_price,
@@ -202,6 +208,7 @@ export function WooCommerceVariationsManager({
           productId,
           variationId: variation.id,
           data: {
+            status: variation.status,
             sku: variation.sku,
             regular_price: variation.regular_price,
             sale_price: variation.sale_price,
@@ -286,6 +293,7 @@ export function WooCommerceVariationsManager({
     
     // Create a new variation with first option of each attribute
     const newVariation: VariationWithStatus = {
+      status: 'publish' as const,
       regular_price: '0',
       stock_status: 'instock' as const,
       manage_stock: true,
@@ -517,6 +525,16 @@ export function WooCommerceVariationsManager({
                         onCheckedChange={(checked) => updateVariation(index, 'manage_stock', checked)}
                       />
                       <Label>Gestionar stock</Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={variation.status === 'publish'}
+                        onCheckedChange={(checked) => 
+                          updateVariation(index, 'status', checked ? 'publish' : 'private')
+                        }
+                      />
+                      <Label>Variación Activa</Label>
                     </div>
 
                     <div className="space-y-2">
