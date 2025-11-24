@@ -76,6 +76,17 @@ export function WooCommerceVariationsManager({
     }
   }, [existingVariations, mode]);
 
+  // Sync variations from props in create mode
+  useEffect(() => {
+    if (mode === 'create' && variations.length > 0) {
+      const withStatus: VariationWithStatus[] = variations.map(v => ({
+        ...v,
+        _status: 'new' as const,
+      }));
+      setVariationsWithStatus(withStatus);
+    }
+  }, [variations, mode]);
+
   const addAttribute = () => {
     if (!newAttributeName.trim()) return;
 
