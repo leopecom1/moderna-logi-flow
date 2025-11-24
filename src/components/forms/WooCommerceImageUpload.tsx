@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUploadWooCommerceImage } from '@/hooks/useWooCommerceProducts';
@@ -6,18 +6,25 @@ import { toast } from '@/hooks/use-toast';
 
 interface WooCommerceImageUploadProps {
   onImageUploaded: (imageUrl: string) => void;
+  onImageRemoved?: (imageUrl: string) => void;
   maxFiles?: number;
   existingImages?: string[];
 }
 
 export function WooCommerceImageUpload({ 
   onImageUploaded, 
+  onImageRemoved,
   maxFiles = 1,
   existingImages = [] 
 }: WooCommerceImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [previews, setPreviews] = useState<string[]>(existingImages);
   const uploadMutation = useUploadWooCommerceImage();
+
+  // Sync previews with existingImages prop
+  useEffect(() => {
+    setPreviews(existingImages);
+  }, [existingImages]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -98,7 +105,11 @@ export function WooCommerceImageUpload({
   };
 
   const removeImage = (index: number) => {
+    const imageUrl = previews[index];
     setPreviews(prev => prev.filter((_, i) => i !== index));
+    if (onImageRemoved && imageUrl) {
+      onImageRemoved(imageUrl);
+    }
   };
 
   return (

@@ -14,6 +14,45 @@ export interface WooCommerceCategory {
   count: number;
 }
 
+export interface WooCommerceAttribute {
+  id?: number;
+  name: string;
+  position?: number;
+  visible?: boolean;
+  variation?: boolean;
+  options: string[];
+}
+
+export interface WooCommerceVariation {
+  id: number;
+  sku?: string;
+  price: string;
+  regular_price: string;
+  sale_price?: string;
+  stock_quantity: number | null;
+  stock_status: 'instock' | 'outofstock';
+  manage_stock: boolean;
+  image?: WooCommerceImage;
+  attributes: Array<{
+    name: string;
+    option: string;
+  }>;
+}
+
+export interface WooCommerceVariationCreate {
+  sku?: string;
+  regular_price: string;
+  sale_price?: string;
+  stock_quantity?: number;
+  stock_status?: 'instock' | 'outofstock';
+  manage_stock?: boolean;
+  image?: { src: string };
+  attributes: Array<{
+    name: string;
+    option: string;
+  }>;
+}
+
 export interface WooCommerceProduct {
   id: number;
   name: string;
@@ -34,6 +73,8 @@ export interface WooCommerceProduct {
   stock_quantity: number | null;
   categories: WooCommerceCategory[];
   images: WooCommerceImage[];
+  attributes?: WooCommerceAttribute[];
+  variations?: number[];
 }
 
 export interface WooCommerceProductCreate {
@@ -51,6 +92,7 @@ export interface WooCommerceProductCreate {
   stock_quantity?: number;
   categories?: { id: number }[];
   images?: { src: string }[];
+  attributes?: WooCommerceAttribute[];
 }
 
 export interface WooCommerceCategoryCreate {
