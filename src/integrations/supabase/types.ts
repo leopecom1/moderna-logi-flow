@@ -1615,6 +1615,39 @@ export type Database = {
         }
         Relationships: []
       }
+      product_mappings: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_synced_at: string | null
+          shopify_product_id: number
+          shopify_product_name: string | null
+          updated_at: string | null
+          woocommerce_product_id: number
+          woocommerce_product_name: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          shopify_product_id: number
+          shopify_product_name?: string | null
+          updated_at?: string | null
+          woocommerce_product_id: number
+          woocommerce_product_name?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          shopify_product_id?: number
+          shopify_product_name?: string | null
+          updated_at?: string | null
+          woocommerce_product_id?: number
+          woocommerce_product_name?: string | null
+        }
+        Relationships: []
+      }
       product_variant_types: {
         Row: {
           created_at: string
@@ -2204,6 +2237,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shopify_config: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          store_domain: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          store_domain: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          store_domain?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       supplier_payment_checks: {
         Row: {

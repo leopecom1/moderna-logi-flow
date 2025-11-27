@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.woocommerce-products]
 verify_jwt = true
+
+[functions.shopify-products]
+verify_jwt = true
