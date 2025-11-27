@@ -40,9 +40,16 @@ export default function ProductSyncPage() {
   const [wooSearch, setWooSearch] = useState("");
   const debouncedWooSearch = useDebounce(wooSearch, 500);
   
-  // Shopify cursor-based pagination and filters (search local en UI)
+  // Shopify cursor-based pagination, filters y búsqueda server-side
   const [shopifyCursor, setShopifyCursor] = useState<string | null>(null);
   const [shopifyStatus, setShopifyStatus] = useState("all");
+  const [shopifySearch, setShopifySearch] = useState("");
+  const debouncedShopifySearch = useDebounce(shopifySearch, 500);
+
+  // Resetear cursor cuando cambian búsqueda o estado
+  useEffect(() => {
+    setShopifyCursor(null);
+  }, [debouncedShopifySearch, shopifyStatus]);
 
   const wooPerPage = 20;
   const shopifyPerPage = 250;
@@ -58,10 +65,11 @@ export default function ProductSyncPage() {
     wooStatus === "all" ? undefined : wooStatus
   );
   
-  // Shopify with cursor-based pagination
+  // Shopify with cursor-based pagination and server-side search (GraphQL)
   const { data: shopifyData, isLoading: shopifyLoading } = useShopifyProductsPaginated(
     shopifyPerPage,
     shopifyCursor,
+    debouncedShopifySearch,
     shopifyStatus
   );
   
@@ -219,7 +227,8 @@ export default function ProductSyncPage() {
               <CardTitle className="flex items-center gap-2">
                 🛍️ Shopify
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({shopifyProducts.length} productos en página)
+                  ({shopifyProducts.length} productos
+                  {debouncedShopifySearch && ` - Buscando: "${debouncedShopifySearch}"`})
                 </span>
               </CardTitle>
             </CardHeader>
@@ -233,6 +242,8 @@ export default function ProductSyncPage() {
                 loading={shopifyLoading}
                 statusFilter={shopifyStatus}
                 onStatusFilterChange={setShopifyStatus}
+                searchTerm={shopifySearch}
+                onSearchChange={setShopifySearch}
                 useCursorPagination={true}
                 hasNext={hasNextShopify}
                 hasPrev={hasPrevShopify}
