@@ -205,15 +205,25 @@ export function ProductMappingModal({
           // Handle stock with default value of 0 if null/undefined
           const stockQuantity = variant.inventory_quantity ?? 0;
 
-          return {
+          // Build base variation data
+          const variationData: any = {
             regular_price: hasDiscount ? variant.compare_at_price! : variant.price,
-            sale_price: hasDiscount ? variant.price : undefined,
-            sku: variant.sku || undefined,
             stock_quantity: stockQuantity,
             manage_stock: true,
-            stock_status: stockQuantity > 0 ? 'instock' as const : 'outofstock' as const,
+            stock_status: stockQuantity > 0 ? 'instock' : 'outofstock',
             attributes,
           };
+
+          // Add optional properties only if they have values
+          if (hasDiscount) {
+            variationData.sale_price = variant.price;
+          }
+          
+          if (variant.sku) {
+            variationData.sku = variant.sku;
+          }
+
+          return variationData;
         });
         
         console.log('Variations to send to WooCommerce:', wooVariations);
