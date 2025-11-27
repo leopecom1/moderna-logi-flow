@@ -52,21 +52,32 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
     const perPage = 100; // Maximum allowed by WooCommerce API
     
     while (true) {
+      console.log(`[BulkMatch] Fetching WooCommerce page ${page}...`);
       const { data, error } = await supabase.functions.invoke(
-        `woocommerce-products/products?page=${page}&per_page=${perPage}`
+        `woocommerce-products/products?page=${page}&per_page=${perPage}`,
+        { method: 'GET' }
       );
-      
-      if (error || !data?.products?.length) break;
-      
-      allProducts.push(...data.products);
+
+      if (error) {
+        console.error('[BulkMatch] WooCommerce error:', error);
+        break;
+      }
+
+      const pageProducts = (data as any)?.products ?? [];
+      console.log(`[BulkMatch] WooCommerce page ${page}: ${pageProducts.length} products`);
+
+      if (!pageProducts.length) break;
+
+      allProducts.push(...pageProducts);
       setWooProductsCount(allProducts.length);
       
       // If we received fewer products than the max, we've reached the last page
-      if (data.products.length < perPage) break;
+      if (pageProducts.length < perPage) break;
       
       page++;
     }
     
+    console.log(`[BulkMatch] Total WooCommerce products loaded: ${allProducts.length}`);
     return allProducts;
   };
 
@@ -79,21 +90,33 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
     while (true) {
       const params = new URLSearchParams({ limit: limit.toString() });
       if (cursor) params.set('page_info', cursor);
-      
+
+      console.log('[BulkMatch] Fetching Shopify products with params:', params.toString());
       const { data, error } = await supabase.functions.invoke(
-        `shopify-products?${params.toString()}`
+        `shopify-products?${params.toString()}`,
+        { method: 'GET' }
       );
+
+      if (error) {
+        console.error('[BulkMatch] Shopify error:', error);
+        break;
+      }
+
+      const pageProducts = (data as any)?.products ?? [];
+      console.log(`[BulkMatch] Shopify page: ${pageProducts.length} products`);
+
+      if (!pageProducts.length) break;
       
-      if (error || !data?.products?.length) break;
-      
-      allProducts.push(...data.products);
+      allProducts.push(...pageProducts);
       setShopifyProductsCount(allProducts.length);
       
       // Get cursor for next page
-      cursor = data.pagination?.nextCursor || null;
-      if (!cursor || !data.pagination?.hasNext) break;
+      const pagination = (data as any)?.pagination;
+      cursor = pagination?.nextCursor || null;
+      if (!cursor || !pagination?.hasNext) break;
     }
     
+    console.log(`[BulkMatch] Total Shopify products loaded: ${allProducts.length}`);
     return allProducts;
   };
 
