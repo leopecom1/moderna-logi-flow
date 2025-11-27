@@ -99,17 +99,15 @@ export function useShopifyProducts(limit: number = 50) {
 export function useShopifyProductsPaginated(
   limit: number = 20,
   cursor: string | null = null,
-  search: string = "",
   status: string = "all"
 ) {
   const { data: config } = useShopifyConfig();
   
   return useQuery({
-    queryKey: ['shopify-products-paginated', limit, cursor, search, status],
+    queryKey: ['shopify-products-paginated', limit, cursor, status],
     queryFn: async () => {
       const params = new URLSearchParams({ limit: limit.toString() });
       if (cursor) params.set('page_info', cursor);
-      if (search) params.set('title', search);
       if (status !== 'all') params.set('status', status);
       
       const data = await callShopifyAPI(params);
