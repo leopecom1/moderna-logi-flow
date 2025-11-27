@@ -53,15 +53,7 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
     
     while (true) {
       const { data, error } = await supabase.functions.invoke(
-        `woocommerce-products/products`,
-        { 
-          body: { 
-            params: new URLSearchParams({ 
-              page: page.toString(), 
-              per_page: perPage.toString() 
-            }).toString() 
-          } 
-        }
+        `woocommerce-products/products?page=${page}&per_page=${perPage}`
       );
       
       if (error || !data?.products?.length) break;
