@@ -114,8 +114,6 @@ serve(async (req) => {
                       compareAtPrice
                       sku
                       inventoryQuantity
-                      weight
-                      weightUnit
                       image {
                         id
                       }
@@ -222,8 +220,6 @@ serve(async (req) => {
             option2: null,
             option3: null,
             image_id: v.image ? Number(v.image.id.split('/').pop()) : null,
-            weight: v.weight ?? undefined,
-            weight_unit: v.weightUnit ?? undefined,
           };
         });
 
@@ -334,8 +330,6 @@ serve(async (req) => {
                           compareAtPrice
                           sku
                           inventoryQuantity
-                          weight
-                          weightUnit
                           image {
                             id
                           }
@@ -420,8 +414,6 @@ serve(async (req) => {
                 option2: null,
                 option3: null,
                 image_id: v.image ? Number(v.image.id.split('/').pop()) : null,
-                weight: v.weight ?? undefined,
-                weight_unit: v.weightUnit ?? undefined,
               };
             });
 
