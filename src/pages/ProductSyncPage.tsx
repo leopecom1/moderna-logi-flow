@@ -28,10 +28,10 @@ export default function ProductSyncPage() {
   const perPage = 20;
 
   const { data: shopifyConfig, isLoading: configLoading } = useShopifyConfig();
-  const { data: shopifyProducts = [], isLoading: shopifyLoading } = useShopifyProducts(250);
+  const { data: shopifyProducts = [], isLoading: shopifyLoading } = useShopifyProducts(100);
   const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(
     1, 
-    250, 
+    100, 
     undefined, 
     undefined, 
     wooStatus === "all" ? undefined : wooStatus
