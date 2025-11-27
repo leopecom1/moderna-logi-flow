@@ -281,3 +281,25 @@ export function useBatchCreateWooCommerceVariations() {
     },
   });
 }
+
+export function useBatchDeleteWooCommerceVariations() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ productId, variationIds }: { productId: number; variationIds: number[] }) => {
+      return await callWooCommerceAPI(`/products/${productId}/variations/batch`, 'POST', { delete: variationIds });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-variations', variables.productId] });
+      queryClient.invalidateQueries({ queryKey: ['woocommerce-products'] });
+    },
+    onError: (error: Error) => {
+      console.error('[WooCommerce] Batch delete error:', error);
+      toast({
+        title: 'Error al eliminar variantes',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+}
