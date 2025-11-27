@@ -2474,6 +2474,95 @@ export type Database = {
         }
         Relationships: []
       }
+      sync_job_items: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          job_id: string
+          processed_at: string | null
+          shopify_product_id: number
+          shopify_product_name: string
+          status: string
+          woocommerce_product_id: number
+          woocommerce_product_name: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_id: string
+          processed_at?: string | null
+          shopify_product_id: number
+          shopify_product_name: string
+          status?: string
+          woocommerce_product_id: number
+          woocommerce_product_name: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          job_id?: string
+          processed_at?: string | null
+          shopify_product_id?: number
+          shopify_product_name?: string
+          status?: string
+          woocommerce_product_id?: number
+          woocommerce_product_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_job_items_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "sync_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_jobs: {
+        Row: {
+          completed_at: string | null
+          completed_products: number
+          copy_options: Json
+          created_at: string
+          created_by: string | null
+          failed_products: number
+          id: string
+          started_at: string | null
+          status: string
+          total_products: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_products?: number
+          copy_options?: Json
+          created_at?: string
+          created_by?: string | null
+          failed_products?: number
+          id?: string
+          started_at?: string | null
+          status?: string
+          total_products?: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_products?: number
+          copy_options?: Json
+          created_at?: string
+          created_by?: string | null
+          failed_products?: number
+          id?: string
+          started_at?: string | null
+          status?: string
+          total_products?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           brand: string

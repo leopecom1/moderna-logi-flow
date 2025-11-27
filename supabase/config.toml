@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.shopify-products]
 verify_jwt = true
+
+[functions.background-sync]
+verify_jwt = true

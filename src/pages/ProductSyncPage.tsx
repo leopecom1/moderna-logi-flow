@@ -6,6 +6,7 @@ import { ShopifyConfigModal } from "@/components/forms/ShopifyConfigModal";
 import { ProductMappingModal } from "@/components/forms/ProductMappingModal";
 import { BulkTitleMatchModal } from "@/components/forms/BulkTitleMatchModal";
 import { BulkSyncProgressModal, ProductSyncStatus } from "@/components/forms/BulkSyncProgressModal";
+import { BackgroundSyncProgressModal } from "@/components/forms/BackgroundSyncProgressModal";
 import { ProductList } from "@/components/sync/ProductList";
 import { useShopifyConfig, useShopifyProductsPaginated } from "@/hooks/useShopifyProducts";
 import { useWooCommerceProducts, useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations, useBatchDeleteWooCommerceVariations } from "@/hooks/useWooCommerceProducts";
@@ -43,6 +44,9 @@ export default function ProductSyncPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [bulkSyncProducts, setBulkSyncProducts] = useState<ProductSyncStatus[]>([]);
   const [currentSyncIndex, setCurrentSyncIndex] = useState(0);
+  const [backgroundSyncOpen, setBackgroundSyncOpen] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const [activeJobs, setActiveJobs] = useState<any[]>([]);
   
   const queryClient = useQueryClient();
   const createMapping = useCreateProductMapping();
@@ -90,6 +94,25 @@ export default function ProductSyncPage() {
   );
   
   const { data: mappings = [] } = useProductMappings();
+
+  // Fetch active jobs
+  useEffect(() => {
+    const fetchActiveJobs = async () => {
+      const { data } = await supabase
+        .from('sync_jobs')
+        .select('*')
+        .in('status', ['pending', 'processing'])
+        .order('created_at', { ascending: false });
+      
+      if (data) {
+        setActiveJobs(data);
+      }
+    };
+
+    fetchActiveJobs();
+    const interval = setInterval(fetchActiveJobs, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const wooProducts = wooData?.products || [];
   const wooTotal = wooData?.total || 0;
@@ -145,199 +168,65 @@ export default function ProductSyncPage() {
   };
 
   const handleStartBulkSync = async (matches: any[], copyOptions: any) => {
-    // Initialize product sync status
-    const syncProducts: ProductSyncStatus[] = matches.map(match => ({
-      wooId: match.woocommerce.id,
-      shopifyId: match.shopify.id,
-      name: match.woocommerce.name,
-      status: 'pending' as const,
-    }));
+    try {
+      // Create sync job
+      const { data: user } = await supabase.auth.getUser();
+      
+      const { data: job, error: jobError } = await supabase
+        .from('sync_jobs')
+        .insert({
+          status: 'pending',
+          total_products: matches.length,
+          copy_options: {
+            copyImages: copyOptions.images,
+            copyDescription: copyOptions.description,
+            copyPrice: copyOptions.price,
+            copyVariants: copyOptions.variants,
+          },
+          created_by: user.user?.id,
+        })
+        .select()
+        .single();
 
-    setBulkSyncProducts(syncProducts);
-    setCurrentSyncIndex(0);
-    setShowBulkProgressModal(true);
-
-    // Process each product sequentially
-    for (let i = 0; i < matches.length; i++) {
-      const match = matches[i];
-      setCurrentSyncIndex(i);
-
-      // Update status to syncing
-      setBulkSyncProducts(prev => 
-        prev.map((p, idx) => idx === i ? { ...p, status: 'syncing' as const } : p)
-      );
-
-      try {
-        // 1. Parallelize mapping and history save
-        const { data: { user } } = await supabase.auth.getUser();
-        await Promise.all([
-          createMapping.mutateAsync({
-            woocommerce_product_id: match.woocommerce.id,
-            shopify_product_id: match.shopify.id,
-            woocommerce_product_name: match.woocommerce.name,
-            shopify_product_name: match.shopify.title,
-          }),
-          supabase.from('product_sync_history').insert({
-            woocommerce_product_id: match.woocommerce.id,
-            woocommerce_product_name: match.woocommerce.name,
-            shopify_product_id: Number(match.shopify.id),
-            shopify_product_name: match.shopify.title,
-            synced_by: user?.id,
-          })
-        ]);
-
-        // 3. Build update data based on copy options
-        const updateData: any = {};
-        
-        if (copyOptions.description && match.shopify.body_html) {
-          updateData.description = match.shopify.body_html;
-        }
-
-        if (copyOptions.images && match.shopify.images?.length > 0) {
-          updateData.images = match.shopify.images.map((img: any) => ({
-            src: img.src,
-            alt: img.alt || match.shopify.title,
-          }));
-        }
-
-        // 3. Handle variants or simple product
-        const hasVariants = match.shopify.variants?.length > 1;
-
-        if (copyOptions.variants && hasVariants) {
-          // Variable product
-          const attributes = match.shopify.options
-            ?.filter((opt: any) => opt.values && opt.values.length > 0)
-            .map((opt: any) => ({
-              name: opt.name,
-              options: opt.values,
-              visible: true,
-              variation: true,
-            })) || [];
-
-          updateData.type = 'variable';
-          updateData.attributes = attributes;
-
-          await updateWooProduct.mutateAsync({
-            id: match.woocommerce.id,
-            data: updateData,
-          });
-
-          // Get and batch delete existing variations
-          const { data: existingVariations } = await queryClient.fetchQuery({
-            queryKey: ['woocommerce-variations', match.woocommerce.id],
-            queryFn: async () => {
-              const response = await supabase.functions.invoke(
-                `woocommerce-products/products/${match.woocommerce.id}/variations`,
-                { method: 'GET' }
-              );
-              if (response.error) throw new Error(response.error.message);
-              return response.data;
-            },
-          });
-
-          if (existingVariations && Array.isArray(existingVariations) && existingVariations.length > 0) {
-            await batchDeleteVariations.mutateAsync({
-              productId: match.woocommerce.id,
-              variationIds: existingVariations.map((v: any) => v.id),
-            });
-          }
-
-          // Create new variations
-          const variationsToCreate = match.shopify.variants.map((variant: any) => {
-            const attributes = match.shopify.options
-              ?.filter((opt: any) => opt.position <= 3)
-              .map((opt: any, idx: number) => ({
-                name: opt.name,
-                option: variant[`option${idx + 1}`] || '',
-              }))
-              .filter((attr: any) => attr.option) || [];
-
-            const hasDiscount = variant.compare_at_price && parseFloat(variant.compare_at_price) > parseFloat(variant.price);
-            const isInStock = (variant.inventory_quantity ?? 0) > 0;
-
-            const variationData: any = {
-              regular_price: hasDiscount ? variant.compare_at_price! : variant.price,
-              attributes,
-            };
-
-            if (isInStock) {
-              variationData.manage_stock = false;
-              variationData.stock_status = 'instock';
-            } else {
-              variationData.manage_stock = true;
-              variationData.stock_quantity = 0;
-              variationData.stock_status = 'outofstock';
-            }
-
-            if (hasDiscount) {
-              variationData.sale_price = variant.price;
-            }
-
-            if (variant.sku) {
-              variationData.sku = variant.sku;
-            }
-
-            return variationData;
-          });
-
-          await batchCreateVariations.mutateAsync({
-            productId: match.woocommerce.id,
-            variations: variationsToCreate,
-          });
-        } else {
-          // Simple product
-          if (copyOptions.price && match.shopify.variants?.[0]) {
-            const variant = match.shopify.variants[0];
-            const hasDiscount = variant.compare_at_price && parseFloat(variant.compare_at_price) > parseFloat(variant.price);
-            
-            updateData.regular_price = hasDiscount ? variant.compare_at_price : variant.price;
-            if (hasDiscount) {
-              updateData.sale_price = variant.price;
-            }
-            if (variant.sku) {
-              updateData.sku = variant.sku;
-            }
-
-            const isInStock = (variant.inventory_quantity ?? 0) > 0;
-            if (isInStock) {
-              updateData.manage_stock = false;
-              updateData.stock_status = 'instock';
-            } else {
-              updateData.manage_stock = true;
-              updateData.stock_quantity = 0;
-              updateData.stock_status = 'outofstock';
-            }
-          }
-
-          await updateWooProduct.mutateAsync({
-            id: match.woocommerce.id,
-            data: updateData,
-          });
-        }
-
-        // Mark as completed
-        setBulkSyncProducts(prev => 
-          prev.map((p, idx) => idx === i ? { ...p, status: 'completed' as const } : p)
-        );
-      } catch (error) {
-        console.error(`Error syncing product ${match.woocommerce.name}:`, error);
-        setBulkSyncProducts(prev => 
-          prev.map((p, idx) => 
-            idx === i ? { 
-              ...p, 
-              status: 'error' as const, 
-              error: error instanceof Error ? error.message : 'Error desconocido' 
-            } : p
-          )
-        );
+      if (jobError || !job) {
+        throw new Error('Failed to create sync job');
       }
-    }
 
-    // Invalidate queries after all products are processed
-    await queryClient.invalidateQueries({ queryKey: ["product-mappings"] });
-    await queryClient.invalidateQueries({ queryKey: ["woocommerce-products"] });
-    
-    toast.success(`Sincronización completada: ${matches.length} productos procesados`);
+      // Create sync job items
+      const items = matches.map(match => ({
+        job_id: job.id,
+        woocommerce_product_id: match.woocommerce.id,
+        woocommerce_product_name: match.woocommerce.name,
+        shopify_product_id: match.shopify.id,
+        shopify_product_name: match.shopify.title,
+        status: 'pending',
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('sync_job_items')
+        .insert(items);
+
+      if (itemsError) {
+        throw new Error('Failed to create sync job items');
+      }
+
+      // Start background sync
+      const { error: functionError } = await supabase.functions.invoke('background-sync', {
+        body: { job_id: job.id },
+      });
+
+      if (functionError) {
+        throw new Error(`Failed to start background sync: ${functionError.message}`);
+      }
+
+      setCurrentJobId(job.id);
+      setBackgroundSyncOpen(true);
+
+      toast.success("Sincronización iniciada en segundo plano");
+    } catch (error: any) {
+      console.error('Error starting bulk sync:', error);
+      toast.error(`Error al iniciar sincronización: ${error.message}`);
+    }
   };
 
   if (configLoading) {
@@ -386,6 +275,35 @@ export default function ProductSyncPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
+        {/* Active jobs banner */}
+        {activeJobs.length > 0 && (
+          <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-3">
+                <RefreshCw className="h-5 w-5 animate-spin text-blue-600 mt-0.5" />
+                <div>
+                  <p className="font-medium text-blue-900">
+                    Hay {activeJobs.length} sincronización{activeJobs.length > 1 ? 'es' : ''} en progreso
+                  </p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Los procesos continúan en segundo plano aunque cierres el navegador
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setCurrentJobId(activeJobs[0].id);
+                  setBackgroundSyncOpen(true);
+                }}
+              >
+                Ver progreso
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -517,10 +435,10 @@ export default function ProductSyncPage() {
         onStartSync={handleStartBulkSync}
       />
 
-      <BulkSyncProgressModal
-        open={showBulkProgressModal}
-        products={bulkSyncProducts}
-        currentIndex={currentSyncIndex}
+      <BackgroundSyncProgressModal
+        open={backgroundSyncOpen}
+        onClose={() => setBackgroundSyncOpen(false)}
+        jobId={currentJobId}
       />
     </MainLayout>
   );
