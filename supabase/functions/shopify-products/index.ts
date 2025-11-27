@@ -62,7 +62,11 @@ serve(async (req) => {
 
     if (useGraphQLSearch) {
       // Use Shopify GraphQL API for more powerful, catalog-wide search
-      const graphQLEndpoint = `https://${config.store_domain}/admin/api/2024-01/graphql.json`;
+      // Ensure we use the myshopify.com domain for API access
+      const storeDomain = config.store_domain.includes('.myshopify.com') 
+        ? config.store_domain 
+        : config.store_domain.replace(/\.(com|net|org|io)$/, '') + '.myshopify.com';
+      const graphQLEndpoint = `https://${storeDomain}/admin/api/2024-01/graphql.json`;
 
       // Build search query. We use wildcard search on title and optionally filter by status
       const searchParts = [`title:*${title}*`];
@@ -211,7 +215,11 @@ serve(async (req) => {
       prevCursor = pageInfo.hasPreviousPage ? pageInfo.startCursor ?? null : null;
     } else {
       // Fallback to REST API for standard listing & cursor-based pagination
-      const shopifyUrl = new URL(`https://${config.store_domain}/admin/api/2024-01/products.json`);
+      // Ensure we use the myshopify.com domain for API access
+      const storeDomain = config.store_domain.includes('.myshopify.com') 
+        ? config.store_domain 
+        : config.store_domain.replace(/\.(com|net|org|io)$/, '') + '.myshopify.com';
+      const shopifyUrl = new URL(`https://${storeDomain}/admin/api/2024-01/products.json`);
       shopifyUrl.searchParams.set('limit', limit);
       if (pageInfo) {
         shopifyUrl.searchParams.set('page_info', pageInfo);
