@@ -10,6 +10,7 @@ import { ShopifyProduct } from "@/types/shopify";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductMappingModalProps {
   open: boolean;
@@ -174,6 +175,26 @@ export function ProductMappingModal({
 
       // Create variations if selected
       if (selectedFields.variants && shopifyProduct.variants.length > 1) {
+        // Step 1: Get existing variations
+        setSyncProgress("Obteniendo variantes existentes...");
+        const { data: existingVariations } = await supabase.functions.invoke(
+          `woocommerce-products/products/${woocommerceProduct.id}/variations`,
+          { method: 'GET' }
+        );
+
+        // Step 2: Delete existing variations if any
+        if (existingVariations && existingVariations.length > 0) {
+          setSyncProgress(`Eliminando ${existingVariations.length} variantes anteriores...`);
+          const deleteIds = existingVariations.map((v: any) => v.id);
+          
+          await supabase.functions.invoke(
+            `woocommerce-products/products/${woocommerceProduct.id}/variations/batch`,
+            { 
+              method: 'POST',
+              body: { delete: deleteIds }
+            }
+          );
+        }
         setSyncProgress(`Creando ${shopifyProduct.variants.length} variantes...`);
         
         // Log stock data for debugging
