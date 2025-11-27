@@ -30,16 +30,12 @@ serve(async (req) => {
       );
     }
 
-    // Get request body
-    const requestBody = await req.json();
-    const { endpoint } = requestBody;
-
-    if (!endpoint) {
-      return new Response(
-        JSON.stringify({ error: 'Endpoint is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Parse URL parameters
+    const url = new URL(req.url);
+    const limit = url.searchParams.get('limit') || '50';
+    const pageInfo = url.searchParams.get('page_info'); // Shopify cursor
+    const title = url.searchParams.get('title'); // Search by title
+    const status = url.searchParams.get('status'); // Filter by status
 
     // Get Shopify config
     const { data: config, error: configError } = await supabaseClient
@@ -55,13 +51,17 @@ serve(async (req) => {
       );
     }
 
-    // Build Shopify API URL
-    const shopifyApiUrl = `https://${config.store_domain}/admin/api/2024-01${endpoint}`;
+    // Construct Shopify API URL with query parameters
+    const shopifyUrl = new URL(`https://${config.store_domain}/admin/api/2024-01/products.json`);
+    shopifyUrl.searchParams.set('limit', limit);
+    if (pageInfo) shopifyUrl.searchParams.set('page_info', pageInfo);
+    if (title) shopifyUrl.searchParams.set('title', title);
+    if (status && status !== 'all') shopifyUrl.searchParams.set('status', status);
     
-    console.log('Calling Shopify API:', shopifyApiUrl);
+    console.log('Calling Shopify API:', shopifyUrl.toString());
 
     // Make request to Shopify
-    const shopifyResponse = await fetch(shopifyApiUrl, {
+    const shopifyResponse = await fetch(shopifyUrl.toString(), {
       method: 'GET',
       headers: {
         'X-Shopify-Access-Token': config.access_token,
@@ -69,12 +69,47 @@ serve(async (req) => {
       },
     });
 
+    if (!shopifyResponse.ok) {
+      const errorText = await shopifyResponse.text();
+      console.error('Shopify API error:', errorText);
+      return new Response(
+        JSON.stringify({ error: `Shopify API error: ${shopifyResponse.status}` }),
+        { status: shopifyResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const data = await shopifyResponse.json();
 
+    // Parse Link header for pagination cursors
+    const linkHeader = shopifyResponse.headers.get('Link');
+    let nextCursor = null;
+    let prevCursor = null;
+
+    if (linkHeader) {
+      const links = linkHeader.split(',');
+      for (const link of links) {
+        const match = link.match(/<[^>]*[?&]page_info=([^&>]+)[^>]*>;\s*rel="([^"]+)"/);
+        if (match) {
+          const cursor = match[1];
+          const rel = match[2];
+          if (rel === 'next') nextCursor = cursor;
+          if (rel === 'previous') prevCursor = cursor;
+        }
+      }
+    }
+
     return new Response(
-      JSON.stringify(data),
+      JSON.stringify({
+        products: data.products,
+        pagination: {
+          nextCursor,
+          prevCursor,
+          hasNext: !!nextCursor,
+          hasPrev: !!prevCursor,
+        }
+      }),
       {
-        status: shopifyResponse.status,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
