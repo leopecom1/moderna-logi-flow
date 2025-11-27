@@ -43,7 +43,9 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
 
   const { data: mappings } = useProductMappings();
   
-  // Use maximum allowed limits: WooCommerce = 100, Shopify = 250
+  // Note: This modal only checks the first page of products due to API limits
+  // WooCommerce max = 100 per page, Shopify max = 250 per page
+  // For a complete match across all products, you'd need to implement pagination
   const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(1, 100);
   const { data: shopifyData, isLoading: shopifyLoading } = useShopifyProductsPaginated(250);
 
@@ -124,7 +126,8 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
           </div>
         ) : matches.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
-            No se encontraron productos con nombres coincidentes entre WooCommerce y Shopify.
+            <p className="mb-2">No se encontraron productos con nombres coincidentes.</p>
+            <p className="text-xs">Nota: Se compararon los primeros 100 productos de WooCommerce y 250 de Shopify.</p>
           </div>
         ) : (
           <>
