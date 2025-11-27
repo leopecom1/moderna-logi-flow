@@ -61,12 +61,19 @@ serve(async (req) => {
     let prevCursor: string | null = null;
 
     if (useGraphQLSearch) {
-      // Convert domain if needed (e.g., modernahogar.com → modernahogar.myshopify.com)
-      const storeDomain = config.store_domain.includes('.myshopify.com') 
-        ? config.store_domain 
-        : config.store_domain.replace(/\.(com|net|org|io)$/, '') + '.myshopify.com';
-      
-      console.log(`Using Shopify domain: ${storeDomain}`);
+      // Use the store_domain exactly as configured; it must be a *.myshopify.com domain
+      const rawDomain = (config.store_domain || '').trim().toLowerCase();
+      if (!rawDomain.endsWith('.myshopify.com')) {
+        const msg = `Invalid Shopify store_domain in config. Expected *.myshopify.com, got: ${rawDomain || 'empty'}`;
+        console.error(msg);
+        return new Response(JSON.stringify({ error: msg }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const storeDomain = rawDomain;
+      console.log(`Using Shopify domain (GraphQL search): ${storeDomain}`);
       const graphQLEndpoint = `https://${storeDomain}/admin/api/2024-10/graphql.json`;
 
       // Build search query. We use wildcard search on title and optionally filter by status
@@ -228,12 +235,19 @@ serve(async (req) => {
       prevCursor = pageInfo.hasPreviousPage ? pageInfo.startCursor ?? null : null;
     } else {
       // Fallback to REST API for standard listing & cursor-based pagination
-      // Ensure we use the myshopify.com domain for API access
-      const storeDomain = config.store_domain.includes('.myshopify.com') 
-        ? config.store_domain 
-        : config.store_domain.replace(/\.(com|net|org|io)$/, '') + '.myshopify.com';
-      
-      console.log(`Using Shopify domain: ${storeDomain}`);
+      // Use the store_domain exactly as configured; it must be a *.myshopify.com domain
+      const rawDomain = (config.store_domain || '').trim().toLowerCase();
+      if (!rawDomain.endsWith('.myshopify.com')) {
+        const msg = `Invalid Shopify store_domain in config. Expected *.myshopify.com, got: ${rawDomain || 'empty'}`;
+        console.error(msg);
+        return new Response(JSON.stringify({ error: msg }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const storeDomain = rawDomain;
+      console.log(`Using Shopify domain (REST): ${storeDomain}`);
       const shopifyUrl = new URL(`https://${storeDomain}/admin/api/2024-10/products.json`);
       shopifyUrl.searchParams.set('limit', limit);
       if (pageInfo) {
