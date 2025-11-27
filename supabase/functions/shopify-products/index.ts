@@ -61,11 +61,12 @@ serve(async (req) => {
     let prevCursor: string | null = null;
 
     if (useGraphQLSearch) {
-      // Use Shopify GraphQL API for more powerful, catalog-wide search
-      // Ensure we use the myshopify.com domain for API access
+      // Convert domain if needed (e.g., modernahogar.com → modernahogar.myshopify.com)
       const storeDomain = config.store_domain.includes('.myshopify.com') 
         ? config.store_domain 
         : config.store_domain.replace(/\.(com|net|org|io)$/, '') + '.myshopify.com';
+      
+      console.log(`Using Shopify domain: ${storeDomain}`);
       const graphQLEndpoint = `https://${storeDomain}/admin/api/2024-10/graphql.json`;
 
       // Build search query. We use wildcard search on title and optionally filter by status
@@ -151,8 +152,20 @@ serve(async (req) => {
       if (!graphQLResponse.ok) {
         const errorText = await graphQLResponse.text();
         console.error('Shopify GraphQL API error:', errorText);
+        
+        let errorMessage = 'Failed to fetch products from Shopify GraphQL';
+        if (graphQLResponse.status === 404) {
+          errorMessage = `Shopify store not found. Verify your store domain is correct (should be *.myshopify.com). Current domain: ${storeDomain}`;
+        } else if (graphQLResponse.status === 401) {
+          errorMessage = 'Invalid Shopify access token. Please check your credentials.';
+        }
+        
         return new Response(
-          JSON.stringify({ error: `Shopify GraphQL API error: ${graphQLResponse.status}` }),
+          JSON.stringify({ 
+            error: errorMessage, 
+            details: errorText,
+            domain_used: storeDomain 
+          }),
           { status: graphQLResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -219,6 +232,8 @@ serve(async (req) => {
       const storeDomain = config.store_domain.includes('.myshopify.com') 
         ? config.store_domain 
         : config.store_domain.replace(/\.(com|net|org|io)$/, '') + '.myshopify.com';
+      
+      console.log(`Using Shopify domain: ${storeDomain}`);
       const shopifyUrl = new URL(`https://${storeDomain}/admin/api/2024-10/products.json`);
       shopifyUrl.searchParams.set('limit', limit);
       if (pageInfo) {
@@ -245,7 +260,7 @@ serve(async (req) => {
 
         // If the REST API returns 404 (e.g. version/path not found), fall back to GraphQL listing
         if (shopifyResponse.status === 404) {
-          console.log('REST API returned 404, falling back to GraphQL products listing');
+          console.log(`REST API returned 404, falling back to GraphQL products listing. Domain used: ${storeDomain}`);
 
           const graphQLEndpoint = `https://${storeDomain}/admin/api/2024-10/graphql.json`;
 
@@ -330,8 +345,20 @@ serve(async (req) => {
           if (!graphQLResponse.ok) {
             const gqlErrorText = await graphQLResponse.text();
             console.error('Shopify GraphQL fallback API error:', gqlErrorText);
+            
+            let errorMessage = 'Failed to fetch products from Shopify GraphQL';
+            if (graphQLResponse.status === 404) {
+              errorMessage = `Shopify store not found. Verify your store domain is correct (should be *.myshopify.com). Current domain: ${storeDomain}`;
+            } else if (graphQLResponse.status === 401) {
+              errorMessage = 'Invalid Shopify access token. Please check your credentials.';
+            }
+            
             return new Response(
-              JSON.stringify({ error: `Shopify API error: ${graphQLResponse.status}` }),
+              JSON.stringify({ 
+                error: errorMessage, 
+                details: gqlErrorText,
+                domain_used: storeDomain 
+              }),
               { status: graphQLResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             );
           }
@@ -391,8 +418,19 @@ serve(async (req) => {
           nextCursor = pageInfoGql.hasNextPage ? pageInfoGql.endCursor ?? null : null;
           prevCursor = pageInfoGql.hasPreviousPage ? pageInfoGql.startCursor ?? null : null;
         } else {
+          let errorMessage = 'Failed to fetch products from Shopify';
+          if (shopifyResponse.status === 404) {
+            errorMessage = `Shopify store not found. Verify your store domain is correct (should be *.myshopify.com). Current domain: ${storeDomain}`;
+          } else if (shopifyResponse.status === 401) {
+            errorMessage = 'Invalid Shopify access token. Please check your credentials.';
+          }
+          
           return new Response(
-            JSON.stringify({ error: `Shopify API error: ${shopifyResponse.status}` }),
+            JSON.stringify({ 
+              error: errorMessage, 
+              details: errorText,
+              domain_used: storeDomain 
+            }),
             { status: shopifyResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }

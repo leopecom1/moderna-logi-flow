@@ -40,7 +40,7 @@ export function ShopifyConfigModal({ open, onOpenChange }: ShopifyConfigModalPro
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="store-domain">Dominio de la tienda</Label>
+            <Label htmlFor="store-domain">Dominio de la tienda Shopify</Label>
             <Input
               id="store-domain"
               placeholder="tu-tienda.myshopify.com"
@@ -48,6 +48,10 @@ export function ShopifyConfigModal({ open, onOpenChange }: ShopifyConfigModalPro
               onChange={(e) => setStoreDomain(e.target.value)}
               required
             />
+            <p className="text-xs text-muted-foreground">
+              ⚠️ Usa el dominio <strong>.myshopify.com</strong> de tu tienda. Encuéntralo en: 
+              Shopify Admin → Settings → Domains
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -65,14 +69,18 @@ export function ShopifyConfigModal({ open, onOpenChange }: ShopifyConfigModalPro
           <Alert>
             <InfoIcon className="h-4 w-4" />
             <AlertDescription className="text-sm">
-              <strong>¿Cómo obtener el token?</strong>
+              <strong>📋 Instrucciones para configurar Shopify:</strong>
               <ol className="list-decimal list-inside mt-2 space-y-1">
                 <li>Ve a tu admin de Shopify</li>
-                <li>Settings → Apps → Develop apps</li>
-                <li>Create an app → Configure</li>
-                <li>Selecciona read_products y write_products</li>
-                <li>Install app → Reveal token</li>
+                <li>Settings → Apps and sales channels → Develop apps</li>
+                <li>Create an app (dale un nombre)</li>
+                <li>Configure Admin API scopes → selecciona <code className="bg-muted px-1">read_products</code> y <code className="bg-muted px-1">write_products</code></li>
+                <li>Install app → API credentials → Reveal token once</li>
+                <li>Copia el <strong>Admin API access token</strong> (empieza con "shpat_")</li>
               </ol>
+              <p className="mt-3 font-semibold text-primary">
+                💡 El dominio debe ser el formato .myshopify.com (ej: tu-tienda.myshopify.com)
+              </p>
             </AlertDescription>
           </Alert>
 

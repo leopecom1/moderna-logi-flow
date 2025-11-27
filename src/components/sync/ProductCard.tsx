@@ -21,7 +21,11 @@ export function ProductCard({ product, type, selected, mapped, onSelect }: Produ
   const name = isWooCommerce ? wcProduct?.name : shopifyProduct?.title;
   const price = isWooCommerce ? wcProduct?.price : shopifyProduct?.variants[0]?.price;
   const sku = isWooCommerce ? wcProduct?.sku : shopifyProduct?.variants[0]?.sku;
-  const imageUrl = isWooCommerce ? wcProduct?.images[0]?.src : shopifyProduct?.images[0]?.src;
+  
+  // Handle images with fallback for both WooCommerce and Shopify
+  const imageUrl = isWooCommerce 
+    ? (wcProduct?.images && wcProduct.images.length > 0 ? wcProduct.images[0].src : null)
+    : (shopifyProduct?.images && shopifyProduct.images.length > 0 ? shopifyProduct.images[0].src : null);
 
   return (
     <Card className={`relative cursor-pointer transition-all hover:shadow-md ${selected ? 'ring-2 ring-primary' : ''}`}>
