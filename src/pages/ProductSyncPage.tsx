@@ -1,15 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShopifyConfigModal } from "@/components/forms/ShopifyConfigModal";
 import { ProductMappingModal } from "@/components/forms/ProductMappingModal";
 import { ProductList } from "@/components/sync/ProductList";
-import { useShopifyConfig, useShopifyProducts } from "@/hooks/useShopifyProducts";
+import { useShopifyConfig, useShopifyProductsPaginated } from "@/hooks/useShopifyProducts";
 import { useWooCommerceProducts } from "@/hooks/useWooCommerceProducts";
 import { useProductMappings } from "@/hooks/useProductMappings";
 import { Settings, RefreshCw, Link2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Custom hook for debouncing
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export default function ProductSyncPage() {
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -17,51 +34,66 @@ export default function ProductSyncPage() {
   const [selectedWooCommerceId, setSelectedWooCommerceId] = useState<number | undefined>();
   const [selectedShopifyId, setSelectedShopifyId] = useState<number | undefined>();
   
-  // WooCommerce pagination and filters
+  // WooCommerce pagination, filters, and search
   const [wooPage, setWooPage] = useState(1);
   const [wooStatus, setWooStatus] = useState("all");
+  const [wooSearch, setWooSearch] = useState("");
+  const debouncedWooSearch = useDebounce(wooSearch, 500);
   
-  // Shopify pagination and filters
-  const [shopifyPage, setShopifyPage] = useState(1);
+  // Shopify cursor-based pagination, filters, and search
+  const [shopifyCursor, setShopifyCursor] = useState<string | null>(null);
   const [shopifyStatus, setShopifyStatus] = useState("all");
+  const [shopifySearch, setShopifySearch] = useState("");
+  const debouncedShopifySearch = useDebounce(shopifySearch, 500);
 
   const perPage = 20;
 
   const { data: shopifyConfig, isLoading: configLoading } = useShopifyConfig();
-  const { data: shopifyProducts = [], isLoading: shopifyLoading } = useShopifyProducts(100);
+  
+  // WooCommerce with server-side pagination and search
   const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(
-    1, 
-    100, 
-    undefined, 
+    wooPage, 
+    perPage, 
+    debouncedWooSearch || undefined, 
     undefined, 
     wooStatus === "all" ? undefined : wooStatus
   );
+  
+  // Shopify with cursor-based pagination and search
+  const { data: shopifyData, isLoading: shopifyLoading } = useShopifyProductsPaginated(
+    perPage,
+    shopifyCursor,
+    debouncedShopifySearch,
+    shopifyStatus
+  );
+  
   const { data: mappings = [] } = useProductMappings();
 
-  const allWooProducts = wooData?.products || [];
-  const allShopifyProducts = shopifyProducts || [];
+  const wooProducts = wooData?.products || [];
+  const wooTotal = wooData?.total || 0;
+  const wooTotalPages = wooData?.totalPages || 1;
   
-  // Filter and paginate WooCommerce products
-  const filteredWooProducts = allWooProducts.filter(p => {
-    if (wooStatus === "all") return true;
-    return p.status === wooStatus;
-  });
-  const wooTotalPages = Math.ceil(filteredWooProducts.length / perPage);
-  const wooProducts = filteredWooProducts.slice((wooPage - 1) * perPage, wooPage * perPage);
-
-  // Filter and paginate Shopify products
-  const filteredShopifyProducts = allShopifyProducts.filter(p => {
-    if (shopifyStatus === "all") return true;
-    return p.status === shopifyStatus;
-  });
-  const shopifyTotalPages = Math.ceil(filteredShopifyProducts.length / perPage);
-  const paginatedShopifyProducts = filteredShopifyProducts.slice((shopifyPage - 1) * perPage, shopifyPage * perPage);
+  const shopifyProducts = shopifyData?.products || [];
+  const hasNextShopify = shopifyData?.hasNext || false;
+  const hasPrevShopify = shopifyData?.hasPrev || false;
 
   const mappedWooIds = new Set(mappings.map(m => m.woocommerce_product_id));
   const mappedShopifyIds = new Set(mappings.map(m => m.shopify_product_id));
 
-  const selectedWooProduct = allWooProducts.find(p => p.id === selectedWooCommerceId);
-  const selectedShopifyProduct = allShopifyProducts.find(p => p.id === selectedShopifyId);
+  const selectedWooProduct = wooProducts.find(p => p.id === selectedWooCommerceId);
+  const selectedShopifyProduct = shopifyProducts.find(p => p.id === selectedShopifyId);
+
+  const handleNextShopify = () => {
+    if (shopifyData?.nextCursor) {
+      setShopifyCursor(shopifyData.nextCursor);
+    }
+  };
+
+  const handlePrevShopify = () => {
+    if (shopifyData?.prevCursor) {
+      setShopifyCursor(shopifyData.prevCursor);
+    }
+  };
 
   const handleAssociate = () => {
     if (selectedWooCommerceId && selectedShopifyId) {
@@ -160,7 +192,7 @@ export default function ProductSyncPage() {
               <CardTitle className="flex items-center gap-2">
                 🛒 WooCommerce
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({filteredWooProducts.length} productos)
+                  ({wooTotal} productos)
                 </span>
               </CardTitle>
             </CardHeader>
@@ -177,6 +209,8 @@ export default function ProductSyncPage() {
                 onPageChange={setWooPage}
                 statusFilter={wooStatus}
                 onStatusFilterChange={setWooStatus}
+                searchTerm={wooSearch}
+                onSearchChange={setWooSearch}
               />
             </CardContent>
           </Card>
@@ -187,23 +221,27 @@ export default function ProductSyncPage() {
               <CardTitle className="flex items-center gap-2">
                 🛍️ Shopify
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({filteredShopifyProducts.length} productos)
+                  ({shopifyProducts.length} productos en página)
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ProductList
-                products={paginatedShopifyProducts}
+                products={shopifyProducts}
                 type="shopify"
                 selectedId={selectedShopifyId}
                 mappedIds={mappedShopifyIds}
                 onSelect={setSelectedShopifyId}
                 loading={shopifyLoading}
-                currentPage={shopifyPage}
-                totalPages={shopifyTotalPages}
-                onPageChange={setShopifyPage}
                 statusFilter={shopifyStatus}
                 onStatusFilterChange={setShopifyStatus}
+                searchTerm={shopifySearch}
+                onSearchChange={setShopifySearch}
+                useCursorPagination={true}
+                hasNext={hasNextShopify}
+                hasPrev={hasPrevShopify}
+                onNext={handleNextShopify}
+                onPrev={handlePrevShopify}
               />
             </CardContent>
           </Card>

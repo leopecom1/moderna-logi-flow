@@ -15,11 +15,18 @@ interface ProductListProps {
   mappedIds?: Set<number>;
   onSelect?: (id: number) => void;
   loading?: boolean;
-  currentPage: number;
-  totalPages: number;
-  onPageChange: (page: number) => void;
+  currentPage?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
   statusFilter: string;
   onStatusFilterChange: (status: string) => void;
+  searchTerm?: string;
+  onSearchChange?: (search: string) => void;
+  hasNext?: boolean;
+  hasPrev?: boolean;
+  onNext?: () => void;
+  onPrev?: () => void;
+  useCursorPagination?: boolean;
 }
 
 export function ProductList({
@@ -29,15 +36,27 @@ export function ProductList({
   mappedIds = new Set(),
   onSelect,
   loading,
-  currentPage,
-  totalPages,
+  currentPage = 1,
+  totalPages = 1,
   onPageChange,
   statusFilter,
   onStatusFilterChange,
+  searchTerm: externalSearchTerm,
+  onSearchChange,
+  hasNext = false,
+  hasPrev = false,
+  onNext,
+  onPrev,
+  useCursorPagination = false,
 }: ProductListProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const [internalSearchTerm, setInternalSearchTerm] = useState("");
 
-  const filteredProducts = products.filter(product => {
+  // Use external search if provided, otherwise use internal
+  const searchTerm = externalSearchTerm !== undefined ? externalSearchTerm : internalSearchTerm;
+  const setSearchTerm = onSearchChange || setInternalSearchTerm;
+
+  // Only filter locally if not using server-side search
+  const displayProducts = onSearchChange ? products : products.filter(product => {
     const name = type === 'woocommerce' 
       ? (product as WooCommerceProduct).name
       : (product as ShopifyProduct).title;
@@ -83,12 +102,12 @@ export function ProductList({
         <>
           <ScrollArea className="h-[500px] pr-4">
             <div className="space-y-3">
-              {filteredProducts.length === 0 ? (
+              {displayProducts.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No se encontraron productos
                 </div>
               ) : (
-                filteredProducts.map(product => {
+                displayProducts.map(product => {
                   const id = type === 'woocommerce'
                     ? (product as WooCommerceProduct).id
                     : (product as ShopifyProduct).id;
@@ -108,49 +127,72 @@ export function ProductList({
             </div>
           </ScrollArea>
 
-          {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious 
-                    onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-                
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                  let pageNum;
-                  if (totalPages <= 5) {
-                    pageNum = i + 1;
-                  } else if (currentPage <= 3) {
-                    pageNum = i + 1;
-                  } else if (currentPage >= totalPages - 2) {
-                    pageNum = totalPages - 4 + i;
-                  } else {
-                    pageNum = currentPage - 2 + i;
-                  }
+          {useCursorPagination ? (
+            // Cursor-based pagination for Shopify
+            (hasNext || hasPrev) && (
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={onPrev}
+                      className={!hasPrev ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={onNext}
+                      className={!hasNext ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )
+          ) : (
+            // Page-based pagination for WooCommerce
+            totalPages > 1 && onPageChange && (
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => currentPage > 1 && onPageChange(currentPage - 1)}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
                   
-                  return (
-                    <PaginationItem key={pageNum}>
-                      <PaginationLink
-                        onClick={() => onPageChange(pageNum)}
-                        isActive={currentPage === pageNum}
-                        className="cursor-pointer"
-                      >
-                        {pageNum}
-                      </PaginationLink>
-                    </PaginationItem>
-                  );
-                })}
-                
-                <PaginationItem>
-                  <PaginationNext 
-                    onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
+                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else if (currentPage <= 3) {
+                      pageNum = i + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNum = totalPages - 4 + i;
+                    } else {
+                      pageNum = currentPage - 2 + i;
+                    }
+                    
+                    return (
+                      <PaginationItem key={pageNum}>
+                        <PaginationLink
+                          onClick={() => onPageChange(pageNum)}
+                          isActive={currentPage === pageNum}
+                          className="cursor-pointer"
+                        >
+                          {pageNum}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => currentPage < totalPages && onPageChange(currentPage + 1)}
+                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )
           )}
         </>
       )}

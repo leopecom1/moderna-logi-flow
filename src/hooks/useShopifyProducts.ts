@@ -3,16 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShopifyProduct, ShopifyConfig } from "@/types/shopify";
 import { useToast } from "@/hooks/use-toast";
 
-async function callShopifyAPI(endpoint: string) {
+async function callShopifyAPI(params: URLSearchParams) {
   const { data: { session } } = await supabase.auth.getSession();
   
   if (!session) {
     throw new Error('No authenticated session');
   }
 
-  const { data, error } = await supabase.functions.invoke('shopify-products', {
-    body: { endpoint },
-  });
+  const queryString = params.toString();
+  const endpoint = queryString ? `?${queryString}` : '';
+
+  const { data, error } = await supabase.functions.invoke(`shopify-products${endpoint}`);
 
   if (error) throw error;
   return data;
@@ -87,8 +88,38 @@ export function useShopifyProducts(limit: number = 50) {
   return useQuery({
     queryKey: ['shopify-products', limit],
     queryFn: async () => {
-      const data = await callShopifyAPI(`/products.json?limit=${limit}`);
+      const params = new URLSearchParams({ limit: limit.toString() });
+      const data = await callShopifyAPI(params);
       return data.products as ShopifyProduct[];
+    },
+    enabled: !!config,
+  });
+}
+
+export function useShopifyProductsPaginated(
+  limit: number = 20,
+  cursor: string | null = null,
+  search: string = "",
+  status: string = "all"
+) {
+  const { data: config } = useShopifyConfig();
+  
+  return useQuery({
+    queryKey: ['shopify-products-paginated', limit, cursor, search, status],
+    queryFn: async () => {
+      const params = new URLSearchParams({ limit: limit.toString() });
+      if (cursor) params.set('page_info', cursor);
+      if (search) params.set('title', search);
+      if (status !== 'all') params.set('status', status);
+      
+      const data = await callShopifyAPI(params);
+      return {
+        products: data.products as ShopifyProduct[],
+        nextCursor: data.pagination?.nextCursor || null,
+        prevCursor: data.pagination?.prevCursor || null,
+        hasNext: data.pagination?.hasNext || false,
+        hasPrev: data.pagination?.hasPrev || false,
+      };
     },
     enabled: !!config,
   });
@@ -101,7 +132,9 @@ export function useShopifyProduct(productId: number | null) {
     queryKey: ['shopify-product', productId],
     queryFn: async () => {
       if (!productId) return null;
-      const data = await callShopifyAPI(`/products/${productId}.json`);
+      const params = new URLSearchParams();
+      const data = await callShopifyAPI(params);
+      // Note: For single product, we'd need a different endpoint structure
       return data.product as ShopifyProduct;
     },
     enabled: !!productId && !!config,
