@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useCreateProductMapping } from "@/hooks/useProductMappings";
-import { useUpdateWooCommerceProduct } from "@/hooks/useWooCommerceProducts";
+import { useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations } from "@/hooks/useWooCommerceProducts";
 import { WooCommerceProduct } from "@/types/woocommerce";
 import { ShopifyProduct } from "@/types/shopify";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,16 +24,21 @@ export function ProductMappingModal({
   woocommerceProduct,
   shopifyProduct,
 }: ProductMappingModalProps) {
+  const hasVariants = shopifyProduct && shopifyProduct.variants.length > 1;
+  
   const [selectedFields, setSelectedFields] = useState({
     images: true,
     description: true,
     price: true,
     sku: true,
-    variants: false,
+    variants: hasVariants,
   });
+
+  const [syncProgress, setSyncProgress] = useState<string>("");
 
   const createMapping = useCreateProductMapping();
   const updateProduct = useUpdateWooCommerceProduct();
+  const batchCreateVariations = useBatchCreateWooCommerceVariations();
   const { toast } = useToast();
 
   const handleToggleField = (field: string) => {
@@ -57,6 +62,8 @@ export function ProductMappingModal({
     if (!woocommerceProduct || !shopifyProduct) return;
 
     try {
+      setSyncProgress("Creando mapeo...");
+      
       // Create mapping first
       await createMapping.mutateAsync({
         woocommerce_product_id: woocommerceProduct.id,
@@ -76,14 +83,20 @@ export function ProductMappingModal({
         updateData.description = shopifyProduct.body_html;
       }
 
-      if (selectedFields.price && shopifyProduct.variants[0]) {
-        updateData.regular_price = shopifyProduct.variants[0].price;
-        if (shopifyProduct.variants[0].compare_at_price) {
-          updateData.sale_price = shopifyProduct.variants[0].compare_at_price;
+      // Only add price to parent if NOT creating variants
+      if (selectedFields.price && shopifyProduct.variants[0] && !selectedFields.variants) {
+        const firstVariant = shopifyProduct.variants[0];
+        const hasDiscount = firstVariant.compare_at_price && 
+                          parseFloat(firstVariant.compare_at_price) > parseFloat(firstVariant.price);
+        
+        updateData.regular_price = hasDiscount ? firstVariant.compare_at_price : firstVariant.price;
+        if (hasDiscount) {
+          updateData.sale_price = firstVariant.price;
         }
       }
 
-      if (selectedFields.sku && shopifyProduct.variants[0]) {
+      // Only add SKU to parent if NOT creating variants
+      if (selectedFields.sku && shopifyProduct.variants[0] && !selectedFields.variants) {
         updateData.sku = shopifyProduct.variants[0].sku;
       }
 
@@ -98,20 +111,67 @@ export function ProductMappingModal({
         }));
       }
 
+      setSyncProgress("Actualizando producto...");
+      
       // Update WooCommerce product
       await updateProduct.mutateAsync({
         id: woocommerceProduct.id,
         data: updateData,
       });
 
+      // Create variations if selected
+      if (selectedFields.variants && shopifyProduct.variants.length > 1) {
+        setSyncProgress(`Creando ${shopifyProduct.variants.length} variantes...`);
+        
+        const wooVariations = shopifyProduct.variants.map(variant => {
+          // Map option1/option2/option3 to attribute names
+          const attributes = shopifyProduct.options.map((opt, idx) => {
+            const optionValue = idx === 0 ? variant.option1 : idx === 1 ? variant.option2 : variant.option3;
+            return {
+              name: opt.name,
+              option: optionValue || '',
+            };
+          }).filter(attr => attr.option); // Remove null/empty options
+
+          // Handle pricing: if compare_at_price exists and is higher, use it as regular_price
+          const hasDiscount = variant.compare_at_price && 
+                            parseFloat(variant.compare_at_price) > parseFloat(variant.price);
+
+          return {
+            regular_price: hasDiscount ? variant.compare_at_price! : variant.price,
+            sale_price: hasDiscount ? variant.price : undefined,
+            sku: variant.sku || undefined,
+            stock_quantity: variant.inventory_quantity,
+            manage_stock: true,
+            stock_status: variant.inventory_quantity > 0 ? 'instock' as const : 'outofstock' as const,
+            attributes,
+          };
+        });
+
+        await batchCreateVariations.mutateAsync({
+          productId: woocommerceProduct.id,
+          variations: wooVariations,
+        });
+      }
+
+      setSyncProgress("");
+      
       toast({
         title: "Sincronización completada",
-        description: "Los datos se copiaron correctamente de Shopify a WooCommerce",
+        description: selectedFields.variants 
+          ? `Producto y ${shopifyProduct.variants.length} variantes copiados correctamente`
+          : "Los datos se copiaron correctamente de Shopify a WooCommerce",
       });
 
       onOpenChange(false);
     } catch (error) {
       console.error('Error copying data:', error);
+      setSyncProgress("");
+      toast({
+        title: "Error",
+        description: "Ocurrió un error al copiar los datos",
+        variant: "destructive",
+      });
     }
   };
 
@@ -241,22 +301,35 @@ export function ProductMappingModal({
           </div>
         </div>
 
+        {syncProgress && (
+          <Alert>
+            <AlertDescription className="text-sm flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              {syncProgress}
+            </AlertDescription>
+          </Alert>
+        )}
+
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            disabled={!!syncProgress}
+          >
             Cancelar
           </Button>
           <Button
             variant="secondary"
             onClick={handleMapOnly}
-            disabled={createMapping.isPending}
+            disabled={createMapping.isPending || !!syncProgress}
           >
             🔗 Solo Asociar
           </Button>
           <Button
             onClick={handleMapAndCopy}
-            disabled={createMapping.isPending || updateProduct.isPending}
+            disabled={createMapping.isPending || updateProduct.isPending || batchCreateVariations.isPending || !!syncProgress}
           >
-            {createMapping.isPending || updateProduct.isPending ? "Procesando..." : "📥 Asociar y Copiar"}
+            {syncProgress ? syncProgress : "📥 Asociar y Copiar"}
           </Button>
         </DialogFooter>
       </DialogContent>
