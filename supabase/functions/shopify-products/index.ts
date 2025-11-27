@@ -56,9 +56,17 @@ serve(async (req) => {
     // Construct Shopify API URL with query parameters
     const shopifyUrl = new URL(`https://${config.store_domain}/admin/api/2024-01/products.json`);
     shopifyUrl.searchParams.set('limit', limit);
-    if (pageInfo) shopifyUrl.searchParams.set('page_info', pageInfo);
-    if (title) shopifyUrl.searchParams.set('title', title);
-    if (status && status !== 'all') shopifyUrl.searchParams.set('status', status);
+    if (pageInfo) {
+      shopifyUrl.searchParams.set('page_info', pageInfo);
+    }
+    // For search, don't use page_info cursor as it conflicts with filters
+    if (title && !pageInfo) {
+      // Use title as a partial match (Shopify supports this)
+      shopifyUrl.searchParams.set('title', title);
+    }
+    if (status && status !== 'all') {
+      shopifyUrl.searchParams.set('status', status);
+    }
     
     console.log('Calling Shopify API:', shopifyUrl.toString());
 

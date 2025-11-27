@@ -46,6 +46,11 @@ export default function ProductSyncPage() {
   const [shopifySearch, setShopifySearch] = useState("");
   const debouncedShopifySearch = useDebounce(shopifySearch, 500);
 
+  // Reset cursor when search or status changes
+  useEffect(() => {
+    setShopifyCursor(null);
+  }, [debouncedShopifySearch, shopifyStatus]);
+
   const perPage = 20;
 
   const { data: shopifyConfig, isLoading: configLoading } = useShopifyConfig();
@@ -221,7 +226,8 @@ export default function ProductSyncPage() {
               <CardTitle className="flex items-center gap-2">
                 🛍️ Shopify
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({shopifyProducts.length} productos en página)
+                  ({shopifyProducts.length} productos
+                  {debouncedShopifySearch && ` - Buscando: "${debouncedShopifySearch}"`})
                 </span>
               </CardTitle>
             </CardHeader>
