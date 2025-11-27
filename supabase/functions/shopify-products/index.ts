@@ -230,7 +230,7 @@ serve(async (req) => {
       
       console.log('Calling Shopify API:', shopifyUrl.toString());
   
-      // Make request to Shopify
+      // Make request to Shopify REST API first
       const shopifyResponse = await fetch(shopifyUrl.toString(), {
         method: 'GET',
         headers: {
@@ -242,27 +242,177 @@ serve(async (req) => {
       if (!shopifyResponse.ok) {
         const errorText = await shopifyResponse.text();
         console.error('Shopify API error:', errorText);
-        return new Response(
-          JSON.stringify({ error: `Shopify API error: ${shopifyResponse.status}` }),
-          { status: shopifyResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+
+        // If the REST API returns 404 (e.g. version/path not found), fall back to GraphQL listing
+        if (shopifyResponse.status === 404) {
+          console.log('REST API returned 404, falling back to GraphQL products listing');
+
+          const graphQLEndpoint = `https://${storeDomain}/admin/api/2024-01/graphql.json`;
+
+          // Build GraphQL query for listing products with optional status filter
+          const searchParts: string[] = [];
+          if (status && status !== 'all') {
+            // Shopify status filter: active | draft | archived
+            searchParts.push(`status:${status}`);
+          }
+          const searchQuery = searchParts.join(' ');
+
+          const graphqlQuery = `
+            query ListProducts($limit: Int!, $query: String) {
+              products(first: $limit, query: $query) {
+                edges {
+                  cursor
+                  node {
+                    id
+                    title
+                    handle
+                    status
+                    productType
+                    vendor
+                    tags
+                    createdAt
+                    updatedAt
+                    images(first: 10) {
+                      edges {
+                        node {
+                          id
+                          url
+                          altText
+                          width
+                          height
+                        }
+                      }
+                    }
+                    variants(first: 100) {
+                      edges {
+                        node {
+                          id
+                          title
+                          price
+                          compareAtPrice
+                          sku
+                          inventoryQuantity
+                          weight
+                          weightUnit
+                          image {
+                            id
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+                pageInfo {
+                  hasNextPage
+                  hasPreviousPage
+                  startCursor
+                  endCursor
+                }
+              }
+            }
+          `;
+
+          const graphQLResponse = await fetch(graphQLEndpoint, {
+            method: 'POST',
+            headers: {
+              'X-Shopify-Access-Token': config.access_token,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              query: graphqlQuery,
+              variables: {
+                limit: Number(limit) || 20,
+                query: searchQuery || null,
+              },
+            }),
+          });
+
+          if (!graphQLResponse.ok) {
+            const gqlErrorText = await graphQLResponse.text();
+            console.error('Shopify GraphQL fallback API error:', gqlErrorText);
+            return new Response(
+              JSON.stringify({ error: `Shopify API error: ${graphQLResponse.status}` }),
+              { status: graphQLResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+
+          const graphQLData = await graphQLResponse.json();
+          const productEdges = graphQLData?.data?.products?.edges || [];
+          const pageInfoGql = graphQLData?.data?.products?.pageInfo || {};
+
+          products = productEdges.map((edge: any) => {
+            const node = edge.node;
+            const numericId = Number(node.id.split('/').pop());
+
+            const images = (node.images?.edges || []).map((imgEdge: any, index: number) => ({
+              id: Number(imgEdge.node.id?.split('/').pop() ?? index + 1),
+              src: imgEdge.node.url,
+              alt: imgEdge.node.altText ?? null,
+              position: index + 1,
+              width: imgEdge.node.width ?? undefined,
+              height: imgEdge.node.height ?? undefined,
+            }));
+
+            const variants = (node.variants?.edges || []).map((variantEdge: any) => {
+              const v = variantEdge.node;
+              return {
+                id: Number(v.id.split('/').pop()),
+                title: v.title,
+                price: v.price,
+                compare_at_price: v.compareAtPrice ?? null,
+                sku: v.sku,
+                inventory_quantity: v.inventoryQuantity,
+                option1: null,
+                option2: null,
+                option3: null,
+                image_id: v.image ? Number(v.image.id.split('/').pop()) : null,
+                weight: v.weight ?? undefined,
+                weight_unit: v.weightUnit ?? undefined,
+              };
+            });
+
+            return {
+              id: numericId,
+              title: node.title,
+              body_html: '',
+              vendor: node.vendor ?? '',
+              product_type: node.productType ?? '',
+              status: (node.status || 'active').toLowerCase(),
+              images,
+              variants,
+              options: [],
+              tags: Array.isArray(node.tags) ? node.tags.join(', ') : (node.tags ?? ''),
+              handle: node.handle ?? '',
+              created_at: node.createdAt ?? new Date().toISOString(),
+              updated_at: node.updatedAt ?? new Date().toISOString(),
+            };
+          });
+
+          nextCursor = pageInfoGql.hasNextPage ? pageInfoGql.endCursor ?? null : null;
+          prevCursor = pageInfoGql.hasPreviousPage ? pageInfoGql.startCursor ?? null : null;
+        } else {
+          return new Response(
+            JSON.stringify({ error: `Shopify API error: ${shopifyResponse.status}` }),
+            { status: shopifyResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        const restData = await shopifyResponse.json();
+        products = restData.products;
   
-      const restData = await shopifyResponse.json();
-      products = restData.products;
+        // Parse Link header for pagination cursors
+        const linkHeader = shopifyResponse.headers.get('Link');
   
-      // Parse Link header for pagination cursors
-      const linkHeader = shopifyResponse.headers.get('Link');
-  
-      if (linkHeader) {
-        const links = linkHeader.split(',');
-        for (const link of links) {
-          const match = link.match(/<[^>]*[?&]page_info=([^&>]+)[^>]*>;\s*rel="([^"]+)"/);
-          if (match) {
-            const cursor = match[1];
-            const rel = match[2];
-            if (rel === 'next') nextCursor = cursor;
-            if (rel === 'previous') prevCursor = cursor;
+        if (linkHeader) {
+          const links = linkHeader.split(',');
+          for (const link of links) {
+            const match = link.match(/<[^>]*[?&]page_info=([^&>]+)[^>]*>;\s*rel="([^"]+)"/);
+            if (match) {
+              const cursor = match[1];
+              const rel = match[2];
+              if (rel === 'next') nextCursor = cursor;
+              if (rel === 'previous') prevCursor = cursor;
+            }
           }
         }
       }
