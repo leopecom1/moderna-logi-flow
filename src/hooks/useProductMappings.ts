@@ -56,6 +56,8 @@ export function useCreateProductMapping() {
           woocommerce_product_name: mapping.woocommerce_product_name,
           shopify_product_name: mapping.shopify_product_name,
           last_synced_at: new Date().toISOString(),
+        }, {
+          onConflict: 'woocommerce_product_id',
         })
         .select()
         .single();
