@@ -66,7 +66,7 @@ serve(async (req) => {
       const storeDomain = config.store_domain.includes('.myshopify.com') 
         ? config.store_domain 
         : config.store_domain.replace(/\.(com|net|org|io)$/, '') + '.myshopify.com';
-      const graphQLEndpoint = `https://${storeDomain}/admin/api/2025-01/graphql.json`;
+      const graphQLEndpoint = `https://${storeDomain}/admin/api/2024-10/graphql.json`;
 
       // Build search query. We use wildcard search on title and optionally filter by status
       const searchParts = [`title:*${title}*`];
@@ -219,7 +219,7 @@ serve(async (req) => {
       const storeDomain = config.store_domain.includes('.myshopify.com') 
         ? config.store_domain 
         : config.store_domain.replace(/\.(com|net|org|io)$/, '') + '.myshopify.com';
-      const shopifyUrl = new URL(`https://${storeDomain}/admin/api/2025-01/products.json`);
+      const shopifyUrl = new URL(`https://${storeDomain}/admin/api/2024-10/products.json`);
       shopifyUrl.searchParams.set('limit', limit);
       if (pageInfo) {
         shopifyUrl.searchParams.set('page_info', pageInfo);
@@ -247,7 +247,7 @@ serve(async (req) => {
         if (shopifyResponse.status === 404) {
           console.log('REST API returned 404, falling back to GraphQL products listing');
 
-          const graphQLEndpoint = `https://${storeDomain}/admin/api/2025-01/graphql.json`;
+          const graphQLEndpoint = `https://${storeDomain}/admin/api/2024-10/graphql.json`;
 
           // Build GraphQL query for listing products with optional status filter
           const searchParts: string[] = [];
