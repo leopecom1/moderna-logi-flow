@@ -40,16 +40,9 @@ export default function ProductSyncPage() {
   const [wooSearch, setWooSearch] = useState("");
   const debouncedWooSearch = useDebounce(wooSearch, 500);
   
-  // Shopify cursor-based pagination, filters, and search
+  // Shopify cursor-based pagination and filters (search local en UI)
   const [shopifyCursor, setShopifyCursor] = useState<string | null>(null);
   const [shopifyStatus, setShopifyStatus] = useState("all");
-  const [shopifySearch, setShopifySearch] = useState("");
-  const debouncedShopifySearch = useDebounce(shopifySearch, 500);
-
-  // Reset cursor when search or status changes
-  useEffect(() => {
-    setShopifyCursor(null);
-  }, [debouncedShopifySearch, shopifyStatus]);
 
   const wooPerPage = 20;
   const shopifyPerPage = 250;
@@ -65,11 +58,10 @@ export default function ProductSyncPage() {
     wooStatus === "all" ? undefined : wooStatus
   );
   
-  // Shopify with cursor-based pagination and search
+  // Shopify with cursor-based pagination
   const { data: shopifyData, isLoading: shopifyLoading } = useShopifyProductsPaginated(
     shopifyPerPage,
     shopifyCursor,
-    debouncedShopifySearch,
     shopifyStatus
   );
   
@@ -227,8 +219,7 @@ export default function ProductSyncPage() {
               <CardTitle className="flex items-center gap-2">
                 🛍️ Shopify
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({shopifyProducts.length} productos
-                  {debouncedShopifySearch && ` - Buscando: "${debouncedShopifySearch}"`})
+                  ({shopifyProducts.length} productos en página)
                 </span>
               </CardTitle>
             </CardHeader>
@@ -242,8 +233,6 @@ export default function ProductSyncPage() {
                 loading={shopifyLoading}
                 statusFilter={shopifyStatus}
                 onStatusFilterChange={setShopifyStatus}
-                searchTerm={shopifySearch}
-                onSearchChange={setShopifySearch}
                 useCursorPagination={true}
                 hasNext={hasNextShopify}
                 hasPrev={hasPrevShopify}
