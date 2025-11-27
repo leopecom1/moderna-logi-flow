@@ -119,14 +119,38 @@ async function processJob(jobId: string, supabase: any) {
 }
 
 async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase: any) {
-  // Fetch Shopify product details
-  const { data: shopifyProduct, error: shopifyError } = await supabase.functions.invoke('shopify-products', {
-    body: { action: 'get', productId: item.shopify_product_id },
+  // Get Shopify config
+  const { data: shopifyConfig, error: configError } = await supabase
+    .from('shopify_config')
+    .select('*')
+    .eq('is_active', true)
+    .single();
+
+  if (configError || !shopifyConfig) {
+    throw new Error('Shopify not configured');
+  }
+
+  // Fetch Shopify product details directly via REST API
+  const shopifyUrl = `https://${shopifyConfig.store_domain}/admin/api/2024-10/products/${item.shopify_product_id}.json`;
+  const shopifyResponse = await fetch(shopifyUrl, {
+    method: 'GET',
+    headers: {
+      'X-Shopify-Access-Token': shopifyConfig.access_token,
+      'Content-Type': 'application/json',
+    },
   });
 
-  if (shopifyError) throw new Error(`Failed to fetch Shopify product: ${shopifyError.message}`);
+  if (!shopifyResponse.ok) {
+    const errorText = await shopifyResponse.text();
+    throw new Error(`Failed to fetch Shopify product: ${shopifyResponse.status} - ${errorText}`);
+  }
 
-  const shopify = shopifyProduct.product;
+  const shopifyData = await shopifyResponse.json();
+  const shopify = shopifyData.product;
+
+  if (!shopify) {
+    throw new Error('Shopify product not found');
+  }
   const updateData: any = {};
 
   // Copy description
@@ -148,33 +172,62 @@ async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase
     updateData.type = 'variable';
     updateData.attributes = attributes;
 
-    // Update product
-    const { error: updateError } = await supabase.functions.invoke('woocommerce-products', {
-      body: {
-        action: 'update',
-        productId: item.woocommerce_product_id,
-        data: updateData,
+    // Get WooCommerce config
+    const { data: wooConfig, error: wooConfigError } = await supabase
+      .from('woocommerce_config')
+      .select('*')
+      .eq('is_active', true)
+      .single();
+
+    if (wooConfigError || !wooConfig) {
+      throw new Error('WooCommerce not configured');
+    }
+
+    // Update product via WooCommerce API
+    const wooUpdateUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}`;
+    const auth = btoa(`${wooConfig.consumer_key}:${wooConfig.consumer_secret}`);
+    
+    const wooUpdateResponse = await fetch(wooUpdateUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify(updateData),
     });
 
-    if (updateError) throw new Error(`Failed to update WooCommerce product: ${updateError.message}`);
+    if (!wooUpdateResponse.ok) {
+      const errorText = await wooUpdateResponse.text();
+      throw new Error(`Failed to update WooCommerce product: ${wooUpdateResponse.status} - ${errorText}`);
+    }
 
     // Delete existing variations
-    const { data: existingVariations } = await supabase.functions.invoke('woocommerce-products', {
-      body: {
-        action: 'getVariations',
-        productId: item.woocommerce_product_id,
+    const wooVariationsUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations`;
+    const variationsResponse = await fetch(wooVariationsUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
       },
     });
 
-    if (existingVariations && existingVariations.length > 0) {
-      await supabase.functions.invoke('woocommerce-products', {
-        body: {
-          action: 'batchDeleteVariations',
-          productId: item.woocommerce_product_id,
-          variationIds: existingVariations.map((v: any) => v.id),
-        },
-      });
+    if (variationsResponse.ok) {
+      const existingVariations = await variationsResponse.json();
+      
+      if (existingVariations && existingVariations.length > 0) {
+        // Batch delete variations
+        const batchDeleteUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations/batch`;
+        await fetch(batchDeleteUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${auth}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            delete: existingVariations.map((v: any) => v.id),
+          }),
+        });
+      }
     }
 
     // Create new variations
@@ -194,28 +247,57 @@ async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase
       };
     });
 
-    await supabase.functions.invoke('woocommerce-products', {
-      body: {
-        action: 'batchCreateVariations',
-        productId: item.woocommerce_product_id,
-        variations: variationsToCreate,
+    // Batch create variations
+    const batchCreateUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations/batch`;
+    const createResponse = await fetch(batchCreateUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        create: variationsToCreate,
+      }),
     });
+
+    if (!createResponse.ok) {
+      const errorText = await createResponse.text();
+      throw new Error(`Failed to create variations: ${createResponse.status} - ${errorText}`);
+    }
   } else {
     // Simple product
     if (copyOptions.copyPrice && shopify.variants?.[0]?.price) {
       updateData.regular_price = shopify.variants[0].price;
     }
 
-    const { error: updateError } = await supabase.functions.invoke('woocommerce-products', {
-      body: {
-        action: 'update',
-        productId: item.woocommerce_product_id,
-        data: updateData,
+    // Get WooCommerce config
+    const { data: wooConfig, error: wooConfigError } = await supabase
+      .from('woocommerce_config')
+      .select('*')
+      .eq('is_active', true)
+      .single();
+
+    if (wooConfigError || !wooConfig) {
+      throw new Error('WooCommerce not configured');
+    }
+
+    // Update product via WooCommerce API
+    const wooUpdateUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}`;
+    const auth = btoa(`${wooConfig.consumer_key}:${wooConfig.consumer_secret}`);
+    
+    const wooUpdateResponse = await fetch(wooUpdateUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify(updateData),
     });
 
-    if (updateError) throw new Error(`Failed to update WooCommerce product: ${updateError.message}`);
+    if (!wooUpdateResponse.ok) {
+      const errorText = await wooUpdateResponse.text();
+      throw new Error(`Failed to update WooCommerce product: ${wooUpdateResponse.status} - ${errorText}`);
+    }
   }
 
   // Create mapping and history
