@@ -1648,6 +1648,39 @@ export type Database = {
         }
         Relationships: []
       }
+      product_sync_history: {
+        Row: {
+          created_at: string
+          id: string
+          shopify_product_id: number
+          shopify_product_name: string | null
+          sync_date: string
+          synced_by: string | null
+          woocommerce_product_id: number
+          woocommerce_product_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shopify_product_id: number
+          shopify_product_name?: string | null
+          sync_date?: string
+          synced_by?: string | null
+          woocommerce_product_id: number
+          woocommerce_product_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shopify_product_id?: number
+          shopify_product_name?: string | null
+          sync_date?: string
+          synced_by?: string | null
+          woocommerce_product_id?: number
+          woocommerce_product_name?: string | null
+        }
+        Relationships: []
+      }
       product_variant_types: {
         Row: {
           created_at: string

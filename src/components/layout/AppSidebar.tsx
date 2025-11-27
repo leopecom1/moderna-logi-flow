@@ -46,7 +46,8 @@ import {
   Wrench,
   ShoppingBag,
   PackageOpen,
-  RefreshCw
+  RefreshCw,
+  History
 } from 'lucide-react';
 
 export const AppSidebar = () => {
@@ -133,6 +134,7 @@ export const AppSidebar = () => {
         { title: 'Pedidos Online', url: '/woocommerce-review', icon: ClipboardList },
         { title: 'Productos Online', url: '/woocommerce-products', icon: PackageOpen },
         { title: 'Sincronización', url: '/product-sync', icon: RefreshCw },
+        { title: 'Historial Sync', url: '/product-sync-history', icon: History },
         { title: 'Analytics & ML', url: '/analytics', icon: Brain },
         { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
         { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },

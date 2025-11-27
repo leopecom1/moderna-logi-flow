@@ -15,6 +15,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Settings, RefreshCw, Link2, GitMerge } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -175,7 +176,17 @@ export default function ProductSyncPage() {
           shopify_product_name: match.shopify.title,
         });
 
-        // 2. Build update data based on copy options
+        // 2. Save to sync history
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('product_sync_history').insert({
+          woocommerce_product_id: match.woocommerce.id,
+          woocommerce_product_name: match.woocommerce.name,
+          shopify_product_id: Number(match.shopify.id),
+          shopify_product_name: match.shopify.title,
+          synced_by: user?.id,
+        });
+
+        // 3. Build update data based on copy options
         const updateData: any = {};
         
         if (copyOptions.description && match.shopify.body_html) {

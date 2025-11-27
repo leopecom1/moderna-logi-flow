@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Package } from "lucide-react";
+import { Loader2, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { useProductMappings } from "@/hooks/useProductMappings";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,6 +36,7 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
   const [loadingProgress, setLoadingProgress] = useState('');
   const [wooProductsCount, setWooProductsCount] = useState(0);
   const [shopifyProductsCount, setShopifyProductsCount] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [copyOptions, setCopyOptions] = useState<CopyOptions>({
     images: true,
     description: true,
@@ -44,6 +45,12 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
   });
 
   const { data: mappings } = useProductMappings();
+  
+  const ITEMS_PER_PAGE = 20;
+  const totalPages = Math.ceil(matches.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const currentMatches = matches.slice(startIndex, endIndex);
 
   // Fetch ALL WooCommerce products with pagination
   const fetchAllWooCommerceProducts = async () => {
@@ -128,6 +135,7 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
       setMatches([]);
       setWooProductsCount(0);
       setShopifyProductsCount(0);
+      setCurrentPage(1);
 
       try {
         // Step 1: Load WooCommerce products
@@ -245,33 +253,62 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
 
             <ScrollArea className="h-[300px] pr-4">
               <div className="space-y-3">
-                {matches.map((match, index) => (
-                  <div
-                    key={`${match.woocommerce.id}-${match.shopify.id}`}
-                    className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
-                  >
-                    <Checkbox
-                      checked={match.selected}
-                      onCheckedChange={() => toggleMatch(index)}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{match.woocommerce.name}</div>
-                      <div className="text-sm text-muted-foreground mt-1">
-                        WooCommerce: ID {match.woocommerce.id} | Shopify: ID {match.shopify.id}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Package className="h-3 w-3" />
-                        <span className="text-xs text-muted-foreground">
-                          {match.shopify.variants?.length > 1 
-                            ? `${match.shopify.variants.length} variantes`
-                            : 'Simple'}
-                        </span>
+                {currentMatches.map((match, index) => {
+                  const actualIndex = startIndex + index;
+                  return (
+                    <div
+                      key={`${match.woocommerce.id}-${match.shopify.id}`}
+                      className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                    >
+                      <Checkbox
+                        checked={match.selected}
+                        onCheckedChange={() => toggleMatch(actualIndex)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{match.woocommerce.name}</div>
+                        <div className="text-sm text-muted-foreground mt-1">
+                          WooCommerce: ID {match.woocommerce.id} | Shopify: ID {match.shopify.id}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Package className="h-3 w-3" />
+                          <span className="text-xs text-muted-foreground">
+                            {match.shopify.variants?.length > 1 
+                              ? `${match.shopify.variants.length} variantes`
+                              : 'Simple'}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between border-t pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  Anterior
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Página {currentPage} de {totalPages} ({matches.length} coincidencias)
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+            )}
 
             <div className="border-t pt-4">
               <Label className="text-sm font-medium mb-3 block">Opciones de Copia</Label>
