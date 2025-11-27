@@ -49,6 +49,7 @@ import WooCommerceConfigPage from "./pages/WooCommerceConfigPage";
 import WooCommerceReviewPage from "./pages/WooCommerceReviewPage";
 import WooCommerceProductsPage from "./pages/WooCommerceProductsPage";
 import ProductSyncPage from "./pages/ProductSyncPage";
+import ProductSyncHistoryPage from "./pages/ProductSyncHistoryPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -117,6 +118,7 @@ function App() {
           <Route path="/woocommerce-review" element={<ProtectedRoute><WooCommerceReviewPage /></ProtectedRoute>} />
           <Route path="/woocommerce-products" element={<ProtectedRoute><WooCommerceProductsPage /></ProtectedRoute>} />
           <Route path="/product-sync" element={<ProtectedRoute><ProductSyncPage /></ProtectedRoute>} />
+          <Route path="/product-sync-history" element={<ProtectedRoute><ProductSyncHistoryPage /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
