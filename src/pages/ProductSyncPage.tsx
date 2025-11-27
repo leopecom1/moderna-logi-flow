@@ -8,9 +8,8 @@ import { BulkTitleMatchModal } from "@/components/forms/BulkTitleMatchModal";
 import { BulkSyncProgressModal, ProductSyncStatus } from "@/components/forms/BulkSyncProgressModal";
 import { ProductList } from "@/components/sync/ProductList";
 import { useShopifyConfig, useShopifyProductsPaginated } from "@/hooks/useShopifyProducts";
-import { useWooCommerceProducts } from "@/hooks/useWooCommerceProducts";
+import { useWooCommerceProducts, useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations, useBatchDeleteWooCommerceVariations } from "@/hooks/useWooCommerceProducts";
 import { useProductMappings, useCreateProductMapping } from "@/hooks/useProductMappings";
-import { useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations, useWooCommerceVariations, useDeleteWooCommerceVariation } from "@/hooks/useWooCommerceProducts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Settings, RefreshCw, Link2, GitMerge } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -49,6 +48,7 @@ export default function ProductSyncPage() {
   const createMapping = useCreateProductMapping();
   const updateWooProduct = useUpdateWooCommerceProduct();
   const batchCreateVariations = useBatchCreateWooCommerceVariations();
+  const batchDeleteVariations = useBatchDeleteWooCommerceVariations();
   
   // WooCommerce pagination, filters, and search
   const [wooPage, setWooPage] = useState(1);
@@ -168,23 +168,23 @@ export default function ProductSyncPage() {
       );
 
       try {
-        // 1. Create mapping
-        await createMapping.mutateAsync({
-          woocommerce_product_id: match.woocommerce.id,
-          shopify_product_id: match.shopify.id,
-          woocommerce_product_name: match.woocommerce.name,
-          shopify_product_name: match.shopify.title,
-        });
-
-        // 2. Save to sync history
+        // 1. Parallelize mapping and history save
         const { data: { user } } = await supabase.auth.getUser();
-        await supabase.from('product_sync_history').insert({
-          woocommerce_product_id: match.woocommerce.id,
-          woocommerce_product_name: match.woocommerce.name,
-          shopify_product_id: Number(match.shopify.id),
-          shopify_product_name: match.shopify.title,
-          synced_by: user?.id,
-        });
+        await Promise.all([
+          createMapping.mutateAsync({
+            woocommerce_product_id: match.woocommerce.id,
+            shopify_product_id: match.shopify.id,
+            woocommerce_product_name: match.woocommerce.name,
+            shopify_product_name: match.shopify.title,
+          }),
+          supabase.from('product_sync_history').insert({
+            woocommerce_product_id: match.woocommerce.id,
+            woocommerce_product_name: match.woocommerce.name,
+            shopify_product_id: Number(match.shopify.id),
+            shopify_product_name: match.shopify.title,
+            synced_by: user?.id,
+          })
+        ]);
 
         // 3. Build update data based on copy options
         const updateData: any = {};
@@ -222,27 +222,24 @@ export default function ProductSyncPage() {
             data: updateData,
           });
 
-          // Delete existing variations
+          // Get and batch delete existing variations
           const { data: existingVariations } = await queryClient.fetchQuery({
             queryKey: ['woocommerce-variations', match.woocommerce.id],
             queryFn: async () => {
-              const endpoint = encodeURIComponent(`products/${match.woocommerce.id}/variations?per_page=100`);
-              const response = await fetch(
-                `https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products?endpoint=${endpoint}`,
-                { headers: { Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kdXN4anJqcmpwYXV1cWVydXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MjUwODIsImV4cCI6MjA2ODEwMTA4Mn0.pfb6tHB0ekR-K4x1j5bj41Q13opC7YGGQt8LJ-GKTPk` } }
+              const response = await supabase.functions.invoke(
+                `woocommerce-products/products/${match.woocommerce.id}/variations`,
+                { method: 'GET' }
               );
-              return response.json();
+              if (response.error) throw new Error(response.error.message);
+              return response.data;
             },
           });
 
-          if (existingVariations && Array.isArray(existingVariations)) {
-            for (const variant of existingVariations) {
-              const deleteEndpoint = encodeURIComponent(`products/${match.woocommerce.id}/variations/${variant.id}`);
-              await fetch(
-                `https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products?endpoint=${deleteEndpoint}&method=DELETE`,
-                { method: 'POST', headers: { Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kdXN4anJqcmpwYXV1cWVydXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MjUwODIsImV4cCI6MjA2ODEwMTA4Mn0.pfb6tHB0ekR-K4x1j5bj41Q13opC7YGGQt8LJ-GKTPk` } }
-              );
-            }
+          if (existingVariations && Array.isArray(existingVariations) && existingVariations.length > 0) {
+            await batchDeleteVariations.mutateAsync({
+              productId: match.woocommerce.id,
+              variationIds: existingVariations.map((v: any) => v.id),
+            });
           }
 
           // Create new variations

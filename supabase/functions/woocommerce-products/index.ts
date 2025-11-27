@@ -169,6 +169,10 @@ serve(async (req) => {
       } else if (path.match(/^\/products\/\d+\/variations\/batch$/)) {
         const productId = path.split('/')[2];
         endpoint = `/products/${productId}/variations/batch`;
+        // For batch operations, we need to use POST even for deletes
+        if (method === 'POST' && body && body.delete) {
+          wooMethod = 'POST'; // WooCommerce batch API uses POST for all operations
+        }
       } else if (path.match(/^\/products\/\d+\/variations\/\d+$/)) {
         const parts = path.split('/');
         const productId = parts[2];
