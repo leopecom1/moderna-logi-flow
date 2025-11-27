@@ -490,8 +490,17 @@ serve(async (req) => {
           );
         }
       } else {
-        const restData = await shopifyResponse.json();
-        products = restData.products;
+      const restData = await shopifyResponse.json();
+      products = restData.products;
+      
+      // Diagnostic logging for options
+      if (products.length > 0) {
+        console.log('Sample product options:', products[0]?.options);
+        console.log('Sample product variants count:', products[0]?.variants?.length);
+        if (products[0]?.variants?.length > 0) {
+          console.log('Sample variant data:', products[0].variants[0]);
+        }
+      }
         
         // Log REST API response details
         console.log('REST products received:', products?.length || 0);

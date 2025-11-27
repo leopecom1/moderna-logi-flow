@@ -62,6 +62,10 @@ export function ProductMappingModal({
     if (!woocommerceProduct || !shopifyProduct) return;
 
     try {
+      // Debug logging
+      console.log('Shopify product options:', shopifyProduct.options);
+      console.log('Shopify product variants:', shopifyProduct.variants);
+      
       setSyncProgress("Creando mapeo...");
       
       // Create mapping first
@@ -71,6 +75,46 @@ export function ProductMappingModal({
         woocommerce_product_name: woocommerceProduct.name,
         shopify_product_name: shopifyProduct.title,
       });
+
+      // Function to extract attributes from variants if options is empty
+      const extractAttributesFromVariants = () => {
+        const attributeMap: Record<string, Set<string>> = {};
+        
+        shopifyProduct.variants.forEach(variant => {
+          if (shopifyProduct.options.length > 0) {
+            // Use option names from shopify
+            shopifyProduct.options.forEach((opt, idx) => {
+              const value = idx === 0 ? variant.option1 : idx === 1 ? variant.option2 : variant.option3;
+              if (value) {
+                if (!attributeMap[opt.name]) attributeMap[opt.name] = new Set();
+                attributeMap[opt.name].add(value);
+              }
+            });
+          } else {
+            // Infer generic names from variant values
+            if (variant.option1) {
+              if (!attributeMap['Opción 1']) attributeMap['Opción 1'] = new Set();
+              attributeMap['Opción 1'].add(variant.option1);
+            }
+            if (variant.option2) {
+              if (!attributeMap['Opción 2']) attributeMap['Opción 2'] = new Set();
+              attributeMap['Opción 2'].add(variant.option2);
+            }
+            if (variant.option3) {
+              if (!attributeMap['Opción 3']) attributeMap['Opción 3'] = new Set();
+              attributeMap['Opción 3'].add(variant.option3);
+            }
+          }
+        });
+
+        return Object.entries(attributeMap).map(([name, values], idx) => ({
+          name,
+          options: Array.from(values),
+          visible: true,
+          variation: true,
+          position: idx,
+        }));
+      };
 
       // Build update data based on selected fields
       const updateData: any = {};
@@ -102,13 +146,22 @@ export function ProductMappingModal({
 
       if (selectedFields.variants && shopifyProduct.variants.length > 1) {
         updateData.type = 'variable';
-        updateData.attributes = shopifyProduct.options.map((opt, idx) => ({
-          name: opt.name,
-          options: opt.values,
-          visible: true,
-          variation: true,
-          position: idx,
-        }));
+        
+        // Use options if available, otherwise extract from variants
+        if (shopifyProduct.options.length > 0) {
+          updateData.attributes = shopifyProduct.options.map((opt, idx) => ({
+            name: opt.name,
+            options: opt.values,
+            visible: true,
+            variation: true,
+            position: idx,
+          }));
+        } else {
+          // Fallback: extract attributes from variants
+          updateData.attributes = extractAttributesFromVariants();
+        }
+        
+        console.log('Attributes to send to WooCommerce:', updateData.attributes);
       }
 
       setSyncProgress("Actualizando producto...");
@@ -124,14 +177,20 @@ export function ProductMappingModal({
         setSyncProgress(`Creando ${shopifyProduct.variants.length} variantes...`);
         
         const wooVariations = shopifyProduct.variants.map(variant => {
-          // Map option1/option2/option3 to attribute names
-          const attributes = shopifyProduct.options.map((opt, idx) => {
-            const optionValue = idx === 0 ? variant.option1 : idx === 1 ? variant.option2 : variant.option3;
-            return {
+          let attributes: { name: string; option: string }[] = [];
+          
+          if (shopifyProduct.options.length > 0) {
+            // Use option names from Shopify options
+            attributes = shopifyProduct.options.map((opt, idx) => ({
               name: opt.name,
-              option: optionValue || '',
-            };
-          }).filter(attr => attr.option); // Remove null/empty options
+              option: (idx === 0 ? variant.option1 : idx === 1 ? variant.option2 : variant.option3) || '',
+            })).filter(attr => attr.option);
+          } else {
+            // Use generic names for attributes
+            if (variant.option1) attributes.push({ name: 'Opción 1', option: variant.option1 });
+            if (variant.option2) attributes.push({ name: 'Opción 2', option: variant.option2 });
+            if (variant.option3) attributes.push({ name: 'Opción 3', option: variant.option3 });
+          }
 
           // Handle pricing: if compare_at_price exists and is higher, use it as regular_price
           const hasDiscount = variant.compare_at_price && 
@@ -147,6 +206,8 @@ export function ProductMappingModal({
             attributes,
           };
         });
+        
+        console.log('Variations to send to WooCommerce:', wooVariations);
 
         await batchCreateVariations.mutateAsync({
           productId: woocommerceProduct.id,
