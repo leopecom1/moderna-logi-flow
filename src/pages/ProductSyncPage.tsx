@@ -51,14 +51,15 @@ export default function ProductSyncPage() {
     setShopifyCursor(null);
   }, [debouncedShopifySearch, shopifyStatus]);
 
-  const perPage = 20;
+  const wooPerPage = 20;
+  const shopifyPerPage = 250;
 
   const { data: shopifyConfig, isLoading: configLoading } = useShopifyConfig();
   
   // WooCommerce with server-side pagination and search
   const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(
     wooPage, 
-    perPage, 
+    wooPerPage, 
     debouncedWooSearch || undefined, 
     undefined, 
     wooStatus === "all" ? undefined : wooStatus
@@ -66,7 +67,7 @@ export default function ProductSyncPage() {
   
   // Shopify with cursor-based pagination and search
   const { data: shopifyData, isLoading: shopifyLoading } = useShopifyProductsPaginated(
-    perPage,
+    shopifyPerPage,
     shopifyCursor,
     debouncedShopifySearch,
     shopifyStatus
