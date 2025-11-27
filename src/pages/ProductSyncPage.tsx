@@ -226,9 +226,10 @@ export default function ProductSyncPage() {
           const { data: existingVariations } = await queryClient.fetchQuery({
             queryKey: ['woocommerce-variations', match.woocommerce.id],
             queryFn: async () => {
+              const endpoint = encodeURIComponent(`products/${match.woocommerce.id}/variations?per_page=100`);
               const response = await fetch(
-                `https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products?endpoint=products/${match.woocommerce.id}/variations&per_page=100`,
-                { headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kdXN4anJqcmpwYXV1cWVydXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MjUwODIsImV4cCI6MjA2ODEwMTA4Mn0.pfb6tHB0ekR-K4x1j5bj41Q13opC7YGGQt8LJ-GKTPk'}` } }
+                `https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products?endpoint=${endpoint}`,
+                { headers: { Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kdXN4anJqcmpwYXV1cWVydXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MjUwODIsImV4cCI6MjA2ODEwMTA4Mn0.pfb6tHB0ekR-K4x1j5bj41Q13opC7YGGQt8LJ-GKTPk` } }
               );
               return response.json();
             },
@@ -236,9 +237,10 @@ export default function ProductSyncPage() {
 
           if (existingVariations && Array.isArray(existingVariations)) {
             for (const variant of existingVariations) {
+              const deleteEndpoint = encodeURIComponent(`products/${match.woocommerce.id}/variations/${variant.id}`);
               await fetch(
-                `https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products?endpoint=products/${match.woocommerce.id}/variations/${variant.id}&method=DELETE`,
-                { method: 'POST', headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kdXN4anJqcmpwYXV1cWVydXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MjUwODIsImV4cCI6MjA2ODEwMTA4Mn0.pfb6tHB0ekR-K4x1j5bj41Q13opC7YGGQt8LJ-GKTPk'}` } }
+                `https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products?endpoint=${deleteEndpoint}&method=DELETE`,
+                { method: 'POST', headers: { Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kdXN4anJqcmpwYXV1cWVydXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MjUwODIsImV4cCI6MjA2ODEwMTA4Mn0.pfb6tHB0ekR-K4x1j5bj41Q13opC7YGGQt8LJ-GKTPk` } }
               );
             }
           }
