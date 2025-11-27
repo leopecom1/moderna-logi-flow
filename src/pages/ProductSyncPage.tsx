@@ -18,7 +18,7 @@ export default function ProductSyncPage() {
   const [selectedShopifyId, setSelectedShopifyId] = useState<number | undefined>();
 
   const { data: shopifyConfig, isLoading: configLoading } = useShopifyConfig();
-  const { data: shopifyProducts = [], isLoading: shopifyLoading } = useShopifyProducts(1, 50);
+  const { data: shopifyProducts = [], isLoading: shopifyLoading } = useShopifyProducts(50);
   const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(1, 50);
   const { data: mappings = [] } = useProductMappings();
 

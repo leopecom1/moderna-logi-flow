@@ -81,13 +81,13 @@ export function useSaveShopifyConfig() {
   });
 }
 
-export function useShopifyProducts(page: number = 1, limit: number = 50) {
+export function useShopifyProducts(limit: number = 50) {
   const { data: config } = useShopifyConfig();
   
   return useQuery({
-    queryKey: ['shopify-products', page, limit],
+    queryKey: ['shopify-products', limit],
     queryFn: async () => {
-      const data = await callShopifyAPI(`/products.json?limit=${limit}&page=${page}`);
+      const data = await callShopifyAPI(`/products.json?limit=${limit}`);
       return data.products as ShopifyProduct[];
     },
     enabled: !!config,
