@@ -30,12 +30,14 @@ serve(async (req) => {
       );
     }
 
-    // Parse URL parameters
+    // Parse URL parameters (works for both GET and POST)
     const url = new URL(req.url);
-    const limit = url.searchParams.get('limit') || '50';
+    const limit = url.searchParams.get('limit') || '20';
     const pageInfo = url.searchParams.get('page_info'); // Shopify cursor
     const title = url.searchParams.get('title'); // Search by title
     const status = url.searchParams.get('status'); // Filter by status
+    
+    console.log('Request params:', { limit, pageInfo, title, status });
 
     // Get Shopify config
     const { data: config, error: configError } = await supabaseClient
