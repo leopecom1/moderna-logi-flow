@@ -237,12 +237,14 @@ async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase
       if (variant.option2) attributes.push({ name: shopify.options[1]?.name || 'Opción 2', option: variant.option2 });
       if (variant.option3) attributes.push({ name: shopify.options[2]?.name || 'Opción 3', option: variant.option3 });
 
+      const inventoryQty = variant.inventory_quantity || 0;
+
       return {
         regular_price: copyOptions.copyPrice ? variant.price : undefined,
         sku: variant.sku || undefined,
-        manage_stock: variant.inventory_quantity === 0,
-        stock_quantity: variant.inventory_quantity === 0 ? 0 : undefined,
-        stock_status: variant.inventory_quantity > 0 ? 'instock' : 'outofstock',
+        manage_stock: true,
+        stock_quantity: inventoryQty,
+        stock_status: inventoryQty > 0 ? 'instock' : 'outofstock',
         attributes,
       };
     });
