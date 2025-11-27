@@ -26,10 +26,10 @@ export function useShopifyConfig() {
         .from('shopify_config')
         .select('*')
         .eq('is_active', true)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data as ShopifyConfig;
+      return data as ShopifyConfig | null;
     },
   });
 }
@@ -82,17 +82,21 @@ export function useSaveShopifyConfig() {
 }
 
 export function useShopifyProducts(page: number = 1, limit: number = 50) {
+  const { data: config } = useShopifyConfig();
+  
   return useQuery({
     queryKey: ['shopify-products', page, limit],
     queryFn: async () => {
       const data = await callShopifyAPI(`/products.json?limit=${limit}&page=${page}`);
       return data.products as ShopifyProduct[];
     },
-    enabled: true,
+    enabled: !!config,
   });
 }
 
 export function useShopifyProduct(productId: number | null) {
+  const { data: config } = useShopifyConfig();
+  
   return useQuery({
     queryKey: ['shopify-product', productId],
     queryFn: async () => {
@@ -100,6 +104,6 @@ export function useShopifyProduct(productId: number | null) {
       const data = await callShopifyAPI(`/products/${productId}.json`);
       return data.product as ShopifyProduct;
     },
-    enabled: !!productId,
+    enabled: !!productId && !!config,
   });
 }

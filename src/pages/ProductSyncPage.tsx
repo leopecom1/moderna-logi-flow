@@ -19,9 +19,11 @@ export default function ProductSyncPage() {
 
   const { data: shopifyConfig, isLoading: configLoading } = useShopifyConfig();
   const { data: shopifyProducts = [], isLoading: shopifyLoading } = useShopifyProducts(1, 50);
-  const { data: wooProducts = [], isLoading: wooLoading } = useWooCommerceProducts(1, 50);
+  const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(1, 50);
   const { data: mappings = [] } = useProductMappings();
 
+  const wooProducts = wooData?.products || [];
+  
   const mappedWooIds = new Set(mappings.map(m => m.woocommerce_product_id));
   const mappedShopifyIds = new Set(mappings.map(m => m.shopify_product_id));
 
