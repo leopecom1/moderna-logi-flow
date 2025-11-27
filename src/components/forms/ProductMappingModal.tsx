@@ -202,15 +202,14 @@ export function ProductMappingModal({
           const hasDiscount = variant.compare_at_price && 
                             parseFloat(variant.compare_at_price) > parseFloat(variant.price);
 
-          // Handle stock with default value of 0 if null/undefined
-          const stockQuantity = variant.inventory_quantity ?? 0;
+          // Determine stock status based on Shopify inventory
+          const isInStock = (variant.inventory_quantity ?? 0) > 0;
 
-          // Build base variation data
+          // Build base variation data - only status, no quantity management
           const variationData: any = {
             regular_price: hasDiscount ? variant.compare_at_price! : variant.price,
-            stock_quantity: stockQuantity,
-            manage_stock: true,
-            stock_status: stockQuantity > 0 ? 'instock' : 'outofstock',
+            manage_stock: false,
+            stock_status: isInStock ? 'instock' : 'outofstock',
             attributes,
           };
 
