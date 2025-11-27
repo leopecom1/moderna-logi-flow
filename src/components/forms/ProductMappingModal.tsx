@@ -176,6 +176,12 @@ export function ProductMappingModal({
       if (selectedFields.variants && shopifyProduct.variants.length > 1) {
         setSyncProgress(`Creando ${shopifyProduct.variants.length} variantes...`);
         
+        // Log stock data for debugging
+        console.log('Variation stock data:', shopifyProduct.variants.map(v => ({
+          title: v.title,
+          inventory_quantity: v.inventory_quantity
+        })));
+        
         const wooVariations = shopifyProduct.variants.map(variant => {
           let attributes: { name: string; option: string }[] = [];
           
@@ -196,13 +202,16 @@ export function ProductMappingModal({
           const hasDiscount = variant.compare_at_price && 
                             parseFloat(variant.compare_at_price) > parseFloat(variant.price);
 
+          // Handle stock with default value of 0 if null/undefined
+          const stockQuantity = variant.inventory_quantity ?? 0;
+
           return {
             regular_price: hasDiscount ? variant.compare_at_price! : variant.price,
             sale_price: hasDiscount ? variant.price : undefined,
             sku: variant.sku || undefined,
-            stock_quantity: variant.inventory_quantity,
+            stock_quantity: stockQuantity,
             manage_stock: true,
-            stock_status: variant.inventory_quantity > 0 ? 'instock' as const : 'outofstock' as const,
+            stock_status: stockQuantity > 0 ? 'instock' as const : 'outofstock' as const,
             attributes,
           };
         });
