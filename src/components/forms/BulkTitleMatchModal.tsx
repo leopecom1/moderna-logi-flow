@@ -5,9 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Package } from "lucide-react";
-import { useWooCommerceProducts } from "@/hooks/useWooCommerceProducts";
-import { useShopifyProductsPaginated } from "@/hooks/useShopifyProducts";
 import { useProductMappings } from "@/hooks/useProductMappings";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductMatch {
   woocommerce: any;
@@ -34,6 +33,9 @@ const normalizeTitle = (title: string) =>
 export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTitleMatchModalProps) {
   const [matches, setMatches] = useState<ProductMatch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState('');
+  const [wooProductsCount, setWooProductsCount] = useState(0);
+  const [shopifyProductsCount, setShopifyProductsCount] = useState(0);
   const [copyOptions, setCopyOptions] = useState<CopyOptions>({
     images: true,
     description: true,
@@ -42,52 +44,124 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
   });
 
   const { data: mappings } = useProductMappings();
-  
-  // Note: This modal only checks the first page of products due to API limits
-  // WooCommerce max = 100 per page, Shopify max = 250 per page
-  // For a complete match across all products, you'd need to implement pagination
-  const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(1, 100);
-  const { data: shopifyData, isLoading: shopifyLoading } = useShopifyProductsPaginated(250);
+
+  // Fetch ALL WooCommerce products with pagination
+  const fetchAllWooCommerceProducts = async () => {
+    const allProducts: any[] = [];
+    let page = 1;
+    const perPage = 100; // Maximum allowed by WooCommerce API
+    
+    while (true) {
+      const { data, error } = await supabase.functions.invoke(
+        `woocommerce-products/products`,
+        { 
+          body: { 
+            params: new URLSearchParams({ 
+              page: page.toString(), 
+              per_page: perPage.toString() 
+            }).toString() 
+          } 
+        }
+      );
+      
+      if (error || !data?.products?.length) break;
+      
+      allProducts.push(...data.products);
+      setWooProductsCount(allProducts.length);
+      
+      // If we received fewer products than the max, we've reached the last page
+      if (data.products.length < perPage) break;
+      
+      page++;
+    }
+    
+    return allProducts;
+  };
+
+  // Fetch ALL Shopify products with cursor-based pagination
+  const fetchAllShopifyProducts = async () => {
+    const allProducts: any[] = [];
+    let cursor: string | null = null;
+    const limit = 250; // Maximum allowed by Shopify API
+    
+    while (true) {
+      const params = new URLSearchParams({ limit: limit.toString() });
+      if (cursor) params.set('page_info', cursor);
+      
+      const { data, error } = await supabase.functions.invoke(
+        `shopify-products?${params.toString()}`
+      );
+      
+      if (error || !data?.products?.length) break;
+      
+      allProducts.push(...data.products);
+      setShopifyProductsCount(allProducts.length);
+      
+      // Get cursor for next page
+      cursor = data.pagination?.nextCursor || null;
+      if (!cursor || !data.pagination?.hasNext) break;
+    }
+    
+    return allProducts;
+  };
 
   useEffect(() => {
     if (!open) return;
     
-    setIsLoading(true);
-    
-    if (!wooData?.products || !shopifyData?.products) {
-      setIsLoading(false);
-      return;
-    }
+    const loadAllProductsAndMatch = async () => {
+      setIsLoading(true);
+      setMatches([]);
+      setWooProductsCount(0);
+      setShopifyProductsCount(0);
 
-    // Get already mapped product IDs
-    const mappedWooIds = new Set(mappings?.map(m => m.woocommerce_product_id) || []);
-    const mappedShopifyIds = new Set(mappings?.map(m => m.shopify_product_id) || []);
+      try {
+        // Step 1: Load WooCommerce products
+        setLoadingProgress('Cargando productos de WooCommerce...');
+        const wooProducts = await fetchAllWooCommerceProducts();
+        
+        // Step 2: Load Shopify products
+        setLoadingProgress('Cargando productos de Shopify...');
+        const shopifyProducts = await fetchAllShopifyProducts();
+        
+        // Step 3: Find matches
+        setLoadingProgress('Buscando coincidencias por título...');
+        
+        // Get already mapped product IDs
+        const mappedWooIds = new Set(mappings?.map(m => m.woocommerce_product_id) || []);
+        const mappedShopifyIds = new Set(mappings?.map(m => m.shopify_product_id) || []);
 
-    // Find matches by normalized title
-    const foundMatches: ProductMatch[] = [];
+        const foundMatches: ProductMatch[] = [];
 
-    for (const wooProduct of wooData.products) {
-      // Skip already mapped products
-      if (mappedWooIds.has(wooProduct.id)) continue;
+        for (const wooProduct of wooProducts) {
+          // Skip already mapped products
+          if (mappedWooIds.has(wooProduct.id)) continue;
 
-      const normalizedWoo = normalizeTitle(wooProduct.name);
-      
-      const matchingShopify = shopifyData.products.find(
-        sp => !mappedShopifyIds.has(sp.id) && normalizeTitle(sp.title) === normalizedWoo
-      );
-      
-      if (matchingShopify) {
-        foundMatches.push({
-          woocommerce: wooProduct,
-          shopify: matchingShopify,
-          selected: true,
-        });
+          const normalizedWoo = normalizeTitle(wooProduct.name);
+          
+          const matchingShopify = shopifyProducts.find(
+            sp => !mappedShopifyIds.has(sp.id) && normalizeTitle(sp.title) === normalizedWoo
+          );
+          
+          if (matchingShopify) {
+            foundMatches.push({
+              woocommerce: wooProduct,
+              shopify: matchingShopify,
+              selected: true,
+            });
+          }
+        }
+
+        setMatches(foundMatches);
+      } catch (error) {
+        console.error('Error loading products:', error);
+      } finally {
+        setIsLoading(false);
+        setLoadingProgress('');
       }
-    }
-
-    setMatches(foundMatches);
-    setIsLoading(false);
-  }, [open, wooData, shopifyData, mappings]);
+    };
+    
+    loadAllProductsAndMatch();
+  }, [open, mappings]);
 
   const toggleMatch = (index: number) => {
     setMatches(prev => 
@@ -110,8 +184,6 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
     }
   };
 
-  const isLoadingData = wooLoading || shopifyLoading || isLoading;
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[80vh]">
@@ -119,15 +191,29 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
           <DialogTitle>Productos con Nombre Coincidente</DialogTitle>
         </DialogHeader>
 
-        {isLoadingData ? (
-          <div className="flex items-center justify-center py-8">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-8 space-y-3">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="ml-2">Buscando coincidencias...</span>
+            <div className="text-center">
+              <p className="font-medium">{loadingProgress}</p>
+              {wooProductsCount > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  WooCommerce: {wooProductsCount} productos
+                </p>
+              )}
+              {shopifyProductsCount > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Shopify: {shopifyProductsCount} productos
+                </p>
+              )}
+            </div>
           </div>
         ) : matches.length === 0 ? (
           <div className="py-8 text-center text-muted-foreground">
             <p className="mb-2">No se encontraron productos con nombres coincidentes.</p>
-            <p className="text-xs">Nota: Se compararon los primeros 100 productos de WooCommerce y 250 de Shopify.</p>
+            <p className="text-xs">
+              Se compararon {wooProductsCount} productos de WooCommerce y {shopifyProductsCount} de Shopify.
+            </p>
           </div>
         ) : (
           <>
@@ -226,7 +312,7 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
           </Button>
           <Button 
             onClick={handleStartSync}
-            disabled={isLoadingData || selectedCount === 0}
+            disabled={isLoading || selectedCount === 0}
           >
             Sincronizar {selectedCount} producto{selectedCount !== 1 ? 's' : ''}
           </Button>
