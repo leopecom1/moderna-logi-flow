@@ -8,8 +8,10 @@ import { ProductList } from "@/components/sync/ProductList";
 import { useShopifyConfig, useShopifyProductsPaginated } from "@/hooks/useShopifyProducts";
 import { useWooCommerceProducts } from "@/hooks/useWooCommerceProducts";
 import { useProductMappings } from "@/hooks/useProductMappings";
+import { useQueryClient } from "@tanstack/react-query";
 import { Settings, RefreshCw, Link2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -33,6 +35,9 @@ export default function ProductSyncPage() {
   const [showMappingModal, setShowMappingModal] = useState(false);
   const [selectedWooCommerceId, setSelectedWooCommerceId] = useState<number | undefined>();
   const [selectedShopifyId, setSelectedShopifyId] = useState<number | undefined>();
+  const [isSyncing, setIsSyncing] = useState(false);
+  
+  const queryClient = useQueryClient();
   
   // WooCommerce pagination, filters, and search
   const [wooPage, setWooPage] = useState(1);
@@ -107,6 +112,27 @@ export default function ProductSyncPage() {
     }
   };
 
+  const handleSyncAll = async () => {
+    setIsSyncing(true);
+    toast.info("Sincronizando productos...");
+    
+    try {
+      // Invalidate both queries to force refetch
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["woocommerce-products"] }),
+        queryClient.invalidateQueries({ queryKey: ["shopify-products-paginated"] }),
+        queryClient.invalidateQueries({ queryKey: ["product-mappings"] }),
+      ]);
+      
+      toast.success("¡Productos sincronizados correctamente!");
+    } catch (error) {
+      console.error("Error syncing products:", error);
+      toast.error("Error al sincronizar productos");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (configLoading) {
     return (
       <MainLayout>
@@ -166,9 +192,13 @@ export default function ProductSyncPage() {
               <Settings className="mr-2 h-4 w-4" />
               Config Shopify
             </Button>
-            <Button variant="outline">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Sincronizar Todo
+            <Button 
+              variant="outline" 
+              onClick={handleSyncAll}
+              disabled={isSyncing}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? "Sincronizando..." : "Sincronizar Todo"}
             </Button>
           </div>
         </div>
