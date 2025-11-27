@@ -76,13 +76,8 @@ serve(async (req) => {
       console.log(`Using Shopify domain (GraphQL search): ${storeDomain}`);
       const graphQLEndpoint = `https://${storeDomain}/admin/api/2024-10/graphql.json`;
 
-      // Build search query. We use wildcard search on title and optionally filter by status
-      const searchParts = [`title:*${title}*`];
-      if (status && status !== 'all') {
-        // Shopify status filter: active | draft | archived
-        searchParts.push(`status:${status}`);
-      }
-      const searchQuery = searchParts.join(' ');
+      // Build search query. Use simple full-text search for title
+      const searchQuery = title; // Shopify GraphQL full-text search
 
       const graphqlQuery = `
         query SearchProducts($limit: Int!, $query: String!) {
@@ -179,8 +174,26 @@ serve(async (req) => {
 
       const graphQLData = await graphQLResponse.json();
 
+      // Log GraphQL response details
+      console.log('GraphQL response status:', graphQLResponse.status);
+      console.log('GraphQL response has errors:', !!graphQLData.errors);
+      
+      // Check for GraphQL errors in the response body (status 200 but with errors)
+      if (graphQLData.errors) {
+        console.error('GraphQL returned errors:', JSON.stringify(graphQLData.errors));
+        return new Response(
+          JSON.stringify({ 
+            error: 'GraphQL query error', 
+            details: graphQLData.errors 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const productEdges = graphQLData?.data?.products?.edges || [];
       const pageInfo = graphQLData?.data?.products?.pageInfo || {};
+      
+      console.log('GraphQL products found:', productEdges.length);
 
       products = productEdges.map((edge: any) => {
         const node = edge.node;
@@ -451,9 +464,13 @@ serve(async (req) => {
       } else {
         const restData = await shopifyResponse.json();
         products = restData.products;
+        
+        // Log REST API response details
+        console.log('REST products received:', products?.length || 0);
   
         // Parse Link header for pagination cursors
         const linkHeader = shopifyResponse.headers.get('Link');
+        console.log('Link header:', linkHeader);
   
         if (linkHeader) {
           const links = linkHeader.split(',');
@@ -467,6 +484,8 @@ serve(async (req) => {
             }
           }
         }
+        
+        console.log('Pagination cursors - next:', nextCursor, 'prev:', prevCursor);
       }
     }
 
