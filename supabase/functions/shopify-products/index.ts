@@ -94,6 +94,12 @@ serve(async (req) => {
                 tags
                 createdAt
                 updatedAt
+                options {
+                  id
+                  name
+                  position
+                  values
+                }
                 images(first: 10) {
                   edges {
                     node {
@@ -114,6 +120,10 @@ serve(async (req) => {
                       compareAtPrice
                       sku
                       inventoryQuantity
+                      selectedOptions {
+                        name
+                        value
+                      }
                       image {
                         id
                       }
@@ -198,6 +208,13 @@ serve(async (req) => {
         // Convert Shopify GID to numeric ID
         const numericId = Number(node.id.split('/').pop());
 
+        const options = (node.options || []).map((opt: any, index: number) => ({
+          id: opt.id ? Number(opt.id.split('/').pop()) : index + 1,
+          name: opt.name,
+          position: opt.position ?? index + 1,
+          values: opt.values || [],
+        }));
+
         const images = (node.images?.edges || []).map((imgEdge: any, index: number) => ({
           id: Number(imgEdge.node.id?.split('/').pop() ?? index + 1),
           src: imgEdge.node.url,
@@ -209,6 +226,7 @@ serve(async (req) => {
 
         const variants = (node.variants?.edges || []).map((variantEdge: any) => {
           const v = variantEdge.node;
+          const selectedOptions = v.selectedOptions || [];
           return {
             id: Number(v.id.split('/').pop()),
             title: v.title,
@@ -216,9 +234,9 @@ serve(async (req) => {
             compare_at_price: v.compareAtPrice ?? null,
             sku: v.sku,
             inventory_quantity: v.inventoryQuantity,
-            option1: null,
-            option2: null,
-            option3: null,
+            option1: selectedOptions[0]?.value ?? null,
+            option2: selectedOptions[1]?.value ?? null,
+            option3: selectedOptions[2]?.value ?? null,
             image_id: v.image ? Number(v.image.id.split('/').pop()) : null,
           };
         });
@@ -232,7 +250,7 @@ serve(async (req) => {
           status: (node.status || 'active').toLowerCase(),
           images,
           variants,
-          options: [],
+          options,
           tags: Array.isArray(node.tags) ? node.tags.join(', ') : (node.tags ?? ''),
           handle: node.handle ?? '',
           created_at: node.createdAt ?? new Date().toISOString(),
@@ -310,6 +328,12 @@ serve(async (req) => {
                     tags
                     createdAt
                     updatedAt
+                    options {
+                      id
+                      name
+                      position
+                      values
+                    }
                     images(first: 10) {
                       edges {
                         node {
@@ -330,6 +354,10 @@ serve(async (req) => {
                           compareAtPrice
                           sku
                           inventoryQuantity
+                          selectedOptions {
+                            name
+                            value
+                          }
                           image {
                             id
                           }
@@ -392,6 +420,13 @@ serve(async (req) => {
             const node = edge.node;
             const numericId = Number(node.id.split('/').pop());
 
+            const options = (node.options || []).map((opt: any, index: number) => ({
+              id: opt.id ? Number(opt.id.split('/').pop()) : index + 1,
+              name: opt.name,
+              position: opt.position ?? index + 1,
+              values: opt.values || [],
+            }));
+
             const images = (node.images?.edges || []).map((imgEdge: any, index: number) => ({
               id: Number(imgEdge.node.id?.split('/').pop() ?? index + 1),
               src: imgEdge.node.url,
@@ -403,6 +438,7 @@ serve(async (req) => {
 
             const variants = (node.variants?.edges || []).map((variantEdge: any) => {
               const v = variantEdge.node;
+              const selectedOptions = v.selectedOptions || [];
               return {
                 id: Number(v.id.split('/').pop()),
                 title: v.title,
@@ -410,9 +446,9 @@ serve(async (req) => {
                 compare_at_price: v.compareAtPrice ?? null,
                 sku: v.sku,
                 inventory_quantity: v.inventoryQuantity,
-                option1: null,
-                option2: null,
-                option3: null,
+                option1: selectedOptions[0]?.value ?? null,
+                option2: selectedOptions[1]?.value ?? null,
+                option3: selectedOptions[2]?.value ?? null,
                 image_id: v.image ? Number(v.image.id.split('/').pop()) : null,
               };
             });
@@ -426,7 +462,7 @@ serve(async (req) => {
               status: (node.status || 'active').toLowerCase(),
               images,
               variants,
-              options: [],
+              options,
               tags: Array.isArray(node.tags) ? node.tags.join(', ') : (node.tags ?? ''),
               handle: node.handle ?? '',
               created_at: node.createdAt ?? new Date().toISOString(),
