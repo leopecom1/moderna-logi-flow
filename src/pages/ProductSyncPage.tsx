@@ -4,12 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ShopifyConfigModal } from "@/components/forms/ShopifyConfigModal";
 import { ProductMappingModal } from "@/components/forms/ProductMappingModal";
+import { BulkTitleMatchModal } from "@/components/forms/BulkTitleMatchModal";
+import { BulkSyncProgressModal, ProductSyncStatus } from "@/components/forms/BulkSyncProgressModal";
 import { ProductList } from "@/components/sync/ProductList";
 import { useShopifyConfig, useShopifyProductsPaginated } from "@/hooks/useShopifyProducts";
 import { useWooCommerceProducts } from "@/hooks/useWooCommerceProducts";
-import { useProductMappings } from "@/hooks/useProductMappings";
+import { useProductMappings, useCreateProductMapping } from "@/hooks/useProductMappings";
+import { useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations, useWooCommerceVariations, useDeleteWooCommerceVariation } from "@/hooks/useWooCommerceProducts";
 import { useQueryClient } from "@tanstack/react-query";
-import { Settings, RefreshCw, Link2 } from "lucide-react";
+import { Settings, RefreshCw, Link2, GitMerge } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 
@@ -33,11 +36,18 @@ function useDebounce<T>(value: T, delay: number): T {
 export default function ProductSyncPage() {
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showMappingModal, setShowMappingModal] = useState(false);
+  const [showBulkMatchModal, setShowBulkMatchModal] = useState(false);
+  const [showBulkProgressModal, setShowBulkProgressModal] = useState(false);
   const [selectedWooCommerceId, setSelectedWooCommerceId] = useState<number | undefined>();
   const [selectedShopifyId, setSelectedShopifyId] = useState<number | undefined>();
   const [isSyncing, setIsSyncing] = useState(false);
+  const [bulkSyncProducts, setBulkSyncProducts] = useState<ProductSyncStatus[]>([]);
+  const [currentSyncIndex, setCurrentSyncIndex] = useState(0);
   
   const queryClient = useQueryClient();
+  const createMapping = useCreateProductMapping();
+  const updateWooProduct = useUpdateWooCommerceProduct();
+  const batchCreateVariations = useBatchCreateWooCommerceVariations();
   
   // WooCommerce pagination, filters, and search
   const [wooPage, setWooPage] = useState(1);
@@ -133,6 +143,193 @@ export default function ProductSyncPage() {
     }
   };
 
+  const handleStartBulkSync = async (matches: any[], copyOptions: any) => {
+    // Initialize product sync status
+    const syncProducts: ProductSyncStatus[] = matches.map(match => ({
+      wooId: match.woocommerce.id,
+      shopifyId: match.shopify.id,
+      name: match.woocommerce.name,
+      status: 'pending' as const,
+    }));
+
+    setBulkSyncProducts(syncProducts);
+    setCurrentSyncIndex(0);
+    setShowBulkProgressModal(true);
+
+    // Process each product sequentially
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      setCurrentSyncIndex(i);
+
+      // Update status to syncing
+      setBulkSyncProducts(prev => 
+        prev.map((p, idx) => idx === i ? { ...p, status: 'syncing' as const } : p)
+      );
+
+      try {
+        // 1. Create mapping
+        await createMapping.mutateAsync({
+          woocommerce_product_id: match.woocommerce.id,
+          shopify_product_id: match.shopify.id,
+          woocommerce_product_name: match.woocommerce.name,
+          shopify_product_name: match.shopify.title,
+        });
+
+        // 2. Build update data based on copy options
+        const updateData: any = {};
+        
+        if (copyOptions.description && match.shopify.body_html) {
+          updateData.description = match.shopify.body_html;
+        }
+
+        if (copyOptions.images && match.shopify.images?.length > 0) {
+          updateData.images = match.shopify.images.map((img: any) => ({
+            src: img.src,
+            alt: img.alt || match.shopify.title,
+          }));
+        }
+
+        // 3. Handle variants or simple product
+        const hasVariants = match.shopify.variants?.length > 1;
+
+        if (copyOptions.variants && hasVariants) {
+          // Variable product
+          const attributes = match.shopify.options
+            ?.filter((opt: any) => opt.values && opt.values.length > 0)
+            .map((opt: any) => ({
+              name: opt.name,
+              options: opt.values,
+              visible: true,
+              variation: true,
+            })) || [];
+
+          updateData.type = 'variable';
+          updateData.attributes = attributes;
+
+          await updateWooProduct.mutateAsync({
+            id: match.woocommerce.id,
+            data: updateData,
+          });
+
+          // Delete existing variations
+          const { data: existingVariations } = await queryClient.fetchQuery({
+            queryKey: ['woocommerce-variations', match.woocommerce.id],
+            queryFn: async () => {
+              const response = await fetch(
+                `https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products?endpoint=products/${match.woocommerce.id}/variations&per_page=100`,
+                { headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kdXN4anJqcmpwYXV1cWVydXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MjUwODIsImV4cCI6MjA2ODEwMTA4Mn0.pfb6tHB0ekR-K4x1j5bj41Q13opC7YGGQt8LJ-GKTPk'}` } }
+              );
+              return response.json();
+            },
+          });
+
+          if (existingVariations && Array.isArray(existingVariations)) {
+            for (const variant of existingVariations) {
+              await fetch(
+                `https://ndusxjrjrjpauuqeruzg.supabase.co/functions/v1/woocommerce-products?endpoint=products/${match.woocommerce.id}/variations/${variant.id}&method=DELETE`,
+                { method: 'POST', headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5kdXN4anJqcmpwYXV1cWVydXpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI1MjUwODIsImV4cCI6MjA2ODEwMTA4Mn0.pfb6tHB0ekR-K4x1j5bj41Q13opC7YGGQt8LJ-GKTPk'}` } }
+              );
+            }
+          }
+
+          // Create new variations
+          const variationsToCreate = match.shopify.variants.map((variant: any) => {
+            const attributes = match.shopify.options
+              ?.filter((opt: any) => opt.position <= 3)
+              .map((opt: any, idx: number) => ({
+                name: opt.name,
+                option: variant[`option${idx + 1}`] || '',
+              }))
+              .filter((attr: any) => attr.option) || [];
+
+            const hasDiscount = variant.compare_at_price && parseFloat(variant.compare_at_price) > parseFloat(variant.price);
+            const isInStock = (variant.inventory_quantity ?? 0) > 0;
+
+            const variationData: any = {
+              regular_price: hasDiscount ? variant.compare_at_price! : variant.price,
+              attributes,
+            };
+
+            if (isInStock) {
+              variationData.manage_stock = false;
+              variationData.stock_status = 'instock';
+            } else {
+              variationData.manage_stock = true;
+              variationData.stock_quantity = 0;
+              variationData.stock_status = 'outofstock';
+            }
+
+            if (hasDiscount) {
+              variationData.sale_price = variant.price;
+            }
+
+            if (variant.sku) {
+              variationData.sku = variant.sku;
+            }
+
+            return variationData;
+          });
+
+          await batchCreateVariations.mutateAsync({
+            productId: match.woocommerce.id,
+            variations: variationsToCreate,
+          });
+        } else {
+          // Simple product
+          if (copyOptions.price && match.shopify.variants?.[0]) {
+            const variant = match.shopify.variants[0];
+            const hasDiscount = variant.compare_at_price && parseFloat(variant.compare_at_price) > parseFloat(variant.price);
+            
+            updateData.regular_price = hasDiscount ? variant.compare_at_price : variant.price;
+            if (hasDiscount) {
+              updateData.sale_price = variant.price;
+            }
+            if (variant.sku) {
+              updateData.sku = variant.sku;
+            }
+
+            const isInStock = (variant.inventory_quantity ?? 0) > 0;
+            if (isInStock) {
+              updateData.manage_stock = false;
+              updateData.stock_status = 'instock';
+            } else {
+              updateData.manage_stock = true;
+              updateData.stock_quantity = 0;
+              updateData.stock_status = 'outofstock';
+            }
+          }
+
+          await updateWooProduct.mutateAsync({
+            id: match.woocommerce.id,
+            data: updateData,
+          });
+        }
+
+        // Mark as completed
+        setBulkSyncProducts(prev => 
+          prev.map((p, idx) => idx === i ? { ...p, status: 'completed' as const } : p)
+        );
+      } catch (error) {
+        console.error(`Error syncing product ${match.woocommerce.name}:`, error);
+        setBulkSyncProducts(prev => 
+          prev.map((p, idx) => 
+            idx === i ? { 
+              ...p, 
+              status: 'error' as const, 
+              error: error instanceof Error ? error.message : 'Error desconocido' 
+            } : p
+          )
+        );
+      }
+    }
+
+    // Invalidate queries after all products are processed
+    await queryClient.invalidateQueries({ queryKey: ["product-mappings"] });
+    await queryClient.invalidateQueries({ queryKey: ["woocommerce-products"] });
+    
+    toast.success(`Sincronización completada: ${matches.length} productos procesados`);
+  };
+
   if (configLoading) {
     return (
       <MainLayout>
@@ -191,6 +388,13 @@ export default function ProductSyncPage() {
             <Button variant="outline" onClick={() => setShowConfigModal(true)}>
               <Settings className="mr-2 h-4 w-4" />
               Config Shopify
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => setShowBulkMatchModal(true)}
+            >
+              <GitMerge className="mr-2 h-4 w-4" />
+              Asociar por Título
             </Button>
             <Button 
               variant="outline" 
@@ -295,6 +499,18 @@ export default function ProductSyncPage() {
         onOpenChange={setShowMappingModal}
         woocommerceProduct={selectedWooProduct || null}
         shopifyProduct={selectedShopifyProduct || null}
+      />
+
+      <BulkTitleMatchModal
+        open={showBulkMatchModal}
+        onOpenChange={setShowBulkMatchModal}
+        onStartSync={handleStartBulkSync}
+      />
+
+      <BulkSyncProgressModal
+        open={showBulkProgressModal}
+        products={bulkSyncProducts}
+        currentIndex={currentSyncIndex}
       />
     </MainLayout>
   );
