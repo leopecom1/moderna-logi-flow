@@ -16,19 +16,52 @@ export default function ProductSyncPage() {
   const [showMappingModal, setShowMappingModal] = useState(false);
   const [selectedWooCommerceId, setSelectedWooCommerceId] = useState<number | undefined>();
   const [selectedShopifyId, setSelectedShopifyId] = useState<number | undefined>();
+  
+  // WooCommerce pagination and filters
+  const [wooPage, setWooPage] = useState(1);
+  const [wooStatus, setWooStatus] = useState("all");
+  
+  // Shopify pagination and filters
+  const [shopifyPage, setShopifyPage] = useState(1);
+  const [shopifyStatus, setShopifyStatus] = useState("all");
+
+  const perPage = 20;
 
   const { data: shopifyConfig, isLoading: configLoading } = useShopifyConfig();
-  const { data: shopifyProducts = [], isLoading: shopifyLoading } = useShopifyProducts(50);
-  const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(1, 50);
+  const { data: shopifyProducts = [], isLoading: shopifyLoading } = useShopifyProducts(250);
+  const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(
+    1, 
+    250, 
+    undefined, 
+    undefined, 
+    wooStatus === "all" ? undefined : wooStatus
+  );
   const { data: mappings = [] } = useProductMappings();
 
-  const wooProducts = wooData?.products || [];
+  const allWooProducts = wooData?.products || [];
+  const allShopifyProducts = shopifyProducts || [];
   
+  // Filter and paginate WooCommerce products
+  const filteredWooProducts = allWooProducts.filter(p => {
+    if (wooStatus === "all") return true;
+    return p.status === wooStatus;
+  });
+  const wooTotalPages = Math.ceil(filteredWooProducts.length / perPage);
+  const wooProducts = filteredWooProducts.slice((wooPage - 1) * perPage, wooPage * perPage);
+
+  // Filter and paginate Shopify products
+  const filteredShopifyProducts = allShopifyProducts.filter(p => {
+    if (shopifyStatus === "all") return true;
+    return p.status === shopifyStatus;
+  });
+  const shopifyTotalPages = Math.ceil(filteredShopifyProducts.length / perPage);
+  const paginatedShopifyProducts = filteredShopifyProducts.slice((shopifyPage - 1) * perPage, shopifyPage * perPage);
+
   const mappedWooIds = new Set(mappings.map(m => m.woocommerce_product_id));
   const mappedShopifyIds = new Set(mappings.map(m => m.shopify_product_id));
 
-  const selectedWooProduct = wooProducts.find(p => p.id === selectedWooCommerceId);
-  const selectedShopifyProduct = shopifyProducts.find(p => p.id === selectedShopifyId);
+  const selectedWooProduct = allWooProducts.find(p => p.id === selectedWooCommerceId);
+  const selectedShopifyProduct = allShopifyProducts.find(p => p.id === selectedShopifyId);
 
   const handleAssociate = () => {
     if (selectedWooCommerceId && selectedShopifyId) {
@@ -127,7 +160,7 @@ export default function ProductSyncPage() {
               <CardTitle className="flex items-center gap-2">
                 🛒 WooCommerce
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({wooProducts.length} productos)
+                  ({filteredWooProducts.length} productos)
                 </span>
               </CardTitle>
             </CardHeader>
@@ -139,6 +172,11 @@ export default function ProductSyncPage() {
                 mappedIds={mappedWooIds}
                 onSelect={setSelectedWooCommerceId}
                 loading={wooLoading}
+                currentPage={wooPage}
+                totalPages={wooTotalPages}
+                onPageChange={setWooPage}
+                statusFilter={wooStatus}
+                onStatusFilterChange={setWooStatus}
               />
             </CardContent>
           </Card>
@@ -149,18 +187,23 @@ export default function ProductSyncPage() {
               <CardTitle className="flex items-center gap-2">
                 🛍️ Shopify
                 <span className="text-sm font-normal text-muted-foreground">
-                  ({shopifyProducts.length} productos)
+                  ({filteredShopifyProducts.length} productos)
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <ProductList
-                products={shopifyProducts}
+                products={paginatedShopifyProducts}
                 type="shopify"
                 selectedId={selectedShopifyId}
                 mappedIds={mappedShopifyIds}
                 onSelect={setSelectedShopifyId}
                 loading={shopifyLoading}
+                currentPage={shopifyPage}
+                totalPages={shopifyTotalPages}
+                onPageChange={setShopifyPage}
+                statusFilter={shopifyStatus}
+                onStatusFilterChange={setShopifyStatus}
               />
             </CardContent>
           </Card>
