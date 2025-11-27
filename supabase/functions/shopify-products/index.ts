@@ -30,9 +30,16 @@ serve(async (req) => {
       );
     }
 
-    const url = new URL(req.url);
-    const path = url.pathname.replace('/shopify-products', '');
-    const method = req.method;
+    // Get request body
+    const requestBody = await req.json();
+    const { endpoint } = requestBody;
+
+    if (!endpoint) {
+      return new Response(
+        JSON.stringify({ error: 'Endpoint is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get Shopify config
     const { data: config, error: configError } = await supabaseClient
@@ -49,16 +56,17 @@ serve(async (req) => {
     }
 
     // Build Shopify API URL
-    const shopifyApiUrl = `https://${config.store_domain}/admin/api/2024-01${path}`;
+    const shopifyApiUrl = `https://${config.store_domain}/admin/api/2024-01${endpoint}`;
     
+    console.log('Calling Shopify API:', shopifyApiUrl);
+
     // Make request to Shopify
     const shopifyResponse = await fetch(shopifyApiUrl, {
-      method,
+      method: 'GET',
       headers: {
         'X-Shopify-Access-Token': config.access_token,
         'Content-Type': 'application/json',
       },
-      body: method !== 'GET' ? await req.text() : undefined,
     });
 
     const data = await shopifyResponse.json();

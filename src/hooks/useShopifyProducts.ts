@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ShopifyProduct, ShopifyConfig } from "@/types/shopify";
 import { useToast } from "@/hooks/use-toast";
 
-async function callShopifyAPI(endpoint: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET', body?: any) {
+async function callShopifyAPI(endpoint: string) {
   const { data: { session } } = await supabase.auth.getSession();
   
   if (!session) {
@@ -11,11 +11,7 @@ async function callShopifyAPI(endpoint: string, method: 'GET' | 'POST' | 'PUT' |
   }
 
   const { data, error } = await supabase.functions.invoke('shopify-products', {
-    body: body ? JSON.stringify(body) : undefined,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    method,
+    body: { endpoint },
   });
 
   if (error) throw error;
