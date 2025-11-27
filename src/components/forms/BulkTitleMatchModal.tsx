@@ -43,9 +43,9 @@ export function BulkTitleMatchModal({ open, onOpenChange, onStartSync }: BulkTit
 
   const { data: mappings } = useProductMappings();
   
-  // We'll need to fetch ALL products, so we use a large per_page value
-  const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(1, 1000);
-  const { data: shopifyData, isLoading: shopifyLoading } = useShopifyProductsPaginated(1000);
+  // Use maximum allowed limits: WooCommerce = 100, Shopify = 250
+  const { data: wooData, isLoading: wooLoading } = useWooCommerceProducts(1, 100);
+  const { data: shopifyData, isLoading: shopifyLoading } = useShopifyProductsPaginated(250);
 
   useEffect(() => {
     if (!open) return;
