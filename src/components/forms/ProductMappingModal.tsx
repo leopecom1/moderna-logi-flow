@@ -226,13 +226,23 @@ export function ProductMappingModal({
           // Determine stock status based on Shopify inventory
           const isInStock = (variant.inventory_quantity ?? 0) > 0;
 
-          // Build base variation data - only status, no quantity management
+          // Build base variation data
           const variationData: any = {
             regular_price: hasDiscount ? variant.compare_at_price! : variant.price,
-            manage_stock: false,
-            stock_status: isInStock ? 'instock' : 'outofstock',
             attributes,
           };
+
+          // Hybrid stock strategy:
+          // - For IN STOCK: use status only, no quantity management
+          // - For OUT OF STOCK: force with quantity management to ensure WooCommerce shows "Agotado"
+          if (isInStock) {
+            variationData.manage_stock = false;
+            variationData.stock_status = 'instock';
+          } else {
+            variationData.manage_stock = true;
+            variationData.stock_quantity = 0;
+            variationData.stock_status = 'outofstock';
+          }
 
           // Add optional properties only if they have values
           if (hasDiscount) {
