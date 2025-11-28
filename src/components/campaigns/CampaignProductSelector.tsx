@@ -57,25 +57,25 @@ export function CampaignProductSelector({ selectedProducts, onSelectionChange }:
     setLoadingAllProducts(true);
     try {
       // Primera llamada para obtener el total de páginas
-      const firstPageData = await callWooCommerceAPI('products', 'GET', null, { 
+      const firstPageData = await callWooCommerceAPI('/products', 'GET', null, { 
         per_page: 100, 
         status: 'publish',
         page: 1 
       });
       
       const totalPages = firstPageData.totalPages || 1;
-      let allProducts: WooCommerceProduct[] = firstPageData.data || [];
+      let allProducts: WooCommerceProduct[] = firstPageData.products || [];
       
       setLoadProgress({ current: 1, total: totalPages });
       
       // Cargar las páginas restantes
       for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
-        const pageData = await callWooCommerceAPI('products', 'GET', null, { 
+        const pageData = await callWooCommerceAPI('/products', 'GET', null, { 
           per_page: 100, 
           status: 'publish',
           page: currentPage 
         });
-        allProducts = [...allProducts, ...(pageData.data || [])];
+        allProducts = [...allProducts, ...(pageData.products || [])];
         setLoadProgress({ current: currentPage, total: totalPages });
       }
       
