@@ -22,6 +22,10 @@ interface CopyOptions {
   copyVariants: boolean;
 }
 
+function normalizeUrl(url: string): string {
+  return url.endsWith('/') ? url.slice(0, -1) : url;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -276,8 +280,10 @@ async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase
       throw new Error('WooCommerce not configured');
     }
 
+    const storeUrl = normalizeUrl(wooConfig.store_url);
+
     // Update product via WooCommerce API
-    const wooUpdateUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}`;
+    const wooUpdateUrl = `${storeUrl}/wp-json/wc/v3/products/${item.woocommerce_product_id}`;
     const auth = btoa(`${wooConfig.consumer_key}:${wooConfig.consumer_secret}`);
     
     const wooUpdateResponse = await fetch(wooUpdateUrl, {
@@ -295,7 +301,7 @@ async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase
     }
 
     // Delete existing variations
-    const wooVariationsUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations`;
+    const wooVariationsUrl = `${storeUrl}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations`;
     const variationsResponse = await fetch(wooVariationsUrl, {
       method: 'GET',
       headers: {
@@ -309,7 +315,7 @@ async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase
       
       if (existingVariations && existingVariations.length > 0) {
         // Batch delete variations
-        const batchDeleteUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations/batch`;
+        const batchDeleteUrl = `${storeUrl}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations/batch`;
         await fetch(batchDeleteUrl, {
           method: 'POST',
           headers: {
@@ -343,7 +349,7 @@ async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase
     });
 
     // Batch create variations
-    const batchCreateUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations/batch`;
+    const batchCreateUrl = `${storeUrl}/wp-json/wc/v3/products/${item.woocommerce_product_id}/variations/batch`;
     const createResponse = await fetch(batchCreateUrl, {
       method: 'POST',
       headers: {
@@ -376,8 +382,10 @@ async function syncProduct(item: SyncJobItem, copyOptions: CopyOptions, supabase
       throw new Error('WooCommerce not configured');
     }
 
+    const storeUrl = normalizeUrl(wooConfig.store_url);
+
     // Update product via WooCommerce API
-    const wooUpdateUrl = `${wooConfig.store_url}/wp-json/wc/v3/products/${item.woocommerce_product_id}`;
+    const wooUpdateUrl = `${storeUrl}/wp-json/wc/v3/products/${item.woocommerce_product_id}`;
     const auth = btoa(`${wooConfig.consumer_key}:${wooConfig.consumer_secret}`);
     
     const wooUpdateResponse = await fetch(wooUpdateUrl, {
