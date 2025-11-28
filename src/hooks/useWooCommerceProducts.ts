@@ -3,11 +3,32 @@ import { supabase } from '@/integrations/supabase/client';
 import { WooCommerceProduct, WooCommerceProductCreate } from '@/types/woocommerce';
 import { toast } from '@/hooks/use-toast';
 
-async function callWooCommerceAPI(endpoint: string, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', body?: any) {
-  console.log(`[WooCommerce] ${method} ${endpoint}`, body);
+export async function callWooCommerceAPI(
+  endpoint: string, 
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET', 
+  body?: any,
+  params?: Record<string, any>
+) {
+  let fullEndpoint = endpoint;
+  
+  // Agregar parámetros de query si existen
+  if (params && Object.keys(params).length > 0) {
+    const queryString = new URLSearchParams(
+      Object.entries(params).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null) {
+          acc[key] = String(value);
+        }
+        return acc;
+      }, {} as Record<string, string>)
+    ).toString();
+    
+    fullEndpoint = `${endpoint}${endpoint.includes('?') ? '&' : '?'}${queryString}`;
+  }
+  
+  console.log(`[WooCommerce] ${method} ${fullEndpoint}`, body);
 
   try {
-    const { data, error } = await supabase.functions.invoke('woocommerce-products' + endpoint, {
+    const { data, error } = await supabase.functions.invoke('woocommerce-products' + fullEndpoint, {
       method,
       body: body || undefined,
     });

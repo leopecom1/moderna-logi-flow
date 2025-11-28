@@ -5,8 +5,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { WooCommerceProduct } from '@/types/woocommerce';
 import { useWooCommerceProducts } from '@/hooks/useWooCommerceProducts';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Loader2, CheckSquare, X } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { callWooCommerceAPI } from '@/hooks/useWooCommerceProducts';
 
 interface CampaignProductSelectorProps {
   selectedProducts: WooCommerceProduct[];
@@ -17,6 +18,8 @@ export function CampaignProductSelector({ selectedProducts, onSelectionChange }:
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [selectAll, setSelectAll] = useState(false);
+  const [loadingAllProducts, setLoadingAllProducts] = useState(false);
+  const [loadProgress, setLoadProgress] = useState({ current: 0, total: 0 });
   
   const { data: productsData, isLoading } = useWooCommerceProducts(page, 20, search);
 
@@ -50,10 +53,50 @@ export function CampaignProductSelector({ selectedProducts, onSelectionChange }:
     return selectedProducts.some(p => p.id === productId);
   };
 
+  const handleSelectAllActive = async () => {
+    setLoadingAllProducts(true);
+    try {
+      // Primera llamada para obtener el total de páginas
+      const firstPageData = await callWooCommerceAPI('products', 'GET', null, { 
+        per_page: 100, 
+        status: 'publish',
+        page: 1 
+      });
+      
+      const totalPages = firstPageData.totalPages || 1;
+      let allProducts: WooCommerceProduct[] = firstPageData.data || [];
+      
+      setLoadProgress({ current: 1, total: totalPages });
+      
+      // Cargar las páginas restantes
+      for (let currentPage = 2; currentPage <= totalPages; currentPage++) {
+        const pageData = await callWooCommerceAPI('products', 'GET', null, { 
+          per_page: 100, 
+          status: 'publish',
+          page: currentPage 
+        });
+        allProducts = [...allProducts, ...(pageData.data || [])];
+        setLoadProgress({ current: currentPage, total: totalPages });
+      }
+      
+      onSelectionChange(allProducts);
+    } catch (error) {
+      console.error('Error loading all active products:', error);
+    } finally {
+      setLoadingAllProducts(false);
+      setLoadProgress({ current: 0, total: 0 });
+    }
+  };
+
+  const handleClearSelection = () => {
+    onSelectionChange([]);
+    setSelectAll(false);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
-        <div className="flex-1 relative">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex-1 min-w-[200px] relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar productos..."
@@ -68,14 +111,48 @@ export function CampaignProductSelector({ selectedProducts, onSelectionChange }:
             checked={selectAll}
             onCheckedChange={handleSelectAll}
           />
-          <Label htmlFor="select-all" className="cursor-pointer">
+          <Label htmlFor="select-all" className="cursor-pointer whitespace-nowrap">
             Todos en página
           </Label>
         </div>
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        {selectedProducts.length} producto(s) seleccionado(s)
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="text-sm text-muted-foreground">
+          {selectedProducts.length} producto(s) seleccionado(s)
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAllActive}
+            disabled={loadingAllProducts}
+          >
+            {loadingAllProducts ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Cargando... ({loadProgress.current}/{loadProgress.total})
+              </>
+            ) : (
+              <>
+                <CheckSquare className="h-4 w-4 mr-2" />
+                Seleccionar todos los activos
+              </>
+            )}
+          </Button>
+          
+          {selectedProducts.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClearSelection}
+            >
+              <X className="h-4 w-4 mr-2" />
+              Limpiar
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="border rounded-lg max-h-96 overflow-y-auto">
