@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
-import { useEcommerceCampaigns, EcommerceCampaign, useApplyCampaign, useRevertCampaign, ApplyCampaignProgress } from '@/hooks/useEcommerceCampaigns';
+import { useEcommerceCampaigns, EcommerceCampaign, useApplyCampaign, useRevertCampaign } from '@/hooks/useEcommerceCampaigns';
 import { CampaignsList } from '@/components/campaigns/CampaignsList';
 import { CreateCampaignModal } from '@/components/campaigns/CreateCampaignModal';
 import { ApplyCampaignModal } from '@/components/campaigns/ApplyCampaignModal';
@@ -15,8 +15,7 @@ export default function EcommerceCampaignsPage() {
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [revertModalOpen, setRevertModalOpen] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const [applyProgress, setApplyProgress] = useState<ApplyCampaignProgress[]>([]);
-  const [revertProgress, setRevertProgress] = useState<ApplyCampaignProgress[]>([]);
+  const [applyMode, setApplyMode] = useState<'apply' | 'revert'>('apply');
   
   const { data: campaigns, isLoading } = useEcommerceCampaigns();
   const applyCampaign = useApplyCampaign();
@@ -29,38 +28,21 @@ export default function EcommerceCampaignsPage() {
 
   const handleApplyCampaign = (campaign: EcommerceCampaign) => {
     setSelectedCampaignId(campaign.id);
-    setApplyProgress([]);
+    setApplyMode('apply');
     setApplyModalOpen(true);
     
-    applyCampaign.mutate(
-      { 
-        campaignId: campaign.id,
-        onProgress: setApplyProgress 
-      },
-      {
-        onSettled: () => {
-          // Keep modal open to show results
-        },
-      }
-    );
+    applyCampaign.mutate(campaign.id);
   };
 
   const handleRevertCampaign = (campaign: EcommerceCampaign) => {
     setSelectedCampaignId(campaign.id);
-    setRevertProgress([]);
-    setRevertModalOpen(true);
+    setApplyMode('revert');
+    setApplyModalOpen(true);
     
-    revertCampaign.mutate(
-      { 
-        campaignId: campaign.id,
-        onProgress: setRevertProgress 
-      },
-      {
-        onSettled: () => {
-          // Keep modal open to show results
-        },
-      }
-    );
+    revertCampaign.mutate({ 
+      campaignId: campaign.id,
+      onProgress: () => {} 
+    });
   };
 
   const handleCampaignCreated = (campaignId: string) => {
@@ -113,17 +95,8 @@ export default function EcommerceCampaignsPage() {
       <ApplyCampaignModal
         open={applyModalOpen}
         onOpenChange={setApplyModalOpen}
-        progress={applyProgress}
-        isApplying={applyCampaign.isPending}
-        mode="apply"
-      />
-
-      <ApplyCampaignModal
-        open={revertModalOpen}
-        onOpenChange={setRevertModalOpen}
-        progress={revertProgress}
-        isApplying={revertCampaign.isPending}
-        mode="revert"
+        campaignId={selectedCampaignId}
+        mode={applyMode}
       />
     </MainLayout>
   );

@@ -988,40 +988,55 @@ export type Database = {
       ecommerce_campaigns: {
         Row: {
           applied_at: string | null
+          completed_products: number | null
           created_at: string
           created_by: string
           description: string | null
+          failed_products: number | null
           id: string
           markup_percentage: number
           name: string
+          processing_status: string | null
           products_count: number | null
           reverted_at: string | null
+          skipped_products: number | null
+          started_at: string | null
           status: string
           updated_at: string
         }
         Insert: {
           applied_at?: string | null
+          completed_products?: number | null
           created_at?: string
           created_by: string
           description?: string | null
+          failed_products?: number | null
           id?: string
           markup_percentage: number
           name: string
+          processing_status?: string | null
           products_count?: number | null
           reverted_at?: string | null
+          skipped_products?: number | null
+          started_at?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
           applied_at?: string | null
+          completed_products?: number | null
           created_at?: string
           created_by?: string
           description?: string | null
+          failed_products?: number | null
           id?: string
           markup_percentage?: number
           name?: string
+          processing_status?: string | null
           products_count?: number | null
           reverted_at?: string | null
+          skipped_products?: number | null
+          started_at?: string | null
           status?: string
           updated_at?: string
         }
