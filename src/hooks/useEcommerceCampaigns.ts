@@ -26,7 +26,7 @@ export interface CampaignProduct {
   original_sale_price: number | null;
   new_regular_price: number | null;
   new_sale_price: number | null;
-  status: 'pending' | 'applied' | 'error' | 'reverted';
+  status: 'pending' | 'applied' | 'error' | 'reverted' | 'skipped';
   error_message: string | null;
   applied_at: string | null;
   reverted_at: string | null;
@@ -200,7 +200,7 @@ export interface CampaignVariation {
   original_sale_price: number | null;
   new_regular_price: number | null;
   new_sale_price: number | null;
-  status: 'pending' | 'applied' | 'error' | 'reverted';
+  status: 'pending' | 'applied' | 'error' | 'reverted' | 'skipped';
   error_message: string | null;
   applied_at: string | null;
   reverted_at: string | null;
@@ -210,7 +210,7 @@ export interface CampaignVariation {
 export interface ApplyCampaignProgress {
   productId: string;
   productName: string;
-  status: 'pending' | 'processing' | 'success' | 'error';
+  status: 'pending' | 'processing' | 'success' | 'error' | 'skipped';
   error?: string;
   variationsTotal?: number;
   variationsProcessed?: number;
@@ -266,6 +266,36 @@ export function useApplyCampaign() {
 
         try {
           if (product.product_type === 'simple') {
+            // Check if product is already on sale
+            const checkResponse = await supabase.functions.invoke('woocommerce-products', {
+              body: {
+                endpoint: `/products/${product.woocommerce_product_id}`,
+                method: 'GET',
+              },
+            });
+
+            if (checkResponse.error) throw new Error(checkResponse.error.message);
+            
+            const currentProduct = checkResponse.data;
+            const isOnSale = currentProduct?.on_sale || 
+                            (currentProduct?.sale_price && parseFloat(currentProduct.sale_price) > 0);
+
+            if (isOnSale) {
+              // Skip product - already on sale
+              await supabase
+                .from('ecommerce_campaign_products')
+                .update({
+                  status: 'skipped',
+                  error_message: 'Producto ya está en oferta',
+                })
+                .eq('id', product.id);
+
+              progress.status = 'skipped';
+              progress.error = 'Ya está en oferta';
+              updateProgress();
+              continue;
+            }
+
             // Update simple product
             const response = await supabase.functions.invoke('woocommerce-products', {
               body: {
@@ -307,13 +337,34 @@ export function useApplyCampaign() {
             if (variations.length === 0) {
               throw new Error(`Producto variable ${product.product_name} no tiene variaciones en WooCommerce`);
             }
+
+            // Filter variations that are NOT already on sale
+            const variationsToUpdate = variations.filter((v: any) => 
+              !v.sale_price || parseFloat(v.sale_price) === 0
+            );
+
+            if (variationsToUpdate.length === 0) {
+              // All variations already on sale, skip product
+              await supabase
+                .from('ecommerce_campaign_products')
+                .update({
+                  status: 'skipped',
+                  error_message: 'Todas las variaciones ya están en oferta',
+                })
+                .eq('id', product.id);
+
+              progress.status = 'skipped';
+              progress.error = 'Todas las variaciones ya están en oferta';
+              updateProgress();
+              continue;
+            }
             
-            progress.variationsTotal = variations.length;
+            progress.variationsTotal = variationsToUpdate.length;
             progress.variationsProcessed = 0;
             updateProgress();
 
             // Store original variation prices and update each variation
-            for (const variation of variations) {
+            for (const variation of variationsToUpdate) {
               // Save original prices to DB
               await supabase.from('ecommerce_campaign_variations').insert({
                 campaign_product_id: product.id,

@@ -6,10 +6,12 @@ import { useEcommerceCampaigns, EcommerceCampaign, useApplyCampaign, useRevertCa
 import { CampaignsList } from '@/components/campaigns/CampaignsList';
 import { CreateCampaignModal } from '@/components/campaigns/CreateCampaignModal';
 import { ApplyCampaignModal } from '@/components/campaigns/ApplyCampaignModal';
+import { ViewCampaignModal } from '@/components/campaigns/ViewCampaignModal';
 import { toast } from 'sonner';
 
 export default function EcommerceCampaignsPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [revertModalOpen, setRevertModalOpen] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
@@ -21,7 +23,8 @@ export default function EcommerceCampaignsPage() {
   const revertCampaign = useRevertCampaign();
 
   const handleViewCampaign = (campaign: EcommerceCampaign) => {
-    toast.info('Ver detalles de campaña - Próximamente');
+    setSelectedCampaignId(campaign.id);
+    setViewModalOpen(true);
   };
 
   const handleApplyCampaign = (campaign: EcommerceCampaign) => {
@@ -99,6 +102,12 @@ export default function EcommerceCampaignsPage() {
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onCampaignCreated={handleCampaignCreated}
+      />
+
+      <ViewCampaignModal
+        open={viewModalOpen}
+        onOpenChange={setViewModalOpen}
+        campaignId={selectedCampaignId}
       />
 
       <ApplyCampaignModal
