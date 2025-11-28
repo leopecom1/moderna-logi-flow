@@ -59,61 +59,124 @@ Deno.serve(async (req) => {
   }
 });
 
-async function processJob(jobId: string, supabase: any) {
-  console.log(`Starting background processing for job ${jobId}`);
+async function resetStuckItems(jobId: string, supabase: any) {
+  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+  
+  const { data: stuckItems } = await supabase
+    .from('sync_job_items')
+    .select('id')
+    .eq('job_id', jobId)
+    .eq('status', 'processing')
+    .lt('updated_at', fiveMinutesAgo);
 
+  if (stuckItems && stuckItems.length > 0) {
+    console.log(`Resetting ${stuckItems.length} stuck items for job ${jobId}`);
+    await supabase
+      .from('sync_job_items')
+      .update({ status: 'pending' })
+      .eq('job_id', jobId)
+      .eq('status', 'processing')
+      .lt('updated_at', fiveMinutesAgo);
+  }
+}
+
+async function processJob(jobId: string, supabase: any) {
+  const BATCH_SIZE = 20;
+  
+  console.log(`Starting background processing for job ${jobId}`);
+  
   try {
-    // Update job status to processing
+    // Update job status to processing if not already
     await supabase
       .from('sync_jobs')
-      .update({ status: 'processing', started_at: new Date().toISOString() })
+      .update({ 
+        status: 'processing',
+        started_at: new Date().toISOString()
+      })
       .eq('id', jobId);
 
-    // Get job details
+    // Reset stuck items (processing for more than 5 minutes)
+    await resetStuckItems(jobId, supabase);
+
+    // Get copy options for this job
     const { data: job } = await supabase
       .from('sync_jobs')
       .select('copy_options')
       .eq('id', jobId)
       .single();
 
-    const copyOptions: CopyOptions = job.copy_options;
+    const copyOptions: CopyOptions = job?.copy_options || {};
 
-    // Get pending items
+    // Get pending sync job items (only a batch)
     const { data: items } = await supabase
       .from('sync_job_items')
       .select('*')
       .eq('job_id', jobId)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .limit(BATCH_SIZE);
 
     if (!items || items.length === 0) {
+      console.log(`No items to process for job ${jobId}`);
       await markJobCompleted(jobId, supabase);
       return;
     }
 
     console.log(`Processing ${items.length} products for job ${jobId}`);
 
-    // Process each item
+    // Process each item in the current batch
     for (const item of items) {
       try {
         await markItemProcessing(item.id, supabase);
+        
         await syncProduct(item, copyOptions, supabase);
+        
         await markItemCompleted(item.id, supabase);
-      } catch (error) {
-        console.error(`Error syncing product ${item.woocommerce_product_id}:`, error);
-        await markItemError(item.id, error.message, supabase);
+      } catch (error: any) {
+        console.error(`Error syncing product ${item.shopify_product_id}:`, error);
+        await markItemError(item.id, error.message || 'Unknown error', supabase);
       }
-
+      
       // Update job progress
       await updateJobProgress(jobId, supabase);
     }
 
-    await markJobCompleted(jobId, supabase);
-    console.log(`Job ${jobId} completed`);
-  } catch (error) {
-    console.error(`Fatal error processing job ${jobId}:`, error);
+    // Check if there are more pending items
+    const { count } = await supabase
+      .from('sync_job_items')
+      .select('*', { count: 'exact', head: true })
+      .eq('job_id', jobId)
+      .eq('status', 'pending');
+
+    if (count && count > 0) {
+      console.log(`${count} items remaining, invoking next batch for job ${jobId}`);
+      
+      // Auto-invoke for next batch
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      
+      fetch(`${supabaseUrl}/functions/v1/background-sync`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${serviceRoleKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ job_id: jobId }),
+      }).catch(err => console.error('Error invoking next batch:', err));
+      
+    } else {
+      // All items processed, mark job as completed
+      await markJobCompleted(jobId, supabase);
+      console.log(`Job ${jobId} completed`);
+    }
+    
+  } catch (error: any) {
+    console.error(`Error processing job ${jobId}:`, error);
     await supabase
       .from('sync_jobs')
-      .update({ status: 'failed', completed_at: new Date().toISOString() })
+      .update({ 
+        status: 'failed',
+        completed_at: new Date().toISOString()
+      })
       .eq('id', jobId);
   }
 }
@@ -359,14 +422,14 @@ function extractAttributesFromShopify(shopify: any) {
 async function markItemProcessing(itemId: string, supabase: any) {
   await supabase
     .from('sync_job_items')
-    .update({ status: 'processing' })
+    .update({ status: 'processing', updated_at: new Date().toISOString() })
     .eq('id', itemId);
 }
 
 async function markItemCompleted(itemId: string, supabase: any) {
   await supabase
     .from('sync_job_items')
-    .update({ status: 'completed', processed_at: new Date().toISOString() })
+    .update({ status: 'completed', processed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq('id', itemId);
 }
 
@@ -377,6 +440,7 @@ async function markItemError(itemId: string, errorMessage: string, supabase: any
       status: 'error',
       error_message: errorMessage,
       processed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq('id', itemId);
 }
@@ -397,6 +461,7 @@ async function updateJobProgress(jobId: string, supabase: any) {
     .update({
       completed_products: completed,
       failed_products: failed,
+      updated_at: new Date().toISOString(),
     })
     .eq('id', jobId);
 }

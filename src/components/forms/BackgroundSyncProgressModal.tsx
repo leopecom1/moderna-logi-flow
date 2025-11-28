@@ -28,6 +28,8 @@ export function BackgroundSyncProgressModal({
 }: BackgroundSyncProgressModalProps) {
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [isBackgrounded, setIsBackgrounded] = useState(false);
+  const [isStalled, setIsStalled] = useState(false);
+  const [isContinuing, setIsContinuing] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -36,12 +38,22 @@ export function BackgroundSyncProgressModal({
     const fetchJobStatus = async () => {
       const { data } = await supabase
         .from('sync_jobs')
-        .select('status, total_products, completed_products, failed_products, started_at, completed_at')
+        .select('status, total_products, completed_products, failed_products, started_at, completed_at, updated_at')
         .eq('id', jobId)
         .single();
 
       if (data) {
-        setJobStatus(data);
+        setJobStatus(data as any);
+        
+        // Check if job is stalled (processing but no updates in 2 minutes)
+        if (data.status === 'processing') {
+          const lastUpdate = new Date(data.updated_at);
+          const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+          const pendingCount = data.total_products - data.completed_products - data.failed_products;
+          setIsStalled(lastUpdate < twoMinutesAgo && pendingCount > 0);
+        } else {
+          setIsStalled(false);
+        }
       }
     };
 
@@ -73,6 +85,32 @@ export function BackgroundSyncProgressModal({
       description: "El proceso continuará aunque cierres esta ventana. Podrás ver el resultado en el historial.",
     });
     onClose();
+  };
+
+  const handleContinue = async () => {
+    if (!jobId) return;
+    
+    setIsContinuing(true);
+    try {
+      await supabase.functions.invoke('background-sync', {
+        body: { job_id: jobId }
+      });
+      
+      toast({
+        title: "Sincronización reiniciada",
+        description: "El proceso continuará desde donde se detuvo.",
+      });
+      setIsStalled(false);
+    } catch (error) {
+      console.error('Error continuing sync:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo reiniciar la sincronización.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsContinuing(false);
+    }
   };
 
   return (
@@ -150,6 +188,18 @@ export function BackgroundSyncProgressModal({
                 </div>
               </div>
             </div>
+          ) : isStalled ? (
+            <div className="rounded-lg bg-yellow-50 p-4 text-sm text-yellow-800">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">El proceso parece haberse detenido</p>
+                  <p className="mt-1 text-sm">
+                    Puedes continuar la sincronización desde donde se detuvo.
+                  </p>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800">
               <div className="flex items-start gap-2">
@@ -165,7 +215,23 @@ export function BackgroundSyncProgressModal({
           )}
 
           <div className="flex gap-2">
-            {!isCompleted && (
+            {isStalled && (
+              <Button
+                onClick={handleContinue}
+                disabled={isContinuing}
+                className="flex-1"
+              >
+                {isContinuing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Reiniciando...
+                  </>
+                ) : (
+                  "Continuar sincronización"
+                )}
+              </Button>
+            )}
+            {!isCompleted && !isStalled && (
               <Button
                 variant="outline"
                 onClick={handleBackground}
