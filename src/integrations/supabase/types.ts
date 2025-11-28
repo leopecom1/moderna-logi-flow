@@ -932,6 +932,59 @@ export type Database = {
           },
         ]
       }
+      ecommerce_campaign_variations: {
+        Row: {
+          applied_at: string | null
+          campaign_product_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          new_regular_price: number | null
+          new_sale_price: number | null
+          original_regular_price: number | null
+          original_sale_price: number | null
+          reverted_at: string | null
+          status: string
+          woocommerce_variation_id: number
+        }
+        Insert: {
+          applied_at?: string | null
+          campaign_product_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          new_regular_price?: number | null
+          new_sale_price?: number | null
+          original_regular_price?: number | null
+          original_sale_price?: number | null
+          reverted_at?: string | null
+          status?: string
+          woocommerce_variation_id: number
+        }
+        Update: {
+          applied_at?: string | null
+          campaign_product_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          new_regular_price?: number | null
+          new_sale_price?: number | null
+          original_regular_price?: number | null
+          original_sale_price?: number | null
+          reverted_at?: string | null
+          status?: string
+          woocommerce_variation_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ecommerce_campaign_variations_campaign_product_id_fkey"
+            columns: ["campaign_product_id"]
+            isOneToOne: false
+            referencedRelation: "ecommerce_campaign_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ecommerce_campaigns: {
         Row: {
           applied_at: string | null

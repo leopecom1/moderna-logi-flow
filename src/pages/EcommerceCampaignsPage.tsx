@@ -2,28 +2,67 @@ import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
-import { useEcommerceCampaigns, EcommerceCampaign } from '@/hooks/useEcommerceCampaigns';
+import { useEcommerceCampaigns, EcommerceCampaign, useApplyCampaign, useRevertCampaign, ApplyCampaignProgress } from '@/hooks/useEcommerceCampaigns';
 import { CampaignsList } from '@/components/campaigns/CampaignsList';
 import { CreateCampaignModal } from '@/components/campaigns/CreateCampaignModal';
+import { ApplyCampaignModal } from '@/components/campaigns/ApplyCampaignModal';
 import { toast } from 'sonner';
 
 export default function EcommerceCampaignsPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [revertModalOpen, setRevertModalOpen] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [applyProgress, setApplyProgress] = useState<ApplyCampaignProgress[]>([]);
+  const [revertProgress, setRevertProgress] = useState<ApplyCampaignProgress[]>([]);
+  
   const { data: campaigns, isLoading } = useEcommerceCampaigns();
+  const applyCampaign = useApplyCampaign();
+  const revertCampaign = useRevertCampaign();
 
   const handleViewCampaign = (campaign: EcommerceCampaign) => {
-    toast.info(`Viendo campaña: ${campaign.name}`);
-    // TODO: Implementar vista detallada de campaña
+    toast.info('Ver detalles de campaña - Próximamente');
+  };
+
+  const handleApplyCampaign = (campaign: EcommerceCampaign) => {
+    setSelectedCampaignId(campaign.id);
+    setApplyProgress([]);
+    setApplyModalOpen(true);
+    
+    applyCampaign.mutate(
+      { 
+        campaignId: campaign.id,
+        onProgress: setApplyProgress 
+      },
+      {
+        onSettled: () => {
+          // Keep modal open to show results
+        },
+      }
+    );
   };
 
   const handleRevertCampaign = (campaign: EcommerceCampaign) => {
-    toast.info(`Revertir campaña: ${campaign.name}`);
-    // TODO: Implementar reversión de campaña
+    setSelectedCampaignId(campaign.id);
+    setRevertProgress([]);
+    setRevertModalOpen(true);
+    
+    revertCampaign.mutate(
+      { 
+        campaignId: campaign.id,
+        onProgress: setRevertProgress 
+      },
+      {
+        onSettled: () => {
+          // Keep modal open to show results
+        },
+      }
+    );
   };
 
   const handleCampaignCreated = (campaignId: string) => {
-    toast.success('Campaña creada exitosamente. Ahora puedes aplicarla a WooCommerce.');
-    // TODO: Implementar aplicación de campaña
+    toast.success('Campaña creada exitosamente');
+    setCreateModalOpen(false);
   };
 
   return (
@@ -50,6 +89,7 @@ export default function EcommerceCampaignsPage() {
           <CampaignsList
             campaigns={campaigns}
             onViewCampaign={handleViewCampaign}
+            onApplyCampaign={handleApplyCampaign}
             onRevertCampaign={handleRevertCampaign}
           />
         ) : null}
@@ -59,6 +99,22 @@ export default function EcommerceCampaignsPage() {
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
         onCampaignCreated={handleCampaignCreated}
+      />
+
+      <ApplyCampaignModal
+        open={applyModalOpen}
+        onOpenChange={setApplyModalOpen}
+        progress={applyProgress}
+        isApplying={applyCampaign.isPending}
+        mode="apply"
+      />
+
+      <ApplyCampaignModal
+        open={revertModalOpen}
+        onOpenChange={setRevertModalOpen}
+        progress={revertProgress}
+        isApplying={revertCampaign.isPending}
+        mode="revert"
       />
     </MainLayout>
   );

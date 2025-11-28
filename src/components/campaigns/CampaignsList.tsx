@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Eye, RotateCcw } from 'lucide-react';
+import { Trash2, Eye, RotateCcw, Play } from 'lucide-react';
 import { EcommerceCampaign, useDeleteCampaign } from '@/hooks/useEcommerceCampaigns';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -20,10 +20,11 @@ import {
 interface CampaignsListProps {
   campaigns: EcommerceCampaign[];
   onViewCampaign: (campaign: EcommerceCampaign) => void;
+  onApplyCampaign: (campaign: EcommerceCampaign) => void;
   onRevertCampaign: (campaign: EcommerceCampaign) => void;
 }
 
-export function CampaignsList({ campaigns, onViewCampaign, onRevertCampaign }: CampaignsListProps) {
+export function CampaignsList({ campaigns, onViewCampaign, onApplyCampaign, onRevertCampaign }: CampaignsListProps) {
   const [campaignToDelete, setCampaignToDelete] = useState<string | null>(null);
   const deleteCampaign = useDeleteCampaign();
 
@@ -88,9 +89,22 @@ export function CampaignsList({ campaigns, onViewCampaign, onRevertCampaign }: C
                         variant="ghost"
                         size="icon"
                         onClick={() => onViewCampaign(campaign)}
+                        title="Ver detalles"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
+                      
+                      {campaign.status === 'draft' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onApplyCampaign(campaign)}
+                          title="Aplicar campaña"
+                        >
+                          <Play className="h-4 w-4" />
+                        </Button>
+                      )}
+                      
                       {campaign.status === 'active' && (
                         <Button
                           variant="ghost"
@@ -101,11 +115,13 @@ export function CampaignsList({ campaigns, onViewCampaign, onRevertCampaign }: C
                           <RotateCcw className="h-4 w-4" />
                         </Button>
                       )}
+                      
                       {campaign.status === 'draft' && (
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => setCampaignToDelete(campaign.id)}
+                          title="Eliminar campaña"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
