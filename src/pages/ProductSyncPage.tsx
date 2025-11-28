@@ -7,6 +7,7 @@ import { ProductMappingModal } from "@/components/forms/ProductMappingModal";
 import { BulkTitleMatchModal } from "@/components/forms/BulkTitleMatchModal";
 import { BulkSyncProgressModal, ProductSyncStatus } from "@/components/forms/BulkSyncProgressModal";
 import { BackgroundSyncProgressModal } from "@/components/forms/BackgroundSyncProgressModal";
+import { CreateFromShopifyModal } from "@/components/sync/CreateFromShopifyModal";
 import { ProductList } from "@/components/sync/ProductList";
 import { useShopifyConfig, useShopifyProductsPaginated } from "@/hooks/useShopifyProducts";
 import { useWooCommerceProducts, useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations, useBatchDeleteWooCommerceVariations } from "@/hooks/useWooCommerceProducts";
@@ -39,8 +40,10 @@ export default function ProductSyncPage() {
   const [showMappingModal, setShowMappingModal] = useState(false);
   const [showBulkMatchModal, setShowBulkMatchModal] = useState(false);
   const [showBulkProgressModal, setShowBulkProgressModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedWooCommerceId, setSelectedWooCommerceId] = useState<number | undefined>();
   const [selectedShopifyId, setSelectedShopifyId] = useState<number | undefined>();
+  const [createFromShopifyId, setCreateFromShopifyId] = useState<number | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [bulkSyncProducts, setBulkSyncProducts] = useState<ProductSyncStatus[]>([]);
   const [currentSyncIndex, setCurrentSyncIndex] = useState(0);
@@ -127,6 +130,7 @@ export default function ProductSyncPage() {
 
   const selectedWooProduct = wooProducts.find(p => p.id === selectedWooCommerceId);
   const selectedShopifyProduct = shopifyProducts.find(p => p.id === selectedShopifyId);
+  const createFromShopifyProduct = shopifyProducts.find(p => p.id === createFromShopifyId);
 
   const handleNextShopify = () => {
     if (shopifyData?.nextCursor) {
@@ -144,6 +148,11 @@ export default function ProductSyncPage() {
     if (selectedWooCommerceId && selectedShopifyId) {
       setShowMappingModal(true);
     }
+  };
+
+  const handleCreateFromShopify = (shopifyId: number) => {
+    setCreateFromShopifyId(shopifyId);
+    setShowCreateModal(true);
   };
 
   const handleSyncAll = async () => {
@@ -401,6 +410,7 @@ export default function ProductSyncPage() {
                 selectedId={selectedShopifyId}
                 mappedIds={mappedShopifyIds}
                 onSelect={setSelectedShopifyId}
+                onCreateProduct={handleCreateFromShopify}
                 loading={shopifyLoading}
                 statusFilter={shopifyStatus}
                 onStatusFilterChange={setShopifyStatus}
@@ -439,6 +449,12 @@ export default function ProductSyncPage() {
         open={backgroundSyncOpen}
         onClose={() => setBackgroundSyncOpen(false)}
         jobId={currentJobId}
+      />
+
+      <CreateFromShopifyModal
+        open={showCreateModal}
+        onOpenChange={setShowCreateModal}
+        shopifyProduct={createFromShopifyProduct || null}
       />
     </MainLayout>
   );

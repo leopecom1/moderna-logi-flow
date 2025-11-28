@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WooCommerceProduct } from "@/types/woocommerce";
 import { ShopifyProduct } from "@/types/shopify";
-import { Check } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 
 interface ProductCardProps {
   product: WooCommerceProduct | ShopifyProduct;
@@ -11,9 +11,10 @@ interface ProductCardProps {
   selected?: boolean;
   mapped?: boolean;
   onSelect?: () => void;
+  onCreateProduct?: () => void;
 }
 
-export function ProductCard({ product, type, selected, mapped, onSelect }: ProductCardProps) {
+export function ProductCard({ product, type, selected, mapped, onSelect, onCreateProduct }: ProductCardProps) {
   const isWooCommerce = type === 'woocommerce';
   const wcProduct = isWooCommerce ? product as WooCommerceProduct : null;
   const shopifyProduct = !isWooCommerce ? product as ShopifyProduct : null;
@@ -48,15 +49,36 @@ export function ProductCard({ product, type, selected, mapped, onSelect }: Produ
               </Badge>
             )}
           </div>
-          {onSelect && (
-            <Button
-              size="sm"
-              variant={selected ? "default" : "outline"}
-              onClick={onSelect}
-            >
-              {selected ? <Check className="h-4 w-4" /> : "Seleccionar"}
-            </Button>
-          )}
+          <div className="flex flex-col gap-2">
+            {onSelect && (
+              <Button
+                size="sm"
+                variant={selected ? "default" : "outline"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect();
+                }}
+                disabled={mapped}
+              >
+                {selected ? <Check className="h-4 w-4" /> : "Seleccionar"}
+              </Button>
+            )}
+            
+            {type === 'shopify' && onCreateProduct && !mapped && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCreateProduct();
+                }}
+                className="text-green-600 border-green-600 hover:bg-green-50"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Crear
+              </Button>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

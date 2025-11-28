@@ -14,6 +14,7 @@ interface ProductListProps {
   selectedId?: number;
   mappedIds?: Set<number>;
   onSelect?: (id: number) => void;
+  onCreateProduct?: (productId: number) => void;
   loading?: boolean;
   currentPage?: number;
   totalPages?: number;
@@ -35,6 +36,7 @@ export function ProductList({
   selectedId,
   mappedIds = new Set(),
   onSelect,
+  onCreateProduct,
   loading,
   currentPage = 1,
   totalPages = 1,
@@ -120,6 +122,7 @@ export function ProductList({
                       selected={selectedId === id}
                       mapped={mappedIds.has(id)}
                       onSelect={onSelect ? () => onSelect(id) : undefined}
+                      onCreateProduct={type === 'shopify' && onCreateProduct ? () => onCreateProduct(id) : undefined}
                     />
                   );
                 })
