@@ -873,6 +873,107 @@ export type Database = {
           },
         ]
       }
+      ecommerce_campaign_products: {
+        Row: {
+          applied_at: string | null
+          campaign_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          new_regular_price: number | null
+          new_sale_price: number | null
+          original_regular_price: number | null
+          original_sale_price: number | null
+          product_name: string
+          product_type: string | null
+          reverted_at: string | null
+          status: string
+          woocommerce_product_id: number
+        }
+        Insert: {
+          applied_at?: string | null
+          campaign_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          new_regular_price?: number | null
+          new_sale_price?: number | null
+          original_regular_price?: number | null
+          original_sale_price?: number | null
+          product_name: string
+          product_type?: string | null
+          reverted_at?: string | null
+          status?: string
+          woocommerce_product_id: number
+        }
+        Update: {
+          applied_at?: string | null
+          campaign_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          new_regular_price?: number | null
+          new_sale_price?: number | null
+          original_regular_price?: number | null
+          original_sale_price?: number | null
+          product_name?: string
+          product_type?: string | null
+          reverted_at?: string | null
+          status?: string
+          woocommerce_product_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ecommerce_campaign_products_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ecommerce_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ecommerce_campaigns: {
+        Row: {
+          applied_at: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          markup_percentage: number
+          name: string
+          products_count: number | null
+          reverted_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          applied_at?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          markup_percentage: number
+          name: string
+          products_count?: number | null
+          reverted_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          applied_at?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          markup_percentage?: number
+          name?: string
+          products_count?: number | null
+          reverted_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       incidents: {
         Row: {
           created_at: string
