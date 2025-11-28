@@ -301,7 +301,13 @@ export function useApplyCampaign() {
 
             if (variationsResponse.error) throw new Error(variationsResponse.error.message);
 
-            const variations = variationsResponse.data?.data || [];
+            const variations = variationsResponse.data || [];
+            console.log(`[Campaign Apply] Product ${product.woocommerce_product_id} has ${variations.length} variations`);
+            
+            if (variations.length === 0) {
+              throw new Error(`Producto variable ${product.product_name} no tiene variaciones en WooCommerce`);
+            }
+            
             progress.variationsTotal = variations.length;
             progress.variationsProcessed = 0;
             updateProgress();
