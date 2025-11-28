@@ -86,6 +86,18 @@ async function processJob(jobId: string, supabase: any) {
   console.log(`Starting background processing for job ${jobId}`);
   
   try {
+    // Check if job was cancelled
+    const { data: jobCheck } = await supabase
+      .from('sync_jobs')
+      .select('status')
+      .eq('id', jobId)
+      .single();
+
+    if (jobCheck?.status === 'cancelled') {
+      console.log(`Job ${jobId} was cancelled, stopping processing`);
+      return;
+    }
+
     // Update job status to processing if not already
     await supabase
       .from('sync_jobs')
@@ -93,7 +105,8 @@ async function processJob(jobId: string, supabase: any) {
         status: 'processing',
         started_at: new Date().toISOString()
       })
-      .eq('id', jobId);
+      .eq('id', jobId)
+      .neq('status', 'cancelled'); // Don't override if cancelled
 
     // Reset stuck items (processing for more than 5 minutes)
     await resetStuckItems(jobId, supabase);
@@ -125,6 +138,23 @@ async function processJob(jobId: string, supabase: any) {
 
     // Process each item in the current batch
     for (const item of items) {
+      // Check if job was cancelled before processing each item
+      const { data: jobCheck } = await supabase
+        .from('sync_jobs')
+        .select('status')
+        .eq('id', jobId)
+        .single();
+
+      if (jobCheck?.status === 'cancelled') {
+        console.log(`Job ${jobId} was cancelled during processing, stopping`);
+        // Reset current item back to pending so it can be resumed later
+        await supabase
+          .from('sync_job_items')
+          .update({ status: 'pending' })
+          .eq('id', item.id);
+        return;
+      }
+
       try {
         await markItemProcessing(item.id, supabase);
         

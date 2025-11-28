@@ -30,6 +30,7 @@ export function BackgroundSyncProgressModal({
   const [isBackgrounded, setIsBackgrounded] = useState(false);
   const [isStalled, setIsStalled] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,6 +78,8 @@ export function BackgroundSyncProgressModal({
   const isCompleted = jobStatus.status === 'completed';
   const isPending = jobStatus.status === 'pending';
   const isProcessing = jobStatus.status === 'processing';
+  const isCancelled = jobStatus.status === 'cancelled';
+  const isFailed = jobStatus.status === 'failed';
 
   const handleBackground = () => {
     setIsBackgrounded(true);
@@ -110,6 +113,37 @@ export function BackgroundSyncProgressModal({
       });
     } finally {
       setIsContinuing(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!jobId) return;
+    
+    setIsCancelling(true);
+    try {
+      const { error } = await supabase
+        .from('sync_jobs')
+        .update({ 
+          status: 'cancelled',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', jobId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sincronización cancelada",
+        description: "El proceso se ha detenido. Los productos ya sincronizados permanecen actualizados.",
+      });
+    } catch (error) {
+      console.error('Error cancelling sync:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo cancelar la sincronización.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -163,7 +197,31 @@ export function BackgroundSyncProgressModal({
             )}
           </div>
 
-          {isCompleted ? (
+          {isCancelled ? (
+            <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-800">
+              <div className="flex items-start gap-2">
+                <XCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Sincronización cancelada</p>
+                  <p className="mt-1 text-sm">
+                    El proceso fue detenido. {jobStatus.completed_products} productos fueron sincronizados exitosamente.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : isFailed ? (
+            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800">
+              <div className="flex items-start gap-2">
+                <XCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Error en la sincronización</p>
+                  <p className="mt-1 text-sm">
+                    Ocurrió un error crítico durante el proceso. Puedes reintentar desde donde se detuvo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : isCompleted ? (
             <div className="rounded-lg bg-green-50 p-4 text-sm text-green-800">
               <div className="flex items-start gap-2">
                 <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" />
@@ -231,21 +289,38 @@ export function BackgroundSyncProgressModal({
                 )}
               </Button>
             )}
-            {!isCompleted && !isStalled && (
-              <Button
-                variant="outline"
-                onClick={handleBackground}
-                className="flex-1"
-              >
-                Ejecutar en segundo plano
-              </Button>
+            {(isProcessing || isPending) && !isStalled && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleBackground}
+                  className="flex-1"
+                >
+                  Ejecutar en segundo plano
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleCancel}
+                  disabled={isCancelling}
+                  className="flex-1"
+                >
+                  {isCancelling ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Cancelando...
+                    </>
+                  ) : (
+                    "Cancelar sincronización"
+                  )}
+                </Button>
+              </>
             )}
             <Button
               onClick={onClose}
               className="flex-1"
-              variant={isCompleted ? "default" : "secondary"}
+              variant={isCompleted || isCancelled || isFailed ? "default" : "secondary"}
             >
-              {isCompleted ? "Cerrar" : "Continuar viendo"}
+              {isCompleted || isCancelled || isFailed ? "Cerrar" : "Continuar viendo"}
             </Button>
           </div>
         </div>
