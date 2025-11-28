@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2 } from 'lucide-react';
-import { useEcommerceCampaigns } from '@/hooks/useEcommerceCampaigns';
+import { useEcommerceCampaigns, EcommerceCampaign } from '@/hooks/useEcommerceCampaigns';
 import { CampaignsList } from '@/components/campaigns/CampaignsList';
 import { CreateCampaignModal } from '@/components/campaigns/CreateCampaignModal';
-import { EcommerceCampaign } from '@/hooks/useEcommerceCampaigns';
 import { toast } from 'sonner';
 
 export default function EcommerceCampaignsPage() {
