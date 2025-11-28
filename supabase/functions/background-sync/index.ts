@@ -71,7 +71,7 @@ async function resetStuckItems(jobId: string, supabase: any) {
     .select('id')
     .eq('job_id', jobId)
     .eq('status', 'processing')
-    .lt('updated_at', fiveMinutesAgo);
+    .lt('created_at', fiveMinutesAgo);
 
   if (stuckItems && stuckItems.length > 0) {
     console.log(`Resetting ${stuckItems.length} stuck items for job ${jobId}`);
@@ -80,7 +80,7 @@ async function resetStuckItems(jobId: string, supabase: any) {
       .update({ status: 'pending' })
       .eq('job_id', jobId)
       .eq('status', 'processing')
-      .lt('updated_at', fiveMinutesAgo);
+      .lt('created_at', fiveMinutesAgo);
   }
 }
 
@@ -460,14 +460,14 @@ function extractAttributesFromShopify(shopify: any) {
 async function markItemProcessing(itemId: string, supabase: any) {
   await supabase
     .from('sync_job_items')
-    .update({ status: 'processing', updated_at: new Date().toISOString() })
+    .update({ status: 'processing' })
     .eq('id', itemId);
 }
 
 async function markItemCompleted(itemId: string, supabase: any) {
   await supabase
     .from('sync_job_items')
-    .update({ status: 'completed', processed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .update({ status: 'completed', processed_at: new Date().toISOString() })
     .eq('id', itemId);
 }
 
@@ -478,7 +478,6 @@ async function markItemError(itemId: string, errorMessage: string, supabase: any
       status: 'error',
       error_message: errorMessage,
       processed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
     })
     .eq('id', itemId);
 }
