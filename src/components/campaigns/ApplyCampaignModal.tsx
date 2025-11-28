@@ -2,34 +2,48 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, Loader2, Package, AlertCircle } from 'lucide-react';
-import { ApplyCampaignProgress } from '@/hooks/useEcommerceCampaigns';
+import { Button } from '@/components/ui/button';
+import { CheckCircle2, XCircle, Loader2, Package, AlertCircle, X } from 'lucide-react';
+import { useCampaignProgress, useCancelCampaignProcessing } from '@/hooks/useEcommerceCampaigns';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ApplyCampaignModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  progress: ApplyCampaignProgress[];
-  isApplying: boolean;
+  campaignId: string | null;
   mode: 'apply' | 'revert';
 }
 
 export function ApplyCampaignModal({ 
   open, 
   onOpenChange, 
-  progress, 
-  isApplying,
+  campaignId,
   mode 
 }: ApplyCampaignModalProps) {
-  const total = progress.length;
-  const completed = progress.filter(p => p.status === 'success' || p.status === 'error' || p.status === 'skipped').length;
-  const successful = progress.filter(p => p.status === 'success').length;
-  const failed = progress.filter(p => p.status === 'error').length;
-  const skipped = progress.filter(p => p.status === 'skipped').length;
+  const { data: progress, isLoading } = useCampaignProgress(campaignId);
+  const cancelProcessing = useCancelCampaignProcessing();
+  
+  const isProcessing = progress?.processing_status === 'processing';
+  const isCompleted = progress?.processing_status === 'completed';
+  const isCancelled = progress?.processing_status === 'cancelled';
+  const isFailed = progress?.processing_status === 'failed';
+  
+  const total = progress?.products_count || 0;
+  const completed = (progress?.completed_products || 0) + (progress?.failed_products || 0) + (progress?.skipped_products || 0);
+  const successful = progress?.completed_products || 0;
+  const failed = progress?.failed_products || 0;
+  const skipped = progress?.skipped_products || 0;
   const progressPercentage = total > 0 ? (completed / total) * 100 : 0;
 
-  const getStatusIcon = (status: ApplyCampaignProgress['status']) => {
+  const handleCancel = () => {
+    if (campaignId && isProcessing) {
+      cancelProcessing.mutate(campaignId);
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'success':
+      case 'applied':
         return <CheckCircle2 className="h-5 w-5 text-green-500" />;
       case 'error':
         return <XCircle className="h-5 w-5 text-destructive" />;
@@ -42,9 +56,9 @@ export function ApplyCampaignModal({
     }
   };
 
-  const getStatusBadge = (status: ApplyCampaignProgress['status']) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'success':
+      case 'applied':
         return <Badge variant="default" className="bg-green-500">Completado</Badge>;
       case 'error':
         return <Badge variant="destructive">Error</Badge>;
@@ -63,13 +77,51 @@ export function ApplyCampaignModal({
     : 'Restaurando precios originales...';
 
   return (
-    <Dialog open={open} onOpenChange={isApplying ? undefined : onOpenChange}>
+    <Dialog open={open} onOpenChange={isProcessing ? undefined : onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 flex-1 overflow-auto">
+          {/* Background Processing Notice */}
+          {isProcessing && (
+            <Alert>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <AlertDescription>
+                El proceso continúa en segundo plano. Puedes cerrar esta ventana sin perder progreso.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Completion Messages */}
+          {isCompleted && (
+            <Alert className="bg-green-50 border-green-200">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                {mode === 'apply' ? 'Campaña aplicada' : 'Campaña revertida'} exitosamente
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isCancelled && (
+            <Alert className="bg-yellow-50 border-yellow-200">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                Procesamiento cancelado
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {isFailed && (
+            <Alert variant="destructive">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>
+                El procesamiento falló. Revisa los errores a continuación.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Overall Progress */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
@@ -101,64 +153,58 @@ export function ApplyCampaignModal({
           </div>
 
           {/* Product List */}
-          <div className="space-y-2 border rounded-lg p-4">
-            <h3 className="text-sm font-medium mb-3">Productos</h3>
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
-              {progress.map((item) => (
-                <div 
-                  key={item.productId} 
-                  className="flex items-start gap-3 p-3 rounded-lg border bg-card"
-                >
-                  <div className="mt-0.5">
-                    {getStatusIcon(item.status)}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="text-sm font-medium truncate">
-                        {item.productName}
-                      </span>
-                      {getStatusBadge(item.status)}
+          {progress?.products && progress.products.length > 0 && (
+            <div className="space-y-2 border rounded-lg p-4">
+              <h3 className="text-sm font-medium mb-3">Productos</h3>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                {progress.products.map((item: any) => (
+                  <div 
+                    key={item.id} 
+                    className="flex items-start gap-3 p-3 rounded-lg border bg-card"
+                  >
+                    <div className="mt-0.5">
+                      {getStatusIcon(item.status)}
                     </div>
                     
-                    {item.error && (
-                      <p className="text-xs text-destructive mt-1">
-                        {item.error}
-                      </p>
-                    )}
-                    
-                    {item.status === 'processing' && item.variationsTotal && (
-                      <div className="mt-2">
-                        <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                          <span>Variaciones</span>
-                          <span>{item.variationsProcessed} / {item.variationsTotal}</span>
-                        </div>
-                        <Progress 
-                          value={(item.variationsProcessed! / item.variationsTotal) * 100} 
-                          className="h-1"
-                        />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <span className="text-sm font-medium truncate">
+                          {item.product_name}
+                        </span>
+                        {getStatusBadge(item.status)}
                       </div>
-                    )}
+                      
+                      {item.error_message && (
+                        <p className="text-xs text-destructive mt-1">
+                          {item.error_message}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Completion Status */}
-          {!isApplying && completed === total && (
-            <div className="text-center py-4 text-sm">
-              {failed === 0 ? (
-                <p className="text-green-600 font-medium">
-                  ✓ {mode === 'apply' ? 'Campaña aplicada' : 'Campaña revertida'} exitosamente
-                </p>
-              ) : (
-                <p className="text-muted-foreground">
-                  Proceso completado con {failed} error{failed !== 1 ? 'es' : ''}
-                </p>
-              )}
+                ))}
+              </div>
             </div>
           )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            {isProcessing && (
+              <Button
+                variant="destructive"
+                onClick={handleCancel}
+                disabled={cancelProcessing.isPending}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancelar Procesamiento
+              </Button>
+            )}
+            
+            {!isProcessing && (
+              <Button onClick={() => onOpenChange(false)}>
+                Cerrar
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

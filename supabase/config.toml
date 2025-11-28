@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.background-sync]
 verify_jwt = true
+
+[functions.apply-campaign]
+verify_jwt = false

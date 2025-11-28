@@ -14,6 +14,11 @@ export interface EcommerceCampaign {
   applied_at: string | null;
   reverted_at: string | null;
   updated_at: string;
+  completed_products?: number;
+  failed_products?: number;
+  skipped_products?: number;
+  started_at?: string | null;
+  processing_status?: 'idle' | 'processing' | 'completed' | 'failed' | 'cancelled';
 }
 
 export interface CampaignProduct {
@@ -220,235 +225,78 @@ export function useApplyCampaign() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ 
-      campaignId, 
-      onProgress 
-    }: { 
-      campaignId: string; 
-      onProgress?: (progress: ApplyCampaignProgress[]) => void;
-    }) => {
-      // Get campaign and products
-      const { data: campaign, error: campaignError } = await supabase
-        .from('ecommerce_campaigns')
-        .select('*')
-        .eq('id', campaignId)
-        .single();
-
-      if (campaignError) throw campaignError;
-
-      const { data: products, error: productsError } = await supabase
-        .from('ecommerce_campaign_products')
-        .select('*')
-        .eq('campaign_id', campaignId);
-
-      if (productsError) throw productsError;
-
-      const progressMap: Map<string, ApplyCampaignProgress> = new Map();
-      products.forEach(p => {
-        progressMap.set(p.id, {
-          productId: p.id,
-          productName: p.product_name,
-          status: 'pending',
-        });
+    mutationFn: async (campaignId: string) => {
+      // Invoke server-side processing
+      const { data, error } = await supabase.functions.invoke('apply-campaign', {
+        body: { campaign_id: campaignId },
       });
 
-      const updateProgress = () => {
-        if (onProgress) {
-          onProgress(Array.from(progressMap.values()));
-        }
-      };
+      if (error) throw error;
 
-      // Process each product
-      for (const product of products) {
-        const progress = progressMap.get(product.id)!;
-        progress.status = 'processing';
-        updateProgress();
-
-        try {
-          if (product.product_type === 'simple') {
-            // Check if product is already on sale
-            const checkResponse = await supabase.functions.invoke('woocommerce-products', {
-              body: {
-                endpoint: `/products/${product.woocommerce_product_id}`,
-                method: 'GET',
-              },
-            });
-
-            if (checkResponse.error) throw new Error(checkResponse.error.message);
-            
-            const currentProduct = checkResponse.data;
-            const isOnSale = currentProduct?.on_sale || 
-                            (currentProduct?.sale_price && parseFloat(currentProduct.sale_price) > 0);
-
-            if (isOnSale) {
-              // Skip product - already on sale
-              await supabase
-                .from('ecommerce_campaign_products')
-                .update({
-                  status: 'skipped',
-                  error_message: 'Producto ya está en oferta',
-                })
-                .eq('id', product.id);
-
-              progress.status = 'skipped';
-              progress.error = 'Ya está en oferta';
-              updateProgress();
-              continue;
-            }
-
-            // Update simple product
-            const response = await supabase.functions.invoke('woocommerce-products', {
-              body: {
-                endpoint: `/products/${product.woocommerce_product_id}`,
-                method: 'PUT',
-                data: {
-                  regular_price: product.new_regular_price?.toString(),
-                  sale_price: product.new_sale_price?.toString(),
-                },
-              },
-            });
-
-            if (response.error) throw new Error(response.error.message);
-
-            // Update product status
-            await supabase
-              .from('ecommerce_campaign_products')
-              .update({
-                status: 'applied',
-                applied_at: new Date().toISOString(),
-              })
-              .eq('id', product.id);
-
-            progress.status = 'success';
-          } else if (product.product_type === 'variable') {
-            // Get variations
-            const variationsResponse = await supabase.functions.invoke('woocommerce-products', {
-              body: {
-                endpoint: `/products/${product.woocommerce_product_id}/variations`,
-                method: 'GET',
-              },
-            });
-
-            if (variationsResponse.error) throw new Error(variationsResponse.error.message);
-
-            const variations = variationsResponse.data || [];
-            console.log(`[Campaign Apply] Product ${product.woocommerce_product_id} has ${variations.length} variations`);
-            
-            if (variations.length === 0) {
-              throw new Error(`Producto variable ${product.product_name} no tiene variaciones en WooCommerce`);
-            }
-
-            // Filter variations that are NOT already on sale
-            const variationsToUpdate = variations.filter((v: any) => 
-              !v.sale_price || parseFloat(v.sale_price) === 0
-            );
-
-            if (variationsToUpdate.length === 0) {
-              // All variations already on sale, skip product
-              await supabase
-                .from('ecommerce_campaign_products')
-                .update({
-                  status: 'skipped',
-                  error_message: 'Todas las variaciones ya están en oferta',
-                })
-                .eq('id', product.id);
-
-              progress.status = 'skipped';
-              progress.error = 'Todas las variaciones ya están en oferta';
-              updateProgress();
-              continue;
-            }
-            
-            progress.variationsTotal = variationsToUpdate.length;
-            progress.variationsProcessed = 0;
-            updateProgress();
-
-            // Store original variation prices and update each variation
-            for (const variation of variationsToUpdate) {
-              // Save original prices to DB
-              await supabase.from('ecommerce_campaign_variations').insert({
-                campaign_product_id: product.id,
-                woocommerce_variation_id: variation.id,
-                original_regular_price: parseFloat(variation.regular_price) || null,
-                original_sale_price: variation.sale_price ? parseFloat(variation.sale_price) : null,
-                new_regular_price: product.new_regular_price,
-                new_sale_price: product.new_sale_price,
-                status: 'pending',
-              });
-
-              // Update variation prices
-              const updateResponse = await supabase.functions.invoke('woocommerce-products', {
-                body: {
-                  endpoint: `/products/${product.woocommerce_product_id}/variations/${variation.id}`,
-                  method: 'PUT',
-                  data: {
-                    regular_price: product.new_regular_price?.toString(),
-                    sale_price: product.new_sale_price?.toString(),
-                  },
-                },
-              });
-
-              if (updateResponse.error) throw new Error(updateResponse.error.message);
-
-              // Update variation status
-              await supabase
-                .from('ecommerce_campaign_variations')
-                .update({
-                  status: 'applied',
-                  applied_at: new Date().toISOString(),
-                })
-                .eq('campaign_product_id', product.id)
-                .eq('woocommerce_variation_id', variation.id);
-
-              progress.variationsProcessed! += 1;
-              updateProgress();
-            }
-
-            // Update product status
-            await supabase
-              .from('ecommerce_campaign_products')
-              .update({
-                status: 'applied',
-                applied_at: new Date().toISOString(),
-              })
-              .eq('id', product.id);
-
-            progress.status = 'success';
-          }
-        } catch (error: any) {
-          progress.status = 'error';
-          progress.error = error.message;
-
-          // Update product with error
-          await supabase
-            .from('ecommerce_campaign_products')
-            .update({
-              status: 'error',
-              error_message: error.message,
-            })
-            .eq('id', product.id);
-        }
-
-        updateProgress();
-      }
-
-      // Update campaign status to active
-      await supabase
-        .from('ecommerce_campaigns')
-        .update({
-          status: 'active',
-          applied_at: new Date().toISOString(),
-        })
-        .eq('id', campaignId);
-
-      return { campaign, products: Array.from(progressMap.values()) };
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ecommerce-campaigns'] });
-      toast.success('Campaña aplicada exitosamente');
+      toast.success('Aplicación de campaña iniciada');
     },
     onError: (error) => {
-      toast.error(`Error al aplicar campaña: ${error.message}`);
+      toast.error(`Error al iniciar aplicación de campaña: ${error.message}`);
+    },
+  });
+}
+
+export function useCampaignProgress(campaignId: string | null) {
+  return useQuery({
+    queryKey: ['campaign-progress', campaignId],
+    queryFn: async () => {
+      if (!campaignId) return null;
+      
+      const { data, error } = await supabase
+        .from('ecommerce_campaigns')
+        .select('status, processing_status, completed_products, failed_products, skipped_products, products_count, started_at')
+        .eq('id', campaignId)
+        .single();
+
+      if (error) throw error;
+      
+      // Also get products for detailed progress
+      const { data: products } = await supabase
+        .from('ecommerce_campaign_products')
+        .select('id, product_name, status, error_message')
+        .eq('campaign_id', campaignId);
+      
+      return {
+        ...data,
+        products: products || [],
+      };
+    },
+    enabled: !!campaignId,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      return data?.processing_status === 'processing' ? 2000 : false;
+    },
+  });
+}
+
+export function useCancelCampaignProcessing() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (campaignId: string) => {
+      const { error } = await supabase
+        .from('ecommerce_campaigns')
+        .update({ processing_status: 'cancelled' })
+        .eq('id', campaignId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ecommerce-campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['campaign-progress'] });
+      toast.success('Procesamiento cancelado');
+    },
+    onError: (error) => {
+      toast.error(`Error al cancelar: ${error.message}`);
     },
   });
 }
