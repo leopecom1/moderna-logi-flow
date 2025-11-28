@@ -121,16 +121,16 @@ serve(async (req) => {
     console.log('[URL] Full URL:', req.url);
     console.log('[URL] Pathname:', url.pathname);
     
-    const path = url.pathname.replace('/woocommerce-products', '');
-    console.log('[URL] Extracted path:', path);
-    
     const method = req.method;
 
     let body = null;
-    if (method !== 'GET' && method !== 'DELETE') {
+    let requestBody: any = null;
+    
+    // Parse body for POST requests (including from supabase.functions.invoke)
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
       try {
-        body = await req.json();
-        console.log('[Body]', JSON.stringify(body));
+        requestBody = await req.json();
+        console.log('[Body]', JSON.stringify(requestBody));
       } catch (e) {
         console.error('[Body] Failed to parse JSON:', e);
       }
@@ -138,9 +138,21 @@ serve(async (req) => {
 
     let endpoint = '';
     let wooMethod = method;
+    
+    // Check if endpoint is provided in request body (from supabase.functions.invoke)
+    if (requestBody && requestBody.endpoint) {
+      endpoint = requestBody.endpoint;
+      wooMethod = requestBody.method || method;
+      body = requestBody.data || null;
+      console.log('[Body-based routing] endpoint:', endpoint, 'method:', wooMethod);
+    } else {
+      // Fall back to URL path parsing (for direct HTTP calls)
+      const path = url.pathname.replace('/woocommerce-products', '');
+      console.log('[URL] Extracted path:', path);
+      body = requestBody;
 
-    // Products endpoints
-    if (path.startsWith('/products')) {
+      // Products endpoints
+      if (path.startsWith('/products')) {
       if (path === '/products' && method === 'GET') {
         const page = url.searchParams.get('page') || '1';
         const perPage = url.searchParams.get('per_page') || '20';
@@ -179,9 +191,9 @@ serve(async (req) => {
         const variationId = parts[4];
         endpoint = `/products/${productId}/variations/${variationId}`;
       }
-    }
-    // Categories endpoints
-    else if (path.startsWith('/categories')) {
+      }
+      // Categories endpoints
+      else if (path.startsWith('/categories')) {
       if (path === '/categories' && method === 'GET') {
         const perPage = url.searchParams.get('per_page') || '100';
         endpoint = `/products/categories?per_page=${perPage}&orderby=name&order=asc`;
@@ -190,6 +202,7 @@ serve(async (req) => {
       } else if (path.match(/^\/categories\/\d+$/)) {
         const categoryId = path.split('/')[2];
         endpoint = `/products/categories/${categoryId}`;
+      }
       }
     }
 
