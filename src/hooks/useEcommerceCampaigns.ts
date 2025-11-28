@@ -301,6 +301,29 @@ export function useCancelCampaignProcessing() {
   });
 }
 
+export function useResumeCampaignProcessing() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (campaignId: string) => {
+      const { data, error } = await supabase.functions.invoke('apply-campaign', {
+        body: { campaign_id: campaignId },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ecommerce-campaigns'] });
+      queryClient.invalidateQueries({ queryKey: ['campaign-progress'] });
+      toast.success('Procesamiento reiniciado');
+    },
+    onError: (error) => {
+      toast.error(`Error al reiniciar: ${error.message}`);
+    },
+  });
+}
+
 export function useRevertCampaign() {
   const queryClient = useQueryClient();
 

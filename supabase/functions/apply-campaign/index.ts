@@ -83,10 +83,10 @@ async function processCampaign(campaignId: string, supabase: any) {
   try {
     console.log(`Processing campaign: ${campaignId}`);
 
-    // Check if campaign was cancelled
+    // Check if campaign was cancelled and prevent concurrent processing
     const { data: campaign } = await supabase
       .from('ecommerce_campaigns')
-      .select('processing_status')
+      .select('processing_status, started_at')
       .eq('id', campaignId)
       .single();
 
@@ -94,6 +94,25 @@ async function processCampaign(campaignId: string, supabase: any) {
       console.log('Campaign was cancelled');
       return;
     }
+
+    // Check if already processing (started less than 30 seconds ago)
+    if (campaign?.started_at) {
+      const startedAt = new Date(campaign.started_at).getTime();
+      const now = Date.now();
+      if (now - startedAt < 30000 && campaign.processing_status === 'processing') {
+        console.log('Process already running recently, skipping to prevent duplicates');
+        return;
+      }
+    }
+
+    // Update started_at with atomic lock
+    await supabase
+      .from('ecommerce_campaigns')
+      .update({ 
+        started_at: new Date().toISOString(),
+        processing_status: 'processing'
+      })
+      .eq('id', campaignId);
 
     // Reset stuck items (processing for more than 5 minutes)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
