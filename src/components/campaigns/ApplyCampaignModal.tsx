@@ -2,7 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, Loader2, Package } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Package, AlertCircle } from 'lucide-react';
 import { ApplyCampaignProgress } from '@/hooks/useEcommerceCampaigns';
 
 interface ApplyCampaignModalProps {
@@ -21,9 +21,10 @@ export function ApplyCampaignModal({
   mode 
 }: ApplyCampaignModalProps) {
   const total = progress.length;
-  const completed = progress.filter(p => p.status === 'success' || p.status === 'error').length;
+  const completed = progress.filter(p => p.status === 'success' || p.status === 'error' || p.status === 'skipped').length;
   const successful = progress.filter(p => p.status === 'success').length;
   const failed = progress.filter(p => p.status === 'error').length;
+  const skipped = progress.filter(p => p.status === 'skipped').length;
   const progressPercentage = total > 0 ? (completed / total) * 100 : 0;
 
   const getStatusIcon = (status: ApplyCampaignProgress['status']) => {
@@ -34,6 +35,8 @@ export function ApplyCampaignModal({
         return <XCircle className="h-5 w-5 text-destructive" />;
       case 'processing':
         return <Loader2 className="h-5 w-5 animate-spin text-primary" />;
+      case 'skipped':
+        return <AlertCircle className="h-5 w-5 text-yellow-500" />;
       default:
         return <Package className="h-5 w-5 text-muted-foreground" />;
     }
@@ -47,6 +50,8 @@ export function ApplyCampaignModal({
         return <Badge variant="destructive">Error</Badge>;
       case 'processing':
         return <Badge>Procesando...</Badge>;
+      case 'skipped':
+        return <Badge className="bg-yellow-500">Omitido</Badge>;
       default:
         return <Badge variant="outline">Pendiente</Badge>;
     }
@@ -80,6 +85,12 @@ export function ApplyCampaignModal({
                 <CheckCircle2 className="h-3 w-3 text-green-500" />
                 {successful} exitosos
               </span>
+              {skipped > 0 && (
+                <span className="flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3 text-yellow-500" />
+                  {skipped} omitidos
+                </span>
+              )}
               {failed > 0 && (
                 <span className="flex items-center gap-1">
                   <XCircle className="h-3 w-3 text-destructive" />
