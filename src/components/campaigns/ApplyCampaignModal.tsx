@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, XCircle, Loader2, Package, AlertCircle, X } from 'lucide-react';
-import { useCampaignProgress, useCancelCampaignProcessing } from '@/hooks/useEcommerceCampaigns';
+import { CheckCircle2, XCircle, Loader2, Package, AlertCircle, X, RefreshCw, Clock } from 'lucide-react';
+import { useCampaignProgress, useCancelCampaignProcessing, useResumeCampaignProcessing } from '@/hooks/useEcommerceCampaigns';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ApplyCampaignModalProps {
@@ -22,6 +22,10 @@ export function ApplyCampaignModal({
 }: ApplyCampaignModalProps) {
   const { data: progress, isLoading } = useCampaignProgress(campaignId);
   const cancelProcessing = useCancelCampaignProcessing();
+  const resumeProcessing = useResumeCampaignProcessing();
+  
+  const [lastCompletedCount, setLastCompletedCount] = useState(0);
+  const [stuckTime, setStuckTime] = useState<number | null>(null);
   
   const isProcessing = progress?.processing_status === 'processing';
   const isCompleted = progress?.processing_status === 'completed';
@@ -33,11 +37,38 @@ export function ApplyCampaignModal({
   const successful = progress?.completed_products || 0;
   const failed = progress?.failed_products || 0;
   const skipped = progress?.skipped_products || 0;
+  const pending = total - completed;
   const progressPercentage = total > 0 ? (completed / total) * 100 : 0;
+
+  // Detect stuck process
+  useEffect(() => {
+    if (isProcessing) {
+      if (completed === lastCompletedCount) {
+        if (!stuckTime) {
+          setStuckTime(Date.now());
+        }
+      } else {
+        setLastCompletedCount(completed);
+        setStuckTime(null);
+      }
+    } else {
+      setStuckTime(null);
+      setLastCompletedCount(completed);
+    }
+  }, [completed, isProcessing, lastCompletedCount, stuckTime]);
+
+  const isStuck = isProcessing && stuckTime && (Date.now() - stuckTime > 60000); // 1 minute without progress
 
   const handleCancel = () => {
     if (campaignId && isProcessing) {
       cancelProcessing.mutate(campaignId);
+    }
+  };
+
+  const handleContinue = () => {
+    if (campaignId) {
+      resumeProcessing.mutate(campaignId);
+      setStuckTime(null);
     }
   };
 
@@ -137,6 +168,12 @@ export function ApplyCampaignModal({
                 <CheckCircle2 className="h-3 w-3 text-green-500" />
                 {successful} exitosos
               </span>
+              {pending > 0 && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  {pending} pendientes
+                </span>
+              )}
               {skipped > 0 && (
                 <span className="flex items-center gap-1">
                   <AlertCircle className="h-3 w-3 text-yellow-500" />
@@ -188,7 +225,17 @@ export function ApplyCampaignModal({
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-4 border-t">
-            {isProcessing && (
+            {isStuck && (
+              <Button
+                onClick={handleContinue}
+                disabled={resumeProcessing.isPending}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Continuar Procesamiento
+              </Button>
+            )}
+            
+            {isProcessing && !isStuck && (
               <Button
                 variant="destructive"
                 onClick={handleCancel}
