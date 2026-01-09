@@ -7,11 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { toast } from '@/hooks/use-toast';
-import { Settings, Save, Bell, Shield, Database, Building2, DollarSign, Megaphone } from 'lucide-react';
+import { Settings, Save, Bell, Shield, Database, Building2, DollarSign, Megaphone, MessageSquare } from 'lucide-react';
 import { UserManagement } from '@/components/admin/UserManagement';
 import { ConfigurationModal } from '@/components/forms/ConfigurationModal';
 import { CurrencySyncModal } from '@/components/forms/CurrencySyncModal';
 import { SystemUpdatesManager } from '@/components/admin/SystemUpdatesManager';
+import { FeedbackManager } from '@/components/admin/FeedbackManager';
 import { useAuth } from '@/hooks/useAuth';
 
 const SettingsPage = () => {
@@ -311,6 +312,24 @@ const SettingsPage = () => {
             </CardHeader>
             <CardContent>
               <SystemUpdatesManager />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Gestión de Feedback - Solo Gerencia */}
+        {profile?.role === 'gerencia' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <MessageSquare className="h-5 w-5" />
+                <span>Gestión de Feedback</span>
+              </CardTitle>
+              <CardDescription>
+                Revisa y responde el feedback enviado por los usuarios
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <FeedbackManager />
             </CardContent>
           </Card>
         )}

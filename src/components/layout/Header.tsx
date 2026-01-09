@@ -4,14 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { LogOut, User, Crown, Users, Truck, DollarSign, Newspaper } from 'lucide-react';
+import { LogOut, User, Crown, Users, Truck, DollarSign, Newspaper, MessageSquare } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
 import { UpdatesPanel } from '@/components/updates/UpdatesPanel';
+import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import { useUSDRate } from '@/hooks/useCurrencyRates';
 import { useSystemUpdates } from '@/hooks/useSystemUpdates';
+import { useFeedback } from '@/hooks/useFeedback';
+
 export const Header = () => {
   const [showUpdates, setShowUpdates] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const {
     profile,
     signOut
@@ -19,6 +23,7 @@ export const Header = () => {
   
   const { data: usdRate } = useUSDRate();
   const { unreadCount } = useSystemUpdates();
+  const { pendingCount } = useFeedback();
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'gerencia':
@@ -83,6 +88,24 @@ export const Header = () => {
               </Badge>
             )}
           </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative h-9 w-9 p-0 smooth-transition"
+            onClick={() => setShowFeedback(true)}
+            title="Feedback"
+          >
+            <MessageSquare className="h-4 w-4" />
+            {profile?.role === 'gerencia' && pendingCount > 0 && (
+              <Badge 
+                variant="secondary" 
+                className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 text-xs rounded-full flex items-center justify-center"
+              >
+                {pendingCount > 9 ? '9+' : pendingCount}
+              </Badge>
+            )}
+          </Button>
           
           <NotificationDropdown />
           
@@ -119,6 +142,7 @@ export const Header = () => {
           </DropdownMenu>
           
           <UpdatesPanel open={showUpdates} onOpenChange={setShowUpdates} />
+          <FeedbackPanel open={showFeedback} onOpenChange={setShowFeedback} />
         </div>
       </div>
     </header>;
