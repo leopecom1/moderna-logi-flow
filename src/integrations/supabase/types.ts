@@ -2797,6 +2797,48 @@ export type Database = {
           },
         ]
       }
+      user_feedback: {
+        Row: {
+          admin_notes: string | null
+          completed_by: string | null
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          priority: string
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          completed_by?: string | null
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          completed_by?: string | null
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vehicles: {
         Row: {
           brand: string
