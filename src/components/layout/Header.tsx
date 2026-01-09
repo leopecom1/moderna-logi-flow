@@ -1,19 +1,24 @@
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { LogOut, User, Crown, Users, Truck, DollarSign } from 'lucide-react';
+import { LogOut, User, Crown, Users, Truck, DollarSign, Newspaper } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown';
+import { UpdatesPanel } from '@/components/updates/UpdatesPanel';
 import { useUSDRate } from '@/hooks/useCurrencyRates';
+import { useSystemUpdates } from '@/hooks/useSystemUpdates';
 export const Header = () => {
+  const [showUpdates, setShowUpdates] = useState(false);
   const {
     profile,
     signOut
   } = useAuth();
   
   const { data: usdRate } = useUSDRate();
+  const { unreadCount } = useSystemUpdates();
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'gerencia':
@@ -61,6 +66,24 @@ export const Header = () => {
         </div>
 
         <div className="flex items-center gap-2 animate-element animate-delay-300">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative h-9 w-9 p-0 smooth-transition"
+            onClick={() => setShowUpdates(true)}
+            title="Novedades del sistema"
+          >
+            <Newspaper className="h-4 w-4" />
+            {unreadCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 text-xs rounded-full flex items-center justify-center"
+              >
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </Badge>
+            )}
+          </Button>
+          
           <NotificationDropdown />
           
           <DropdownMenu>
@@ -94,6 +117,8 @@ export const Header = () => {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          
+          <UpdatesPanel open={showUpdates} onOpenChange={setShowUpdates} />
         </div>
       </div>
     </header>;
