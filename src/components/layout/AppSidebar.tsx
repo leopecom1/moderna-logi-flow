@@ -84,8 +84,8 @@ export const AppSidebar = () => {
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive 
-      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium border-l-2 border-primary' 
-      : 'hover:bg-sidebar-accent/50';
+      ? 'bg-primary/15 text-primary font-semibold border-l-3 border-primary pl-3' 
+      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors';
 
   // Gerencia - 7 grupos lógicos bien organizados
   const gerenciaItems: MenuCategory[] = [
@@ -257,13 +257,13 @@ export const AppSidebar = () => {
           <SidebarMenu>
             {category.items.map((item) => (
               <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild>
+                <SidebarMenuButton asChild className="h-11">
                   <NavLink 
                     to={item.url} 
-                    className={({ isActive }) => getNavCls({ isActive })}
+                    className={({ isActive }) => `${getNavCls({ isActive })} text-base`}
                   >
-                    <item.icon className="h-4 w-4" />
-                    {!isCollapsed && <span>{item.title}</span>}
+                    <item.icon className="h-5 w-5 shrink-0" />
+                    {!isCollapsed && <span className="font-medium">{item.title}</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -281,30 +281,30 @@ export const AppSidebar = () => {
         defaultOpen={shouldBeOpen}
         className="group/collapsible"
       >
-        <SidebarGroup>
+        <SidebarGroup className="py-1">
           <CollapsibleTrigger asChild>
-            <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/30 rounded-md transition-colors flex items-center justify-between pr-2">
-              <div className="flex items-center gap-2">
-                <category.icon className="h-4 w-4 text-muted-foreground" />
+            <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg transition-colors flex items-center justify-between pr-3 py-2.5 text-sm font-semibold text-sidebar-foreground/90 uppercase tracking-wide">
+              <div className="flex items-center gap-2.5">
+                <category.icon className="h-5 w-5 text-primary/80" />
                 {!isCollapsed && <span>{category.category}</span>}
               </div>
               {!isCollapsed && (
-                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                <ChevronRight className="h-4 w-4 text-sidebar-foreground/60 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               )}
             </SidebarGroupLabel>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <SidebarGroupContent>
+            <SidebarGroupContent className="mt-1">
               <SidebarMenu>
                 {category.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild className="h-10">
                       <NavLink 
                         to={item.url} 
-                        className={({ isActive }) => getNavCls({ isActive })}
+                        className={({ isActive }) => `${getNavCls({ isActive })} text-sm`}
                       >
-                        <item.icon className="h-4 w-4" />
-                        {!isCollapsed && <span>{item.title}</span>}
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        {!isCollapsed && <span className="font-medium">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
