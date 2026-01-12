@@ -262,7 +262,7 @@ export const AppSidebar = () => {
                     to={item.url} 
                     className={({ isActive }) => `${getNavCls({ isActive })} text-base`}
                   >
-                    <item.icon className="h-5 w-5 shrink-0 text-primary" />
+                    <item.icon className="h-5 w-5 shrink-0 text-white" />
                     {!isCollapsed && <span className="font-medium">{item.title}</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -285,7 +285,7 @@ export const AppSidebar = () => {
           <CollapsibleTrigger asChild>
             <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg transition-colors flex items-center justify-between pr-3 py-2.5 text-sm font-semibold text-sidebar-foreground/90 uppercase tracking-wide">
               <div className="flex items-center gap-2.5">
-                <category.icon className="h-5 w-5 text-primary/80" />
+                <category.icon className="h-5 w-5 text-white" />
                 {!isCollapsed && <span>{category.category}</span>}
               </div>
               {!isCollapsed && (
@@ -303,7 +303,7 @@ export const AppSidebar = () => {
                         to={item.url} 
                         className={({ isActive }) => `${getNavCls({ isActive })} text-sm`}
                       >
-                        <item.icon className="h-5 w-5 shrink-0 text-primary" />
+                        <item.icon className="h-5 w-5 shrink-0 text-white" />
                         {!isCollapsed && <span className="font-medium">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
