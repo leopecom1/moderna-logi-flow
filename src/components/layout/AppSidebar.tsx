@@ -262,7 +262,7 @@ export const AppSidebar = () => {
                     to={item.url} 
                     className={({ isActive }) => `${getNavCls({ isActive })} text-base`}
                   >
-                    <item.icon className="h-5 w-5 shrink-0" />
+                    <item.icon className="h-5 w-5 shrink-0 text-primary" />
                     {!isCollapsed && <span className="font-medium">{item.title}</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -303,7 +303,7 @@ export const AppSidebar = () => {
                         to={item.url} 
                         className={({ isActive }) => `${getNavCls({ isActive })} text-sm`}
                       >
-                        <item.icon className="h-5 w-5 shrink-0" />
+                        <item.icon className="h-5 w-5 shrink-0 text-primary" />
                         {!isCollapsed && <span className="font-medium">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
