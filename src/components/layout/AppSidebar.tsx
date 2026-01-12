@@ -13,6 +13,11 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   Home,
   Package,
   Truck,
@@ -23,7 +28,6 @@ import {
   Settings,
   Crown,
   UserPlus,
-  Route,
   MapPin,
   FileText,
   DollarSign,
@@ -32,10 +36,8 @@ import {
   Receipt,
   PiggyBank,
   Upload,
-  Bell,
   User,
   Banknote,
-  Navigation,
   Brain,
   Building2,
   TrendingUp,
@@ -48,115 +50,139 @@ import {
   PackageOpen,
   RefreshCw,
   History,
-  Percent
+  Percent,
+  ChevronRight,
+  LayoutDashboard,
+  type LucideIcon,
 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+}
+
+interface MenuCategory {
+  category: string;
+  icon: LucideIcon;
+  defaultOpen?: boolean;
+  items: MenuItem[];
+}
 
 export const AppSidebar = () => {
   const { profile } = useAuth();
   const { state } = useSidebar();
   const location = useLocation();
   const currentPath = location.pathname;
+  const isCollapsed = state === 'collapsed';
 
   const isActive = (path: string) => currentPath === path;
 
-  const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    isActive ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/50';
+  const isGroupActive = (items: MenuItem[]) => 
+    items.some(item => isActive(item.url));
 
-  // Menu items organized by categories
-  const gerenciaItems = [
+  const getNavCls = ({ isActive }: { isActive: boolean }) =>
+    isActive 
+      ? 'bg-sidebar-accent text-sidebar-accent-foreground font-medium border-l-2 border-primary' 
+      : 'hover:bg-sidebar-accent/50';
+
+  // Gerencia - 7 grupos lógicos bien organizados
+  const gerenciaItems: MenuCategory[] = [
     {
-      category: 'Principal',
+      category: 'Dashboard',
+      icon: LayoutDashboard,
+      defaultOpen: true,
       items: [
         { title: 'Dashboard', url: '/', icon: Home },
       ]
     },
     {
-      category: 'Ventas y Clientes',
+      category: 'Comercial',
+      icon: Users,
       items: [
         { title: 'Clientes', url: '/customers', icon: Users },
         { title: 'Pedidos', url: '/orders', icon: ShoppingCart },
         { title: 'Entregas', url: '/deliveries', icon: Truck },
+        { title: 'Cobros', url: '/collections', icon: Receipt },
+        { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
       ]
     },
     {
-      category: 'Catálogo y Stock',
+      category: 'Inventario',
+      icon: Package,
       items: [
         { title: 'Productos', url: '/products', icon: Package2 },
-        { title: 'Stock de Productos', url: '/inventory', icon: Package },
-        { title: 'Movimientos Stock', url: '/stock-movements', icon: ArrowRightLeft },
+        { title: 'Stock', url: '/inventory', icon: Package },
+        { title: 'Movimientos', url: '/stock-movements', icon: ArrowRightLeft },
       ]
     },
     {
-      category: 'Procesos de Pedidos',
+      category: 'Operaciones',
+      icon: Truck,
       items: [
         { title: 'Gestión de Pedidos', url: '/logistics', icon: ClipboardList },
         { title: 'Gestión de Envíos', url: '/routes-management', icon: Truck },
-        { title: 'Visualización de Rutas', url: '/routes-view', icon: MapPin },
+        { title: 'Visualizar Rutas', url: '/routes-view', icon: MapPin },
         { title: 'Panel de Armado', url: '/assembly', icon: Wrench },
       ]
     },
     {
-      category: 'Compras y Proveedores',
-      items: [
-        { title: 'Compras', url: '/purchases', icon: ShoppingCart },
-        { title: 'Pago Proveedores', url: '/supplier-payments', icon: CreditCard },
-      ]
-    },
-    {
       category: 'Finanzas',
+      icon: DollarSign,
       items: [
         { title: 'Panel Financiero', url: '/finance', icon: TrendingUp },
         { title: 'Gestión de Cajas', url: '/cash-management', icon: Calculator },
         { title: 'Pagos', url: '/payments', icon: DollarSign },
-        { title: 'Cobros', url: '/collections', icon: Receipt },
-        { title: 'Cuentas por Cobrar', url: '/accounts-receivable', icon: PiggyBank },
+        { title: 'Compras', url: '/purchases', icon: ShoppingCart },
+        { title: 'Pago Proveedores', url: '/supplier-payments', icon: CreditCard },
         { title: 'Crédito Moderna', url: '/credito-moderna', icon: Banknote },
       ]
     },
     {
-      category: 'Reportes y Análisis',
-      items: [
-        { title: 'Reportes', url: '/reports', icon: BarChart3 },
-      ]
-    },
-    {
-      category: 'Gestión de Personal',
-      items: [
-        { title: 'Usuarios', url: '/user-management', icon: Crown },
-        { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
-        { title: 'Vehículos', url: '/vehiculos', icon: Car },
-        { title: 'Armadores', url: '/armadores', icon: Wrench },
-      ]
-    },
-    {
-      category: 'Herramientas',
+      category: 'E-commerce',
+      icon: ShoppingBag,
       items: [
         { title: 'Tienda Online', url: '/woocommerce-config', icon: ShoppingBag },
         { title: 'Pedidos Online', url: '/woocommerce-review', icon: ClipboardList },
         { title: 'Productos Online', url: '/woocommerce-products', icon: PackageOpen },
         { title: 'Sincronización', url: '/product-sync', icon: RefreshCw },
         { title: 'Historial Sync', url: '/product-sync-history', icon: History },
-        { title: 'Campañas E-commerce', url: '/ecommerce-campaigns', icon: Percent },
-        { title: 'Analytics & ML', url: '/analytics', icon: Brain },
+        { title: 'Campañas', url: '/ecommerce-campaigns', icon: Percent },
+      ]
+    },
+    {
+      category: 'Administración',
+      icon: Settings,
+      items: [
+        { title: 'Usuarios', url: '/user-management', icon: Crown },
+        { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
+        { title: 'Vehículos', url: '/vehiculos', icon: Car },
+        { title: 'Armadores', url: '/armadores', icon: Wrench },
+        { title: 'Reportes', url: '/reports', icon: BarChart3 },
+        { title: 'Analytics', url: '/analytics', icon: Brain },
         { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
         { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },
-        { title: 'Configuración', url: '/settings', icon: Settings },
         { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
-        { title: 'Notificaciones', url: '/notifications', icon: Bell },
+        { title: 'Configuración', url: '/settings', icon: Settings },
         { title: 'Mi Perfil', url: '/profile', icon: User },
       ]
     }
   ];
 
-  const vendedorItems = [
+  // Vendedor - estructura simplificada
+  const vendedorItems: MenuCategory[] = [
     {
-      category: 'Principal',
+      category: 'Dashboard',
+      icon: LayoutDashboard,
+      defaultOpen: true,
       items: [
         { title: 'Dashboard', url: '/', icon: Home },
       ]
     },
     {
       category: 'Ventas',
+      icon: ShoppingCart,
       items: [
         { title: 'Clientes', url: '/customers', icon: Users },
         { title: 'Mis Pedidos', url: '/orders', icon: Package },
@@ -168,6 +194,7 @@ export const AppSidebar = () => {
     },
     {
       category: 'Sistema',
+      icon: Settings,
       items: [
         { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
         { title: 'Mi Perfil', url: '/profile', icon: User },
@@ -175,15 +202,19 @@ export const AppSidebar = () => {
     }
   ];
 
-  const cadeteItems = [
+  // Cadete - estructura mínima
+  const cadeteItems: MenuCategory[] = [
     {
-      category: 'Principal',
+      category: 'Dashboard',
+      icon: LayoutDashboard,
+      defaultOpen: true,
       items: [
         { title: 'Dashboard', url: '/', icon: Home },
       ]
     },
     {
       category: 'Operaciones',
+      icon: Truck,
       items: [
         { title: 'Mi Ruta', url: '/route', icon: MapPin },
         { title: 'Entregas', url: '/deliveries', icon: Truck },
@@ -192,6 +223,7 @@ export const AppSidebar = () => {
     },
     {
       category: 'Sistema',
+      icon: Settings,
       items: [
         { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
         { title: 'Mi Perfil', url: '/profile', icon: User },
@@ -199,7 +231,7 @@ export const AppSidebar = () => {
     }
   ];
 
-  const getMenuItems = () => {
+  const getMenuItems = (): MenuCategory[] => {
     switch (profile?.role) {
       case 'gerencia':
         return gerenciaItems;
@@ -214,25 +246,54 @@ export const AppSidebar = () => {
 
   const menuCategories = getMenuItems();
 
-  return (
-    <Sidebar className={state === 'collapsed' ? 'w-14' : 'w-60'} collapsible="icon">
-      <SidebarContent>
-        {/* Logo Section */}
-        <div className="p-4 border-b border-sidebar-border">
-          <div className="flex items-center justify-center">
-            <img 
-              src={modernaLogo} 
-              alt="Moderna Logo" 
-              className={`object-contain transition-all duration-200 ${
-                state === 'collapsed' ? 'h-8 w-8' : 'h-12 w-auto'
-              }`}
-            />
-          </div>
-        </div>
+  const renderCategory = (category: MenuCategory, index: number) => {
+    const isCategoryActive = isGroupActive(category.items);
+    const shouldBeOpen = category.defaultOpen || isCategoryActive;
 
-        {menuCategories.map((category) => (
-          <SidebarGroup key={category.category}>
-            <SidebarGroupLabel>{category.category}</SidebarGroupLabel>
+    // Dashboard siempre visible sin colapsar
+    if (category.category === 'Dashboard') {
+      return (
+        <SidebarGroup key={category.category}>
+          <SidebarMenu>
+            {category.items.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild>
+                  <NavLink 
+                    to={item.url} 
+                    className={({ isActive }) => getNavCls({ isActive })}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    {!isCollapsed && <span>{item.title}</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+          {!isCollapsed && <Separator className="my-2" />}
+        </SidebarGroup>
+      );
+    }
+
+    // Categorías colapsables
+    return (
+      <Collapsible
+        key={category.category}
+        defaultOpen={shouldBeOpen}
+        className="group/collapsible"
+      >
+        <SidebarGroup>
+          <CollapsibleTrigger asChild>
+            <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent/30 rounded-md transition-colors flex items-center justify-between pr-2">
+              <div className="flex items-center gap-2">
+                <category.icon className="h-4 w-4 text-muted-foreground" />
+                {!isCollapsed && <span>{category.category}</span>}
+              </div>
+              {!isCollapsed && (
+                <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+              )}
+            </SidebarGroupLabel>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
             <SidebarGroupContent>
               <SidebarMenu>
                 {category.items.map((item) => (
@@ -243,15 +304,39 @@ export const AppSidebar = () => {
                         className={({ isActive }) => getNavCls({ isActive })}
                       >
                         <item.icon className="h-4 w-4" />
-                        {state !== 'collapsed' && <span>{item.title}</span>}
+                        {!isCollapsed && <span>{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+          </CollapsibleContent>
+        </SidebarGroup>
+      </Collapsible>
+    );
+  };
+
+  return (
+    <Sidebar className={isCollapsed ? 'w-14' : 'w-60'} collapsible="icon">
+      <SidebarContent>
+        {/* Logo Section */}
+        <div className="p-4 border-b border-sidebar-border">
+          <div className="flex items-center justify-center">
+            <img 
+              src={modernaLogo} 
+              alt="Moderna Logo" 
+              className={`object-contain transition-all duration-200 ${
+                isCollapsed ? 'h-8 w-8' : 'h-12 w-auto'
+              }`}
+            />
+          </div>
+        </div>
+
+        {/* Menu Categories */}
+        <div className="flex-1 overflow-y-auto py-2">
+          {menuCategories.map((category, index) => renderCategory(category, index))}
+        </div>
       </SidebarContent>
     </Sidebar>
   );
