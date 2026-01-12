@@ -84,8 +84,8 @@ export const AppSidebar = () => {
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
     isActive 
-      ? 'bg-primary/15 text-primary font-semibold border-l-3 border-primary pl-3' 
-      : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors';
+      ? 'bg-primary/15 font-semibold border-l-3 border-primary pl-3' 
+      : 'hover:bg-sidebar-accent transition-colors';
 
   // Gerencia - 7 grupos lógicos bien organizados
   const gerenciaItems: MenuCategory[] = [
@@ -260,9 +260,9 @@ export const AppSidebar = () => {
                 <SidebarMenuButton asChild className="h-11">
                   <NavLink 
                     to={item.url} 
-                    className={({ isActive }) => `${getNavCls({ isActive })} text-base`}
+                    className={({ isActive }) => `${getNavCls({ isActive })} text-base text-white`}
                   >
-                    <item.icon className="h-5 w-5 shrink-0 text-white" />
+                    <item.icon className="h-5 w-5 shrink-0" />
                     {!isCollapsed && <span className="font-medium">{item.title}</span>}
                   </NavLink>
                 </SidebarMenuButton>
@@ -283,9 +283,9 @@ export const AppSidebar = () => {
       >
         <SidebarGroup className="py-1">
           <CollapsibleTrigger asChild>
-            <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg transition-colors flex items-center justify-between pr-3 py-2.5 text-sm font-semibold text-sidebar-foreground/90 uppercase tracking-wide">
+            <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg transition-colors flex items-center justify-between pr-3 py-2.5 text-sm font-semibold text-white uppercase tracking-wide">
               <div className="flex items-center gap-2.5">
-                <category.icon className="h-5 w-5 text-white" />
+                <category.icon className="h-5 w-5" />
                 {!isCollapsed && <span>{category.category}</span>}
               </div>
               {!isCollapsed && (
@@ -301,9 +301,9 @@ export const AppSidebar = () => {
                     <SidebarMenuButton asChild className="h-10">
                       <NavLink 
                         to={item.url} 
-                        className={({ isActive }) => `${getNavCls({ isActive })} text-sm`}
+                        className={({ isActive }) => `${getNavCls({ isActive })} text-sm text-white`}
                       >
-                        <item.icon className="h-5 w-5 shrink-0 text-white" />
+                        <item.icon className="h-5 w-5 shrink-0" />
                         {!isCollapsed && <span className="font-medium">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
