@@ -1,183 +1,242 @@
 
-# Nueva Pestaña "Producto Web" en el Modal de Crear Producto
+# Configuración de Stock Web + Asociación de Producto WooCommerce
 
-## Objetivo
-Agregar una segunda pestaña llamada "Producto Web" dentro del modal `CreateProductModal` existente en `/products`. Esta pestaña permitirá crear el producto en WooCommerce al mismo tiempo que se crea el producto interno, pre-llenando el nombre y la marca desde los datos ya ingresados en la primera pestaña. Los precios del producto web estarán fijados siempre en Pesos Uruguayos (UYU), independientemente de la moneda del producto interno.
+## Diagnóstico completo del estado actual
 
----
+### Base de datos (`products`)
+La tabla `products` actualmente **no tiene ninguna columna** que vincule el producto interno con WooCommerce ni que almacene la configuración de stock web. Toda la relación existe solo del lado de WooCommerce (WooCommerce guarda su propio stock). Se necesita agregar columnas nuevas al schema.
 
-## Análisis del Estado Actual
+### Flujo de WooCommerce
+El hook `useCreateWooCommerceProduct` llama a la edge function `woocommerce-products` con el payload de creación. La API de WooCommerce gestiona su propio stock internamente (`manage_stock`, `stock_quantity`, `backorders`).
 
-### `CreateProductModal.tsx`
-- Es un `Dialog` con un único `<form>` que usa `react-hook-form` con validación Zod.
-- Contiene campos: nombre, precios (lista 1 y lista 2), costo, moneda, garantía, código proveedor, categoría, marca, variantes y precio automático.
-- Al guardar exitosamente (`onSubmit`), inserta en la tabla `products` de Supabase.
-
-### `ProductWooCommerceModal.tsx`
-- Modal independiente que usa estado local (`useState`) para el formulario.
-- Llama a la edge function `woocommerce-products` vía el hook `useCreateWooCommerceProduct`.
-- Soporta productos simples y variables, con manejo de imágenes, categorías WooCommerce y variaciones.
-
-### Flujo WooCommerce
-- El hook `useCreateWooCommerceProduct` → `callWooCommerceAPI('/products', 'POST', data)` → Edge Function.
-- Las categorías WooCommerce se obtienen con `useWooCommerceCategories`.
-- Las imágenes se suben a Supabase Storage (`woocommerce-images`) y se envían como URLs.
+### Puntos de entrada en el código
+- **`CreateProductModal.tsx`** — ya tiene la pestaña "Producto Web" (implementada en el paso anterior)
+- **`EditProductModal.tsx`** — solo tiene el formulario interno, sin pestaña web
+- **`InventoryProducts.tsx`** — muestra productos en inventario, sin ningún vínculo a WooCommerce
+- **`ProductsPage.tsx`** — tabla de productos `/products`, donde ya existe el `EditProductModal`
 
 ---
 
-## Diseño de la Solución
+## Schema nuevo necesario
 
-### Estructura con Tabs
-El modal pasará de tener un único formulario a tener dos pestañas usando el componente `Tabs` de Radix ya disponible:
+Se agrega a la tabla `products` las siguientes columnas:
 
-```
-[ Pestaña: Producto Interno ] [ Pestaña: Producto Web (WooCommerce) ]
-```
+```sql
+-- Vinculación con WooCommerce
+woocommerce_product_id INTEGER NULL  -- ID del producto en WooCommerce (null = sin producto web)
 
-La pestaña "Producto Web" es **opcional**: si el usuario no la completa, simplemente se crea solo el producto interno (comportamiento actual).
+-- Configuración de stock para la tienda web
+web_stock_mode TEXT DEFAULT 'virtual' 
+  CHECK (web_stock_mode IN ('virtual', 'real', 'disabled'))
+  -- 'virtual'  = stock simulado fijo (umbral)
+  -- 'real'     = stock real del depósito
+  -- 'disabled' = sin gestión de stock (siempre "en stock")
 
-### Lógica de Pre-llenado
-Cuando el usuario cambia a la pestaña "Producto Web", los campos se sincronizan automáticamente desde los valores del formulario principal:
-- **Nombre**: `watch("name")` → `wooFormData.name`
-- **Descripción corta**: se puede completar como marca + nombre (ej: "Samsung TV 55\"")
-
-### Precio siempre en UYU
-- El campo de precio en la pestaña WooCommerce **no tiene selector de moneda**.
-- Se muestra un badge/etiqueta fija "🇺🇾 UYU" junto al campo de precio regular.
-- Si el producto interno tiene moneda USD, aparece un aviso: "El precio web debe ingresarse en pesos uruguayos".
-
----
-
-## Campos de la Pestaña "Producto Web"
-
-### Sección 1: Información básica (pre-llenada)
-- **Nombre** (pre-llenado desde pestaña 1, editable)
-- **Tipo**: Simple / Variable (select)
-- **Descripción corta** (Textarea, opcional)
-
-### Sección 2: Precio en UYU
-- **Precio Regular** (en UYU, sin opción de cambiar moneda)
-- **Precio en oferta** (opcional, aparece si toggle "En Oferta" está activo)
-- Badge indicativo: "Precio en Pesos Uruguayos (UYU)"
-
-### Sección 3: Estado y visibilidad
-- Toggle: Publicado / Borrador
-- Toggle: Destacado
-
-### Sección 4: Categorías WooCommerce
-- Badges clickeables con las categorías de WooCommerce (igual que en `ProductWooCommerceModal`)
-
-### Sección 5: Imágenes (opcional)
-- Componente `WooCommerceImageUpload` existente
-
----
-
-## Implementación Técnica
-
-### Solo un archivo modificado: `CreateProductModal.tsx`
-
-Se añadirá:
-1. Importación de `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger` de Radix.
-2. Importación de `useCreateWooCommerceProduct` y `useWooCommerceCategories`.
-3. Importación de `WooCommerceImageUpload`.
-4. Un estado local `wooFormData` para los datos de la pestaña web (independiente de react-hook-form).
-5. Un estado `createWooProduct` (boolean) para indicar si el usuario quiere crear el producto web también.
-6. Un `useEffect` que sincroniza `name` y `brand` del formulario principal → `wooFormData` cuando cambian.
-
-### Flujo de guardado modificado (`onSubmit`)
-
-```
-1. Crear producto interno (Supabase) — siempre
-2. Si createWooProduct === true Y campos web mínimos completados (nombre + precio):
-   → llamar useCreateWooCommerceProduct con los datos de wooFormData
-   → mostrar toast de éxito/error por separado
-3. Cerrar modal
-```
-
-El guardado del producto web es **independiente**: si falla WooCommerce, el producto interno ya se creó y se muestra un toast de advertencia explicando que el producto interno se creó pero el web falló.
-
-### Estado local para WooCommerce (dentro de CreateProductModal)
-
-```typescript
-const [wooFormData, setWooFormData] = useState({
-  name: '',
-  type: 'simple' as 'simple' | 'variable',
-  short_description: '',
-  regular_price: '',       // siempre UYU
-  sale_price: '',
-  on_sale: false,
-  status: 'publish' as 'publish' | 'draft',
-  featured: false,
-  categories: [] as number[],
-  images: [] as string[],
-});
-
-const [createWooProduct, setCreateWooProduct] = useState(false);
-```
-
-### Sincronización automática nombre/marca
-
-```typescript
-const watchedName = form.watch("name");
-const watchedBrand = form.watch("brand");
-
-useEffect(() => {
-  if (watchedName) {
-    setWooFormData(prev => ({
-      ...prev,
-      name: watchedBrand && watchedBrand !== 'none'
-        ? `${watchedBrand} ${watchedName}`
-        : watchedName,
-    }));
-  }
-}, [watchedName, watchedBrand]);
-```
-
-### Aviso de moneda USD
-
-```typescript
-const watchedCurrency = form.watch("currency");
-// Si currency === 'USD', mostrar alerta en la pestaña web:
-// "Este producto tiene precio en USD. Ingresá el precio equivalente en pesos uruguayos para la web."
+web_virtual_stock INTEGER DEFAULT 10  -- cantidad a mostrar si modo virtual
+web_stock_warehouse_id UUID NULL REFERENCES warehouses(id)
+  -- si NULL en modo 'real' → suma todos los depósitos
+  -- si tiene valor en modo 'real' → usa ese depósito específico
 ```
 
 ---
 
-## Cambios de UI en el Modal
+## Qué se implementa
 
-### Antes:
+### 1. Migración de base de datos
+Nueva migración SQL con los 4 campos sobre `products`. Políticas RLS ya cubiertas por las existentes (gerencia/vendedor ALL).
+
+### 2. Pestaña "Producto Web" en `CreateProductModal` — ampliar campos de stock
+
+Se agrega dentro del formulario de la pestaña web (que ya existe), **debajo del precio**, una nueva sección "Configuración de Stock":
+
 ```
-Dialog → Form único
+Gestión de Stock en la tienda web
+  ○ Sin gestión de stock (siempre disponible)
+  ○ Stock Virtual Simulado  → campo: "Cantidad a mostrar"  (ej: 10)
+  ○ Stock Real del Depósito → selector de depósito
+       [Todos los depósitos]
+       [Depósito Principal]
+       [Depósito Secundario]
 ```
 
-### Después:
+Al guardar, si `createWooProduct = true`, el payload enviado a WooCommerce ya incluye:
+- `manage_stock: true/false`  
+- `stock_quantity: N` (si virtual o real)
+- `backorders: 'no'`
+
+Y en Supabase se persiste:
+- `woocommerce_product_id` = el ID retornado por WooCommerce
+- `web_stock_mode` = 'virtual' | 'real' | 'disabled'
+- `web_virtual_stock` = N
+- `web_stock_warehouse_id` = UUID | null
+
+### 3. Ampliar `EditProductModal` — agregar pestaña "Producto Web"
+
+El `EditProductModal` actualmente solo tiene el formulario interno en `sm:max-w-[500px]`. Se convierte en un modal con Tabs igual al de creación:
+
+**Pestaña 1: Producto Interno** — exactamente igual que ahora  
+**Pestaña 2: Producto Web** — muestra uno de dos estados:
+
+**Estado A — Producto SIN producto web (`woocommerce_product_id = null`)**:
 ```
-Dialog →
-  Tabs
-    TabsList: ["Producto Interno", "Producto Web"]
-    TabsContent "interno": (todo el formulario actual)
-    TabsContent "web":
-      - Toggle "Publicar también en la tienda web"
-      - [si toggle ON]: formulario web simplificado con UYU fijo
-      - [si toggle OFF]: mensaje "Activá esta opción para crear el producto en la tienda web al mismo tiempo"
+┌─────────────────────────────────────────────────────┐
+│  Este producto no tiene un producto web asociado.   │
+│                                                     │
+│  [Crear nuevo en WooCommerce]  [Asociar existente]  │
+└─────────────────────────────────────────────────────┘
 ```
 
-El tamaño del modal se ajusta de `sm:max-w-[800px]` a `sm:max-w-[900px]` para acomodar mejor las dos pestañas.
+**Estado B — Producto CON producto web (`woocommerce_product_id != null`)**:
+```
+┌─────────────────────────────────────────────────────┐
+│  ✓ Vinculado a WooCommerce ID: 12345                │
+│                                                     │
+│  Configuración de Stock Web:                        │
+│  ○ Sin gestión  ○ Virtual [10]  ○ Real [Depósito ▼] │
+│                                                     │
+│  [Guardar cambios de stock]  [Desvincular]         │
+└─────────────────────────────────────────────────────┘
+```
+
+### 4. Lógica de "Asociar producto web existente"
+
+Un sub-modal (Dialog dentro del Dialog) que:
+1. Carga la lista de productos de WooCommerce (usando `useWooCommerceProducts`)
+2. Permite buscar por nombre
+3. Al seleccionar, llama a `supabase.from('products').update({ woocommerce_product_id: N })` y actualiza la configuración de stock
+
+### 5. Badge en `ProductsPage` (tabla de productos)
+
+En la columna "Estado" o una nueva columna "Web" de la tabla en `/products`, mostrar:
+- Badge `🌐 Web` verde si `woocommerce_product_id != null`
+- Badge `Sin web` gris si `woocommerce_product_id = null`
+
+### 6. `InventoryProducts.tsx` — botón "Asociar web" en productos sin vinculación
+
+En la vista tabla de inventario (`/inventory`), en la columna de acciones de cada producto, agregar un botón pequeño `Asociar web` si `woocommerce_product_id = null`. Al hacer click, abre el mismo sub-modal de búsqueda y asociación.
 
 ---
 
-## Archivos a Modificar
+## Flujo de sincronización de stock real
 
-| Archivo | Cambio |
+Cuando `web_stock_mode = 'real'`, la cantidad enviada a WooCommerce se calcula al momento de guardar:
+
+```
+Si web_stock_warehouse_id != null:
+  stock = inventory_items.current_stock WHERE product_id = X AND warehouse_id = Y
+
+Si web_stock_warehouse_id = null (todos):
+  stock = SUM(inventory_items.current_stock) WHERE product_id = X
+```
+
+Esta sincronización ocurre **en el momento de guardar la configuración** (al crear o editar). No es tiempo real automático — es una sincronización manual bajo demanda. Si el usuario quiere actualizar el stock en WooCommerce, lo hace desde el modal de edición.
+
+> Nota: sincronización automática en tiempo real requeriría webhooks o cron jobs que están fuera del scope de esta implementación.
+
+---
+
+## Implementación técnica detallada
+
+### Archivos a crear/modificar
+
+| Archivo | Acción |
 |---|---|
-| `src/components/forms/CreateProductModal.tsx` | MODIFICAR — Agregar Tabs, estado wooFormData, lógica de guardado dual |
+| `supabase/migrations/[nueva].sql` | CREAR — 4 columnas nuevas en `products` |
+| `src/components/forms/CreateProductModal.tsx` | MODIFICAR — agregar sección de stock web + guardar `woocommerce_product_id` |
+| `src/components/forms/EditProductModal.tsx` | MODIFICAR — agregar Tabs, pestaña web completa con los 2 estados |
+| `src/pages/ProductsPage.tsx` | MODIFICAR — agregar badge de vinculación web en la tabla |
+| `src/components/inventory/InventoryProducts.tsx` | MODIFICAR — agregar botón "Asociar web" en tabla |
 
-No se necesitan nuevos archivos. Se reutilizan hooks y componentes ya existentes.
+No se requieren nuevos archivos de componentes — todo se implementa dentro de los modales existentes.
 
 ---
 
-## Casos Borde
+## Detalles de la sección de stock en el formulario web
 
-- **Sin configuración WooCommerce**: Si la edge function falla por falta de configuración, se muestra un toast específico indicando que el producto interno se creó bien pero el web no pudo crearse.
-- **Precio vacío en WooCommerce**: La pestaña web solo intentará crear si el precio regular está completado.
-- **Usuario ignora la pestaña web**: Si nunca activa el toggle, el comportamiento es exactamente igual al actual.
+### Estado del formulario local en CreateProductModal (ampliación)
+
+```typescript
+const [wooStockConfig, setWooStockConfig] = useState<{
+  mode: 'disabled' | 'virtual' | 'real';
+  virtual_quantity: number;
+  warehouse_id: string | null; // null = todos
+}>({
+  mode: 'virtual',
+  virtual_quantity: 10,
+  warehouse_id: null,
+});
+```
+
+### Construcción del payload a WooCommerce
+
+```typescript
+// Calcular stock a enviar
+let stockPayload: { manage_stock: boolean; stock_quantity?: number } = {
+  manage_stock: false
+};
+
+if (wooStockConfig.mode === 'virtual') {
+  stockPayload = { manage_stock: true, stock_quantity: wooStockConfig.virtual_quantity };
+} else if (wooStockConfig.mode === 'real') {
+  // Consultar stock real de Supabase
+  const stockData = await supabase
+    .from('inventory_items')
+    .select('current_stock')
+    .eq('product_id', product.id)
+    .then(({ data }) => {
+      if (!wooStockConfig.warehouse_id) {
+        return data?.reduce((sum, item) => sum + item.current_stock, 0) ?? 0;
+      }
+      return data?.find(i => i.warehouse_id === wooStockConfig.warehouse_id)?.current_stock ?? 0;
+    });
+  stockPayload = { manage_stock: true, stock_quantity: stockData };
+}
+```
+
+### Guardado en Supabase (tras crear el producto en WooCommerce)
+
+```typescript
+const wooResponse = await createWooMutation.mutateAsync(wooPayload);
+
+// Guardar el ID y configuración de stock
+await supabase.from('products').update({
+  woocommerce_product_id: wooResponse.id,
+  web_stock_mode: wooStockConfig.mode,
+  web_virtual_stock: wooStockConfig.mode === 'virtual' ? wooStockConfig.virtual_quantity : null,
+  web_stock_warehouse_id: wooStockConfig.mode === 'real' ? wooStockConfig.warehouse_id : null,
+}).eq('id', product.id);
+```
+
+---
+
+## UI de la sección de stock en el modal
+
+```
+─── Configuración de Stock en la Tienda Web ───────────────────
+
+  ¿Cómo gestionar el stock online?
+
+  ( ) Sin gestión de stock
+      El producto siempre aparecerá como "En stock"
+
+  (●) Stock Virtual Simulado
+      Muestra una cantidad fija sin importar el inventario real
+      Cantidad a mostrar: [ 10 ]
+
+  ( ) Stock Real del Depósito
+      Sincroniza el stock desde el inventario de tu depósito
+      Depósito de referencia: [ Todos los depósitos ▼ ]
+      Stock actual calculado: 42 unidades
+
+───────────────────────────────────────────────────────────────
+```
+
+---
+
+## Casos borde manejados
+
+- **Sin inventario**: si `web_stock_mode = 'real'` y el producto no tiene stock en inventario, se envía `stock_quantity: 0` a WooCommerce (no falla)
+- **Desvinculación**: al desvincular, se borra `woocommerce_product_id` y se resetean los campos de stock web en Supabase. El producto en WooCommerce NO se elimina (solo se desvincula)
+- **Asociación de existente**: no cambia el precio ni el nombre en WooCommerce, solo guarda el ID localmente y configura la gestión de stock
+- **Producto sin `woocommerce_product_id` en `CreateProductModal`**: si el usuario no activa el toggle de producto web, no se tocan los nuevos campos (quedan null)
+- **Query de inventory_items**: si el producto aún no tiene ítem en inventario al momento de crear, el stock real será 0 (comportamiento correcto)
