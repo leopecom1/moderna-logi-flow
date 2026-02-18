@@ -95,6 +95,8 @@ export default function WooCommerceConfigPage() {
 
       const configData = {
         ...formData,
+        default_branch_id: formData.default_branch_id || null,
+        default_warehouse_id: formData.default_warehouse_id || null,
         created_by: profile.user_id,
       };
 
