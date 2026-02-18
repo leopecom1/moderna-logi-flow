@@ -1,192 +1,183 @@
 
-# Nueva Página: Analytics de Negocio - KPIs Completos
+# Nueva Pestaña "Producto Web" en el Modal de Crear Producto
 
 ## Objetivo
-Crear una nueva página `/kpi-analytics` dedicada exclusivamente a KPIs de ventas, costos y ganancias, con datos reales de Supabase. Se reemplazará también el link "Analytics" del sidebar para apuntar a esta nueva página más completa (manteniendo la antigua en `/analytics`).
+Agregar una segunda pestaña llamada "Producto Web" dentro del modal `CreateProductModal` existente en `/products`. Esta pestaña permitirá crear el producto en WooCommerce al mismo tiempo que se crea el producto interno, pre-llenando el nombre y la marca desde los datos ya ingresados en la primera pestaña. Los precios del producto web estarán fijados siempre en Pesos Uruguayos (UYU), independientemente de la moneda del producto interno.
 
 ---
 
-## Datos Disponibles en la Base de Datos
+## Análisis del Estado Actual
 
-A partir de las tablas existentes en Supabase se pueden extraer:
+### `CreateProductModal.tsx`
+- Es un `Dialog` con un único `<form>` que usa `react-hook-form` con validación Zod.
+- Contiene campos: nombre, precios (lista 1 y lista 2), costo, moneda, garantía, código proveedor, categoría, marca, variantes y precio automático.
+- Al guardar exitosamente (`onSubmit`), inserta en la tabla `products` de Supabase.
 
-| Fuente | KPIs posibles |
-|---|---|
-| `orders` | Ventas totales, ticket promedio, pedidos por período, tasa de conversión, comparativas |
-| `payments` | Ingresos cobrados, pendientes de cobro, métodos de pago, liquidaciones |
-| `collections` | Cobros realizados, monto promedio de cobros, métodos más usados |
-| `purchases` | Costos de compra, gasto a proveedores |
-| `accounts_receivable` | Deuda total, balance pendiente, crédito utilizado |
-| `customers` | Total clientes, clientes nuevos, clientes activos |
-| `deliveries` | Tasa de entrega exitosa, entregas pendientes, en camino |
-| `incidents` | Incidencias abiertas/cerradas, impacto en operaciones |
-| `inventory_items` | Valor del inventario, stock bajo mínimo |
-| `credit_moderna_installments` | Cuotas pendientes, recaudado en crédito |
-| `petty_cash_expenses` | Gastos operativos |
+### `ProductWooCommerceModal.tsx`
+- Modal independiente que usa estado local (`useState`) para el formulario.
+- Llama a la edge function `woocommerce-products` vía el hook `useCreateWooCommerceProduct`.
+- Soporta productos simples y variables, con manejo de imágenes, categorías WooCommerce y variaciones.
 
----
-
-## Estructura de la Página: 5 Secciones con Tabs
-
-### Tab 1 - Resumen General (Vista ejecutiva)
-Fila superior con 8 KPI cards grandes:
-- **Ventas del mes** (`orders.total_amount` filtrado por mes actual)
-- **Ventas de hoy** (filtro por fecha)
-- **Ticket promedio** (total_amount / cantidad de pedidos)
-- **Pedidos este mes** (count de orders del mes)
-- **Clientes activos** (clientes con pedidos en los últimos 30 días)
-- **Tasa de entrega** (entregas exitosas / pedidos totales x 100)
-- **Deuda total pendiente** (accounts_receivable.balance_due sumado)
-- **Incidencias abiertas** (count incidents con status=abierto)
-
-### Tab 2 - Ventas
-- Gráfico de línea: Ventas por día (últimos 30 días)
-- Gráfico de barras: Ventas por semana (últimos 3 meses)
-- KPIs: Ventas hoy / ayer / semana / mes / año
-- Comparativa: Este mes vs mes anterior (%)
-- Métodos de pago más usados (pie chart con `orders.payment_method`)
-- Top 10 pedidos de mayor valor
-- Pedidos por estado (pendiente, en camino, entregado, cancelado)
-
-### Tab 3 - Clientes
-- Total de clientes registrados
-- Clientes nuevos este mes
-- Clientes con deuda (accounts_receivable con balance > 0)
-- Clientes sin compras en 60+ días (riesgo churn)
-- Ticket promedio por cliente
-- Top 10 clientes por volumen de compra
-- Distribución por método de pago preferido
-
-### Tab 4 - Costos y Ganancias
-- Total cobros registrados (collections)
-- Saldo pendiente de cobro (payments con status pendiente)
-- Gastos de compras (purchases total)
-- Cuotas crédito moderna pendientes
-- Ganancias brutas estimadas (ventas - costos de compras)
-- Gráfico: Ingresos vs Gastos por mes
-- Liquidaciones de tarjeta pendientes (card_liquidations)
-- Gastos de caja chica (petty_cash_expenses)
-
-### Tab 5 - Operaciones
-- Pedidos entregados hoy / semana / mes
-- Tasa de éxito en entregas (%)
-- Tiempo promedio de entrega (estimado)
-- Cadetes con más entregas
-- Incidencias por tipo
-- Rutas activas
+### Flujo WooCommerce
+- El hook `useCreateWooCommerceProduct` → `callWooCommerceAPI('/products', 'POST', data)` → Edge Function.
+- Las categorías WooCommerce se obtienen con `useWooCommerceCategories`.
+- Las imágenes se suben a Supabase Storage (`woocommerce-images`) y se envían como URLs.
 
 ---
 
-## Período de tiempo seleccionable
-Selector de rango en la parte superior (Hoy / 7 días / 30 días / 90 días / Este año) que afecta a todos los KPIs.
+## Diseño de la Solución
+
+### Estructura con Tabs
+El modal pasará de tener un único formulario a tener dos pestañas usando el componente `Tabs` de Radix ya disponible:
+
+```
+[ Pestaña: Producto Interno ] [ Pestaña: Producto Web (WooCommerce) ]
+```
+
+La pestaña "Producto Web" es **opcional**: si el usuario no la completa, simplemente se crea solo el producto interno (comportamiento actual).
+
+### Lógica de Pre-llenado
+Cuando el usuario cambia a la pestaña "Producto Web", los campos se sincronizan automáticamente desde los valores del formulario principal:
+- **Nombre**: `watch("name")` → `wooFormData.name`
+- **Descripción corta**: se puede completar como marca + nombre (ej: "Samsung TV 55\"")
+
+### Precio siempre en UYU
+- El campo de precio en la pestaña WooCommerce **no tiene selector de moneda**.
+- Se muestra un badge/etiqueta fija "🇺🇾 UYU" junto al campo de precio regular.
+- Si el producto interno tiene moneda USD, aparece un aviso: "El precio web debe ingresarse en pesos uruguayos".
+
+---
+
+## Campos de la Pestaña "Producto Web"
+
+### Sección 1: Información básica (pre-llenada)
+- **Nombre** (pre-llenado desde pestaña 1, editable)
+- **Tipo**: Simple / Variable (select)
+- **Descripción corta** (Textarea, opcional)
+
+### Sección 2: Precio en UYU
+- **Precio Regular** (en UYU, sin opción de cambiar moneda)
+- **Precio en oferta** (opcional, aparece si toggle "En Oferta" está activo)
+- Badge indicativo: "Precio en Pesos Uruguayos (UYU)"
+
+### Sección 3: Estado y visibilidad
+- Toggle: Publicado / Borrador
+- Toggle: Destacado
+
+### Sección 4: Categorías WooCommerce
+- Badges clickeables con las categorías de WooCommerce (igual que en `ProductWooCommerceModal`)
+
+### Sección 5: Imágenes (opcional)
+- Componente `WooCommerceImageUpload` existente
 
 ---
 
 ## Implementación Técnica
 
-### Archivos a crear/modificar
+### Solo un archivo modificado: `CreateProductModal.tsx`
 
-| Archivo | Acción |
+Se añadirá:
+1. Importación de `Tabs`, `TabsContent`, `TabsList`, `TabsTrigger` de Radix.
+2. Importación de `useCreateWooCommerceProduct` y `useWooCommerceCategories`.
+3. Importación de `WooCommerceImageUpload`.
+4. Un estado local `wooFormData` para los datos de la pestaña web (independiente de react-hook-form).
+5. Un estado `createWooProduct` (boolean) para indicar si el usuario quiere crear el producto web también.
+6. Un `useEffect` que sincroniza `name` y `brand` del formulario principal → `wooFormData` cuando cambian.
+
+### Flujo de guardado modificado (`onSubmit`)
+
+```
+1. Crear producto interno (Supabase) — siempre
+2. Si createWooProduct === true Y campos web mínimos completados (nombre + precio):
+   → llamar useCreateWooCommerceProduct con los datos de wooFormData
+   → mostrar toast de éxito/error por separado
+3. Cerrar modal
+```
+
+El guardado del producto web es **independiente**: si falla WooCommerce, el producto interno ya se creó y se muestra un toast de advertencia explicando que el producto interno se creó pero el web falló.
+
+### Estado local para WooCommerce (dentro de CreateProductModal)
+
+```typescript
+const [wooFormData, setWooFormData] = useState({
+  name: '',
+  type: 'simple' as 'simple' | 'variable',
+  short_description: '',
+  regular_price: '',       // siempre UYU
+  sale_price: '',
+  on_sale: false,
+  status: 'publish' as 'publish' | 'draft',
+  featured: false,
+  categories: [] as number[],
+  images: [] as string[],
+});
+
+const [createWooProduct, setCreateWooProduct] = useState(false);
+```
+
+### Sincronización automática nombre/marca
+
+```typescript
+const watchedName = form.watch("name");
+const watchedBrand = form.watch("brand");
+
+useEffect(() => {
+  if (watchedName) {
+    setWooFormData(prev => ({
+      ...prev,
+      name: watchedBrand && watchedBrand !== 'none'
+        ? `${watchedBrand} ${watchedName}`
+        : watchedName,
+    }));
+  }
+}, [watchedName, watchedBrand]);
+```
+
+### Aviso de moneda USD
+
+```typescript
+const watchedCurrency = form.watch("currency");
+// Si currency === 'USD', mostrar alerta en la pestaña web:
+// "Este producto tiene precio en USD. Ingresá el precio equivalente en pesos uruguayos para la web."
+```
+
+---
+
+## Cambios de UI en el Modal
+
+### Antes:
+```
+Dialog → Form único
+```
+
+### Después:
+```
+Dialog →
+  Tabs
+    TabsList: ["Producto Interno", "Producto Web"]
+    TabsContent "interno": (todo el formulario actual)
+    TabsContent "web":
+      - Toggle "Publicar también en la tienda web"
+      - [si toggle ON]: formulario web simplificado con UYU fijo
+      - [si toggle OFF]: mensaje "Activá esta opción para crear el producto en la tienda web al mismo tiempo"
+```
+
+El tamaño del modal se ajusta de `sm:max-w-[800px]` a `sm:max-w-[900px]` para acomodar mejor las dos pestañas.
+
+---
+
+## Archivos a Modificar
+
+| Archivo | Cambio |
 |---|---|
-| `src/pages/KpiAnalyticsPage.tsx` | CREAR - Página principal nueva |
-| `src/components/analytics/SalesKPIs.tsx` | CREAR - Tab de Ventas |
-| `src/components/analytics/CustomerKPIs.tsx` | CREAR - Tab de Clientes |
-| `src/components/analytics/FinanceKPIs.tsx` | CREAR - Tab Costos/Ganancias |
-| `src/components/analytics/OperationsKPIs.tsx` | CREAR - Tab Operaciones |
-| `src/App.tsx` | MODIFICAR - Agregar ruta `/kpi-analytics` |
-| `src/components/layout/AppSidebar.tsx` | MODIFICAR - Cambiar link "Analytics" a nueva ruta |
+| `src/components/forms/CreateProductModal.tsx` | MODIFICAR — Agregar Tabs, estado wooFormData, lógica de guardado dual |
 
-### Tecnologías usadas
-- **Recharts**: `LineChart`, `BarChart`, `PieChart`, `AreaChart` (ya instalado)
-- **Supabase queries directas**: sin edge functions, todo del lado cliente con filtros de fecha
-- **date-fns**: para manejo y formateo de fechas (ya instalado)
-- **Radix Tabs**: para las 5 secciones
-
-### Estructura del componente principal
-
-```typescript
-// KpiAnalyticsPage.tsx
-const [period, setPeriod] = useState<'today' | '7d' | '30d' | '90d' | 'year'>('30d');
-// Todos los hooks de data reciben el period como parámetro
-// Tab layout con 5 secciones
-```
-
-### Queries principales (ejemplo)
-
-```typescript
-// Ventas por período
-const { data: orders } = useQuery({
-  queryKey: ['kpi-orders', period],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select('id, total_amount, created_at, status, payment_method, customer_id')
-      .gte('created_at', startDate.toISOString())
-      .order('created_at');
-    return data;
-  }
-});
-
-// Cobros (collections)
-const { data: collections } = useQuery({
-  queryKey: ['kpi-collections', period],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('collections')
-      .select('id, amount, collection_date, payment_method_type, collection_status')
-      .gte('collection_date', startDateStr);
-    return data;
-  }
-});
-```
+No se necesitan nuevos archivos. Se reutilizan hooks y componentes ya existentes.
 
 ---
 
-## KPIs Completos a Mostrar
+## Casos Borde
 
-### Ventas
-1. Ventas totales del período
-2. Ventas de hoy
-3. Ventas de ayer (comparativa)
-4. Variación % hoy vs ayer
-5. Ventas esta semana
-6. Ventas este mes
-7. Ventas este año
-8. Ticket promedio (ventas / pedidos)
-9. Pedidos totales del período
-10. Pedidos por día promedio
-11. % variación vs período anterior
-
-### Clientes
-12. Total clientes activos (con pedidos en el período)
-13. Clientes nuevos (creados en el período)
-14. Clientes sin compras recientes (>60 días)
-15. Deuda total pendiente (balance_due)
-16. Clientes con deuda
-17. Ticket promedio por cliente
-
-### Costos y Ganancias
-18. Total cobrado en el período
-19. Total pendiente de cobro (payments pendientes)
-20. Total gastos compras (purchases)
-21. Cuotas crédito moderna pendientes
-22. Gastos caja chica
-23. Ganancia bruta estimada
-24. Margen bruto %
-25. Liquidaciones tarjeta pendientes
-
-### Operaciones
-26. Pedidos entregados
-27. Tasa de entrega exitosa %
-28. Pedidos en tránsito
-29. Pedidos pendientes sin asignar
-30. Incidencias abiertas
-31. Incidencias cerradas en el período
-32. Rutas activas
-
----
-
-## Cambio en el Sidebar
-
-El link "Analytics" en Administración pasará de `/analytics` (la página ML existente) a `/kpi-analytics` (la nueva). La página antigua de ML quedará disponible en su URL original.
-
+- **Sin configuración WooCommerce**: Si la edge function falla por falta de configuración, se muestra un toast específico indicando que el producto interno se creó bien pero el web no pudo crearse.
+- **Precio vacío en WooCommerce**: La pestaña web solo intentará crear si el precio regular está completado.
+- **Usuario ignora la pestaña web**: Si nunca activa el toggle, el comportamiento es exactamente igual al actual.
