@@ -51,6 +51,7 @@ import WooCommerceProductsPage from "./pages/WooCommerceProductsPage";
 import ProductSyncPage from "./pages/ProductSyncPage";
 import ProductSyncHistoryPage from "./pages/ProductSyncHistoryPage";
 import EcommerceCampaignsPage from "./pages/EcommerceCampaignsPage";
+import KpiAnalyticsPage from "./pages/KpiAnalyticsPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
 
@@ -121,6 +122,7 @@ function App() {
           <Route path="/product-sync" element={<ProtectedRoute><ProductSyncPage /></ProtectedRoute>} />
           <Route path="/product-sync-history" element={<ProtectedRoute><ProductSyncHistoryPage /></ProtectedRoute>} />
           <Route path="/ecommerce-campaigns" element={<ProtectedRoute><EcommerceCampaignsPage /></ProtectedRoute>} />
+          <Route path="/kpi-analytics" element={<ProtectedRoute><KpiAnalyticsPage /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -160,7 +160,7 @@ export const AppSidebar = () => {
         { title: 'Vehículos', url: '/vehiculos', icon: Car },
         { title: 'Armadores', url: '/armadores', icon: Wrench },
         { title: 'Reportes', url: '/reports', icon: BarChart3 },
-        { title: 'Analytics', url: '/analytics', icon: Brain },
+        { title: 'Analytics', url: '/kpi-analytics', icon: Brain },
         { title: 'Gestión Empresarial', url: '/business', icon: Building2 },
         { title: 'Importación Masiva', url: '/bulk-import', icon: Upload },
         { title: 'Incidencias', url: '/incidents', icon: AlertTriangle },
