@@ -33,13 +33,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Globe, AlertCircle, Store } from "lucide-react";
+import { Plus, Globe, AlertCircle, Store, Package, Boxes, Warehouse } from "lucide-react";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 import { ProductVariantConfig } from "./ProductVariantConfig";
 import { WooCommerceImageUpload } from "./WooCommerceImageUpload";
-import { useCreateWooCommerceProduct } from "@/hooks/useWooCommerceProducts";
+import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct } from "@/hooks/useWooCommerceProducts";
 import { useWooCommerceCategories } from "@/hooks/useWooCommerceCategories";
 
 const formSchema = z.object({
@@ -84,6 +86,12 @@ interface WooFormData {
   images: string[];
 }
 
+interface WooStockConfig {
+  mode: 'disabled' | 'virtual' | 'real';
+  virtual_quantity: number;
+  warehouse_id: string | null; // null = todos los depósitos
+}
+
 export function CreateProductModal({ onProductCreated }: CreateProductModalProps) {
   const [open, setOpen] = React.useState(false);
   const [priceListConfig, setPriceListConfig] = React.useState<PriceListConfig>({
@@ -103,9 +111,16 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     categories: [],
     images: [],
   });
+  const [wooStockConfig, setWooStockConfig] = React.useState<WooStockConfig>({
+    mode: 'virtual',
+    virtual_quantity: 10,
+    warehouse_id: null,
+  });
+  const [realStockPreview, setRealStockPreview] = React.useState<number | null>(null);
   const { toast } = useToast();
 
   const createWooMutation = useCreateWooCommerceProduct();
+  const updateWooMutation = useUpdateWooCommerceProduct();
   const { data: wooCategories, isLoading: wooCategoriesLoading } = useWooCommerceCategories();
 
   // Fetch categories
@@ -147,13 +162,26 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         console.error("Error fetching brands:", error);
         throw error;
       }
-      console.log("Fetched brands:", data);
       return data;
     },
     enabled: open,
   });
 
-  
+  // Fetch warehouses
+  const { data: warehouses } = useQuery({
+    queryKey: ["warehouses-woo"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("warehouses")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: open,
+  });
+
   // Fetch price list configuration
   const { data: priceConfig } = useQuery({
     queryKey: ["price_lists_config"],
@@ -177,8 +205,6 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       });
     }
   }, [priceConfig]);
-
-  console.log("Brands data:", brands, "Loading:", brandsLoading, "Error:", brandsError);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -255,6 +281,21 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     return `${categoryPrefix}${nextNumber.toString().padStart(3, '0')}`;
   };
 
+  // Calcular stock real desde inventario
+  const calculateRealStock = async (productId: string, warehouseId: string | null): Promise<number> => {
+    let query = supabase
+      .from('inventory_items')
+      .select('current_stock')
+      .eq('product_id', productId);
+    
+    if (warehouseId) {
+      query = query.eq('warehouse_id', warehouseId);
+    }
+    
+    const { data } = await query;
+    return data?.reduce((sum, item) => sum + (item.current_stock || 0), 0) ?? 0;
+  };
+
   const onSubmit = async (values: FormValues) => {
     try {
       let finalCategory = values.category;
@@ -288,6 +329,10 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         use_automatic_pricing: values.use_automatic_pricing,
         has_variants: values.has_variants,
         currency: values.currency,
+        // Web stock config (solo se establece si se crea con WooCommerce)
+        web_stock_mode: createWooProduct && wooFormData.regular_price ? wooStockConfig.mode : 'virtual',
+        web_virtual_stock: createWooProduct && wooFormData.regular_price ? wooStockConfig.virtual_quantity : 10,
+        web_stock_warehouse_id: createWooProduct && wooFormData.regular_price && wooStockConfig.mode === 'real' ? wooStockConfig.warehouse_id : null,
       };
 
       const { data: product, error: productError } = await supabase
@@ -323,6 +368,26 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       // Si se pidió crear también en WooCommerce
       if (createWooProduct && wooFormData.regular_price) {
         try {
+          // Calcular stock según configuración
+          let stockPayload: { manage_stock: boolean; stock_quantity?: number; backorders?: string } = {
+            manage_stock: false
+          };
+
+          if (wooStockConfig.mode === 'virtual') {
+            stockPayload = {
+              manage_stock: true,
+              stock_quantity: wooStockConfig.virtual_quantity,
+              backorders: 'no'
+            };
+          } else if (wooStockConfig.mode === 'real') {
+            const realStock = await calculateRealStock(product.id, wooStockConfig.warehouse_id);
+            stockPayload = {
+              manage_stock: true,
+              stock_quantity: realStock,
+              backorders: 'no'
+            };
+          }
+
           const wooPayload: any = {
             name: wooFormData.name,
             type: wooFormData.type,
@@ -333,9 +398,18 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
             sale_price: wooFormData.on_sale && wooFormData.sale_price ? wooFormData.sale_price : undefined,
             categories: wooFormData.categories.map(id => ({ id })),
             images: wooFormData.images.map(src => ({ src })),
+            ...stockPayload,
           };
 
-          await createWooMutation.mutateAsync(wooPayload);
+          const wooResponse = await createWooMutation.mutateAsync(wooPayload);
+
+          // Guardar el ID de WooCommerce en el producto interno
+          if (wooResponse?.id) {
+            await supabase
+              .from('products')
+              .update({ woocommerce_product_id: wooResponse.id })
+              .eq('id', product.id);
+          }
 
           toast({
             title: "Producto publicado en la tienda web",
@@ -366,6 +440,8 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         categories: [],
         images: [],
       });
+      setWooStockConfig({ mode: 'virtual', virtual_quantity: 10, warehouse_id: null });
+      setRealStockPreview(null);
       setOpen(false);
       onProductCreated?.();
       refetchCategories?.();
@@ -828,7 +904,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                     <p className="text-xs opacity-70">Si no lo activás, solo se creará el producto interno.</p>
                   </div>
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {/* Aviso moneda USD */}
                     {watchedCurrency === 'USD' && (
                       <Alert>
@@ -917,6 +993,111 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         />
                         <span className="text-sm">Producto en oferta</span>
                       </div>
+                    </div>
+
+                    {/* ─── CONFIGURACIÓN DE STOCK WEB ─── */}
+                    <div className="rounded-lg border p-4 space-y-4 bg-muted/30">
+                      <div className="flex items-center gap-2">
+                        <Boxes className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm font-semibold">Configuración de Stock en la Tienda Web</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">¿Cómo gestionar el stock online?</p>
+
+                      <RadioGroup
+                        value={wooStockConfig.mode}
+                        onValueChange={(val: 'disabled' | 'virtual' | 'real') =>
+                          setWooStockConfig(prev => ({ ...prev, mode: val }))
+                        }
+                        className="space-y-3"
+                      >
+                        {/* Sin gestión */}
+                        <div className="flex items-start gap-3 rounded-md border bg-background p-3">
+                          <RadioGroupItem value="disabled" id="stock-disabled" className="mt-0.5" />
+                          <div className="space-y-0.5">
+                            <Label htmlFor="stock-disabled" className="text-sm font-medium cursor-pointer">
+                              Sin gestión de stock
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              El producto siempre aparecerá como "En stock" sin mostrar cantidad.
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Virtual */}
+                        <div className="flex items-start gap-3 rounded-md border bg-background p-3">
+                          <RadioGroupItem value="virtual" id="stock-virtual" className="mt-0.5" />
+                          <div className="flex-1 space-y-2">
+                            <Label htmlFor="stock-virtual" className="text-sm font-medium cursor-pointer">
+                              Stock Virtual Simulado
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Muestra una cantidad fija definida por vos, sin importar el inventario real.
+                            </p>
+                            {wooStockConfig.mode === 'virtual' && (
+                              <div className="flex items-center gap-2 pt-1">
+                                <Package className="h-4 w-4 text-muted-foreground" />
+                                <label className="text-xs font-medium whitespace-nowrap">Cantidad a mostrar:</label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  className="h-8 w-24 text-sm"
+                                  value={wooStockConfig.virtual_quantity}
+                                  onChange={(e) =>
+                                    setWooStockConfig(prev => ({
+                                      ...prev,
+                                      virtual_quantity: parseInt(e.target.value) || 0
+                                    }))
+                                  }
+                                />
+                                <span className="text-xs text-muted-foreground">unidades</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Real */}
+                        <div className="flex items-start gap-3 rounded-md border bg-background p-3">
+                          <RadioGroupItem value="real" id="stock-real" className="mt-0.5" />
+                          <div className="flex-1 space-y-2">
+                            <Label htmlFor="stock-real" className="text-sm font-medium cursor-pointer">
+                              Stock Real del Depósito
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              Sincroniza el stock desde el inventario real de tu depósito al guardar.
+                            </p>
+                            {wooStockConfig.mode === 'real' && (
+                              <div className="space-y-2 pt-1">
+                                <div className="flex items-center gap-2">
+                                  <Warehouse className="h-4 w-4 text-muted-foreground" />
+                                  <label className="text-xs font-medium">Depósito de referencia:</label>
+                                </div>
+                                <Select
+                                  value={wooStockConfig.warehouse_id ?? 'all'}
+                                  onValueChange={(val) =>
+                                    setWooStockConfig(prev => ({
+                                      ...prev,
+                                      warehouse_id: val === 'all' ? null : val
+                                    }))
+                                  }
+                                >
+                                  <SelectTrigger className="h-8 text-sm">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Todos los depósitos (suma total)</SelectItem>
+                                    {warehouses?.map(w => (
+                                      <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground italic">
+                                  El stock se sincronizará al guardar el producto.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </RadioGroup>
                     </div>
 
                     {/* Estado y visibilidad */}

@@ -1971,6 +1971,10 @@ export type Database = {
           use_automatic_pricing: boolean
           warranty_months: number | null
           warranty_years: number | null
+          web_stock_mode: string
+          web_stock_warehouse_id: string | null
+          web_virtual_stock: number
+          woocommerce_product_id: number | null
         }
         Insert: {
           brand?: string | null
@@ -1992,6 +1996,10 @@ export type Database = {
           use_automatic_pricing?: boolean
           warranty_months?: number | null
           warranty_years?: number | null
+          web_stock_mode?: string
+          web_stock_warehouse_id?: string | null
+          web_virtual_stock?: number
+          woocommerce_product_id?: number | null
         }
         Update: {
           brand?: string | null
@@ -2013,6 +2021,10 @@ export type Database = {
           use_automatic_pricing?: boolean
           warranty_months?: number | null
           warranty_years?: number | null
+          web_stock_mode?: string
+          web_stock_warehouse_id?: string | null
+          web_virtual_stock?: number
+          woocommerce_product_id?: number | null
         }
         Relationships: [
           {
@@ -2020,6 +2032,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_web_stock_warehouse_id_fkey"
+            columns: ["web_stock_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
