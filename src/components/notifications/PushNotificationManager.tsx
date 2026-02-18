@@ -155,7 +155,7 @@ export const PushNotificationManager = () => {
       console.log('Service Worker registered:', registration);
       
       // Suscribirse a push notifications
-      const subscription = await registration.pushManager.subscribe({
+      const subscription = await (registration as any).pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array('YOUR_VAPID_PUBLIC_KEY') // Reemplazar con tu clave VAPID
       });
