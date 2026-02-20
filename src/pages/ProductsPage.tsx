@@ -50,6 +50,7 @@ interface Product {
   currency?: 'UYU' | 'USD';
   use_automatic_pricing?: boolean;
   woocommerce_product_id?: number | null;
+  woocommerce_status?: string | null;
   categories?: {
     id: string;
     name: string;
@@ -147,18 +148,21 @@ export default function ProductsPage() {
     if (!product.woocommerce_product_id) return;
     setTogglingWebId(product.id);
     try {
-      // Fetch current WooCommerce product status
-      const { data: wooProduct } = await supabase.functions.invoke(
-        'woocommerce-products/products/' + product.woocommerce_product_id,
-        { method: 'GET' }
-      );
-      const currentStatus = wooProduct?.status || 'publish';
+      const currentStatus = product.woocommerce_status || 'publish';
       const newStatus = currentStatus === 'publish' ? 'draft' : 'publish';
       
       await updateWooProduct.mutateAsync({
         id: product.woocommerce_product_id,
         data: { status: newStatus },
       });
+
+      // Persist status in our DB
+      await supabase
+        .from('products')
+        .update({ woocommerce_status: newStatus })
+        .eq('id', product.id);
+
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       
       toast({
         title: newStatus === 'publish' ? "Producto activado en la web" : "Producto desactivado de la web",
@@ -366,11 +370,16 @@ export default function ProductsPage() {
                       {product.is_active ? "Activo" : "Inactivo"}
                     </Badge>
                     {product.woocommerce_product_id ? (
-                      <Badge className="text-xs bg-emerald-500/15 text-emerald-700 border-emerald-300 cursor-pointer hover:bg-emerald-500/25"
+                      <Badge 
+                        className={`text-xs cursor-pointer ${
+                          product.woocommerce_status === 'publish' 
+                            ? 'bg-emerald-500/15 text-emerald-700 border-emerald-300 hover:bg-emerald-500/25' 
+                            : 'bg-orange-500/15 text-orange-700 border-orange-300 hover:bg-orange-500/25'
+                        }`}
                         onClick={() => handleToggleWooStatus(product)}
                       >
                         <Globe className="h-3 w-3 mr-1" />
-                        Web
+                        {product.woocommerce_status === 'publish' ? 'Web activo' : 'Web inactivo'}
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="text-xs text-muted-foreground">
@@ -569,9 +578,13 @@ export default function ProductsPage() {
                                   {togglingWebId === product.id ? (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                   ) : (
-                                    <Badge className="text-xs bg-emerald-500/15 text-emerald-700 border-emerald-300 hover:bg-emerald-500/25 cursor-pointer">
+                                    <Badge className={`text-xs cursor-pointer ${
+                                      product.woocommerce_status === 'publish'
+                                        ? 'bg-emerald-500/15 text-emerald-700 border-emerald-300 hover:bg-emerald-500/25'
+                                        : 'bg-orange-500/15 text-orange-700 border-orange-300 hover:bg-orange-500/25'
+                                    }`}>
                                       <Globe className="h-3 w-3 mr-1" />
-                                      Web #{product.woocommerce_product_id}
+                                      {product.woocommerce_status === 'publish' ? 'Activo' : 'Inactivo'}
                                     </Badge>
                                   )}
                                 </Button>
