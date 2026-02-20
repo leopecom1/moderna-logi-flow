@@ -5,7 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Grid, List, Settings, Upload, Download, Package, TrendingUp, Table, Hash, Check, X } from "lucide-react";
+import { Search, Grid, List, Settings, Upload, Download, Package, TrendingUp, Table, Hash, Check, X, Globe, Loader2 } from "lucide-react";
+import { useUpdateWooCommerceProduct } from "@/hooks/useWooCommerceProducts";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { MessageLoading } from "@/components/ui/message-loading";
 import { CreateProductModal } from "@/components/forms/CreateProductModal";
@@ -47,6 +49,7 @@ interface Product {
   cost: number;
   currency?: 'UYU' | 'USD';
   use_automatic_pricing?: boolean;
+  woocommerce_product_id?: number | null;
   categories?: {
     id: string;
     name: string;
@@ -60,8 +63,10 @@ export default function ProductsPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Partial<Product>>({});
+  const [togglingWebId, setTogglingWebId] = useState<string | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const updateWooProduct = useUpdateWooCommerceProduct();
 
   const { data: products, isLoading, error, refetch } = useQuery({
     queryKey: ["products"],
@@ -136,6 +141,41 @@ export default function ProductsPage() {
 
   const handleFieldChange = (field: keyof Product, value: any) => {
     setEditValues(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleToggleWooStatus = async (product: Product) => {
+    if (!product.woocommerce_product_id) return;
+    setTogglingWebId(product.id);
+    try {
+      // Fetch current WooCommerce product status
+      const { data: wooProduct } = await supabase.functions.invoke(
+        'woocommerce-products/products/' + product.woocommerce_product_id,
+        { method: 'GET' }
+      );
+      const currentStatus = wooProduct?.status || 'publish';
+      const newStatus = currentStatus === 'publish' ? 'draft' : 'publish';
+      
+      await updateWooProduct.mutateAsync({
+        id: product.woocommerce_product_id,
+        data: { status: newStatus },
+      });
+      
+      toast({
+        title: newStatus === 'publish' ? "Producto activado en la web" : "Producto desactivado de la web",
+        description: newStatus === 'publish' 
+          ? "El producto ahora es visible en la tienda online" 
+          : "El producto ya no es visible en la tienda online",
+      });
+    } catch (error) {
+      console.error('Error toggling WooCommerce status:', error);
+      toast({
+        title: "Error",
+        description: "No se pudo cambiar el estado en WooCommerce",
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingWebId(null);
+    }
   };
 
   const filteredProducts = products?.filter(product =>
@@ -321,9 +361,23 @@ export default function ProductsPage() {
                     <CardTitle className="text-lg">{product.name}</CardTitle>
                     <p className="text-sm text-muted-foreground">Código: {product.code}</p>
                   </div>
-                  <Badge variant={product.is_active ? "default" : "secondary"}>
-                    {product.is_active ? "Activo" : "Inactivo"}
-                  </Badge>
+                  <div className="flex flex-col items-end gap-1">
+                    <Badge variant={product.is_active ? "default" : "secondary"}>
+                      {product.is_active ? "Activo" : "Inactivo"}
+                    </Badge>
+                    {product.woocommerce_product_id ? (
+                      <Badge className="text-xs bg-emerald-500/15 text-emerald-700 border-emerald-300 cursor-pointer hover:bg-emerald-500/25"
+                        onClick={() => handleToggleWooStatus(product)}
+                      >
+                        <Globe className="h-3 w-3 mr-1" />
+                        Web
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">
+                        Sin web
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -396,6 +450,7 @@ export default function ProductsPage() {
                   <TableHead>Moneda</TableHead>
                   <TableHead>Precio Auto</TableHead>
                   <TableHead className="text-right">Margen</TableHead>
+                  <TableHead>Web</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
@@ -498,6 +553,39 @@ export default function ProductsPage() {
                         <span className="text-green-600 font-semibold">
                           {product.margin_percentage?.toFixed(2) || 0}%
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        {product.woocommerce_product_id ? (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2"
+                                  onClick={() => handleToggleWooStatus(product)}
+                                  disabled={togglingWebId === product.id}
+                                >
+                                  {togglingWebId === product.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Badge className="text-xs bg-emerald-500/15 text-emerald-700 border-emerald-300 hover:bg-emerald-500/25 cursor-pointer">
+                                      <Globe className="h-3 w-3 mr-1" />
+                                      Web #{product.woocommerce_product_id}
+                                    </Badge>
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Click para activar/desactivar en WooCommerce</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            Sin web
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={product.is_active ? "default" : "secondary"}>
