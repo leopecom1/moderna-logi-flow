@@ -155,11 +155,28 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
     images: [],
   });
 
+  // Editable WooCommerce product data (when linked)
+  const [wooEditData, setWooEditData] = React.useState<WooNewProductData>({
+    name: '',
+    type: 'simple',
+    short_description: '',
+    regular_price: '',
+    sale_price: '',
+    on_sale: false,
+    status: 'publish',
+    featured: false,
+    categories: [],
+    images: [],
+  });
+  const [wooEditLoading, setWooEditLoading] = React.useState(false);
+  const [wooEditLoaded, setWooEditLoaded] = React.useState(false);
+
   // Association sub-modal state
   const [showAssocModal, setShowAssocModal] = React.useState(false);
   const [assocSearch, setAssocSearch] = React.useState('');
   const [assocPage, setAssocPage] = React.useState(1);
   const [savingStock, setSavingStock] = React.useState(false);
+  const [savingWooEdit, setSavingWooEdit] = React.useState(false);
   const [creatingWoo, setCreatingWoo] = React.useState(false);
   const [unlinking, setUnlinking] = React.useState(false);
 
@@ -260,8 +277,36 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
         warehouse_id: product.web_stock_warehouse_id ?? null,
       });
       setWooNewProductData(prev => ({ ...prev, name: product.name }));
+      setWooEditLoaded(false);
     }
   }, [open, product]);
+
+  // Fetch WooCommerce product data when linked and tab opened
+  React.useEffect(() => {
+    if (open && wooLinked && !wooEditLoaded) {
+      setWooEditLoading(true);
+      supabase.functions.invoke('woocommerce-products', {
+        method: 'POST',
+        body: { endpoint: `/products/${wooLinked}`, method: 'GET' },
+      }).then(({ data, error }) => {
+        if (data && !error) {
+          setWooEditData({
+            name: data.name || '',
+            type: data.type || 'simple',
+            short_description: data.short_description || '',
+            regular_price: data.regular_price || '',
+            sale_price: data.sale_price || '',
+            on_sale: data.on_sale || false,
+            status: data.status || 'publish',
+            featured: data.featured || false,
+            categories: data.categories?.map((c: any) => c.id) || [],
+            images: data.images?.map((i: any) => i.src) || [],
+          });
+          setWooEditLoaded(true);
+        }
+      }).catch(() => {}).finally(() => setWooEditLoading(false));
+    }
+  }, [open, wooLinked, wooEditLoaded]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -414,6 +459,52 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
     } finally {
       setSavingStock(false);
     }
+  };
+
+  // Save WooCommerce product edits (name, price, description, status, etc.)
+  const handleSaveWooEdit = async () => {
+    if (!wooLinked) return;
+    setSavingWooEdit(true);
+    try {
+      const wooPayload: any = {
+        name: wooEditData.name,
+        short_description: wooEditData.short_description,
+        status: wooEditData.status,
+        featured: wooEditData.featured,
+        categories: wooEditData.categories.map(id => ({ id })),
+        images: wooEditData.images.map(src => ({ src })),
+      };
+
+      // Only send pricing for simple products
+      if (wooEditData.type === 'simple') {
+        wooPayload.regular_price = wooEditData.regular_price;
+        wooPayload.sale_price = wooEditData.on_sale ? wooEditData.sale_price : '';
+      }
+
+      await updateWooMutation.mutateAsync({ id: wooLinked, data: wooPayload });
+
+      // Also persist status locally
+      await supabase.from('products').update({
+        woocommerce_status: wooEditData.status,
+      }).eq('id', product.id);
+
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast({ title: "Producto web actualizado", description: "Los cambios fueron guardados en WooCommerce." });
+      onProductUpdated?.();
+    } catch (err: any) {
+      toast({ title: "Error al guardar", description: err?.message || "No se pudieron guardar los cambios.", variant: "destructive" });
+    } finally {
+      setSavingWooEdit(false);
+    }
+  };
+
+  const toggleWooEditCategory = (categoryId: number) => {
+    setWooEditData(prev => ({
+      ...prev,
+      categories: prev.categories.includes(categoryId)
+        ? prev.categories.filter(id => id !== categoryId)
+        : [...prev.categories, categoryId],
+    }));
   };
 
   // Create new WooCommerce product and link
@@ -951,11 +1042,7 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                               Vinculado a WooCommerce
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              ID: {wooLinked} · <a
-                                href="#"
-                                className="underline"
-                                onClick={(e) => { e.preventDefault(); window.open(`https://wp-admin/post.php?post=${wooLinked}&action=edit`, '_blank'); }}
-                              >Ver en WooCommerce ↗</a>
+                              ID: {wooLinked}
                             </p>
                           </div>
                         </div>
@@ -972,19 +1059,164 @@ export function EditProductModal({ product, onProductUpdated }: EditProductModal
                         </Button>
                       </div>
 
-                      <StockConfigPanel />
+                      {wooEditLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Nombre */}
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">Nombre en la tienda web</label>
+                            <Input
+                              value={wooEditData.name}
+                              onChange={(e) => setWooEditData(prev => ({ ...prev, name: e.target.value }))}
+                            />
+                          </div>
 
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          onClick={handleSaveWebStock}
-                          disabled={savingStock}
-                          className="gap-2"
-                        >
-                          {savingStock ? <Loader2 className="h-4 w-4 animate-spin" /> : <Boxes className="h-4 w-4" />}
-                          Guardar y sincronizar stock web
-                        </Button>
-                      </div>
+                          {/* Descripción corta */}
+                          <div className="space-y-1">
+                            <label className="text-sm font-medium">Descripción corta</label>
+                            <Textarea
+                              value={wooEditData.short_description}
+                              onChange={(e) => setWooEditData(prev => ({ ...prev, short_description: e.target.value }))}
+                              rows={2}
+                            />
+                          </div>
+
+                          {/* Precios (solo para simples) */}
+                          {wooEditData.type === 'simple' && (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium">Precio en la tienda web</label>
+                                <Badge variant="outline" className="text-xs">🇺🇾 UYU</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-xs text-muted-foreground">Precio regular</label>
+                                  <Input
+                                    type="number" step="0.01"
+                                    value={wooEditData.regular_price}
+                                    onChange={(e) => setWooEditData(prev => ({ ...prev, regular_price: e.target.value }))}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs text-muted-foreground">Precio oferta</label>
+                                  <Input
+                                    type="number" step="0.01"
+                                    value={wooEditData.sale_price}
+                                    onChange={(e) => setWooEditData(prev => ({ ...prev, sale_price: e.target.value }))}
+                                    disabled={!wooEditData.on_sale}
+                                    className={!wooEditData.on_sale ? "bg-muted" : ""}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Switch
+                                  checked={wooEditData.on_sale}
+                                  onCheckedChange={(val) => setWooEditData(prev => ({ ...prev, on_sale: val }))}
+                                />
+                                <span className="text-sm">Producto en oferta</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {wooEditData.type === 'variable' && (
+                            <Alert>
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                Este es un producto variable. Los precios se gestionan desde las variaciones en WooCommerce.
+                              </AlertDescription>
+                            </Alert>
+                          )}
+
+                          {/* Estado */}
+                          <div className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                              <p className="text-sm font-medium">Publicado</p>
+                              <p className="text-xs text-muted-foreground">Visible en la tienda</p>
+                            </div>
+                            <Switch
+                              checked={wooEditData.status === 'publish'}
+                              onCheckedChange={(val) => setWooEditData(prev => ({ ...prev, status: val ? 'publish' : 'draft' }))}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between rounded-lg border p-3">
+                            <div>
+                              <p className="text-sm font-medium">Destacado</p>
+                              <p className="text-xs text-muted-foreground">Aparecerá en secciones destacadas</p>
+                            </div>
+                            <Switch
+                              checked={wooEditData.featured}
+                              onCheckedChange={(val) => setWooEditData(prev => ({ ...prev, featured: val }))}
+                            />
+                          </div>
+
+                          {/* Categorías */}
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Categorías de la tienda web</p>
+                            {wooCategoriesLoading ? (
+                              <p className="text-xs text-muted-foreground">Cargando...</p>
+                            ) : wooCategories && wooCategories.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {wooCategories.map((cat: any) => (
+                                  <Badge
+                                    key={cat.id}
+                                    variant={wooEditData.categories.includes(cat.id) ? "default" : "outline"}
+                                    className="cursor-pointer"
+                                    onClick={() => toggleWooEditCategory(cat.id)}
+                                  >
+                                    {cat.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-muted-foreground">No hay categorías en WooCommerce.</p>
+                            )}
+                          </div>
+
+                          {/* Imágenes */}
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Imágenes del producto</p>
+                            <WooCommerceImageUpload
+                              onImageUploaded={(url) => setWooEditData(prev => ({ ...prev, images: [...prev.images, url] }))}
+                              onImageRemoved={(url) => setWooEditData(prev => ({ ...prev, images: prev.images.filter(i => i !== url) }))}
+                              maxFiles={8}
+                              existingImages={wooEditData.images}
+                            />
+                          </div>
+
+                          <Separator />
+
+                          {/* Guardar datos del producto web */}
+                          <Button
+                            type="button"
+                            className="w-full gap-2"
+                            onClick={handleSaveWooEdit}
+                            disabled={savingWooEdit}
+                          >
+                            {savingWooEdit ? <Loader2 className="h-4 w-4 animate-spin" /> : <Globe className="h-4 w-4" />}
+                            Guardar cambios del producto web
+                          </Button>
+
+                          <Separator />
+
+                          {/* Stock config */}
+                          <StockConfigPanel />
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full gap-2"
+                            onClick={handleSaveWebStock}
+                            disabled={savingStock}
+                          >
+                            {savingStock ? <Loader2 className="h-4 w-4 animate-spin" /> : <Boxes className="h-4 w-4" />}
+                            Guardar y sincronizar stock web
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     /* ── Estado A: Sin vinculación ── */
