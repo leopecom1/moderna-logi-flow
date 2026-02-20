@@ -1975,6 +1975,7 @@ export type Database = {
           web_stock_warehouse_id: string | null
           web_virtual_stock: number
           woocommerce_product_id: number | null
+          woocommerce_status: string | null
         }
         Insert: {
           brand?: string | null
@@ -2000,6 +2001,7 @@ export type Database = {
           web_stock_warehouse_id?: string | null
           web_virtual_stock?: number
           woocommerce_product_id?: number | null
+          woocommerce_status?: string | null
         }
         Update: {
           brand?: string | null
@@ -2025,6 +2027,7 @@ export type Database = {
           web_stock_warehouse_id?: string | null
           web_virtual_stock?: number
           woocommerce_product_id?: number | null
+          woocommerce_status?: string | null
         }
         Relationships: [
           {
