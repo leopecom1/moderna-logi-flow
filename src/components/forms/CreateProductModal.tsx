@@ -308,7 +308,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
           .single();
 
         if (categoryError) throw categoryError;
-        finalCategory = newCategory.name;
+        finalCategory = newCategory.id;
       }
 
       const generatedCode = await generateProductCode(finalCategory);
