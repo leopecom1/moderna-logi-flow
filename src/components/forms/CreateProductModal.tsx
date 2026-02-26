@@ -1152,24 +1152,55 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                       </div>
                     </div>
 
-                    {/* Categorías WooCommerce */}
+                    {/* Categorías WooCommerce - Vista jerárquica */}
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Categorías de la tienda web</p>
                       {wooCategoriesLoading ? (
                         <p className="text-xs text-muted-foreground">Cargando categorías...</p>
                       ) : wooCategories && wooCategories.length > 0 ? (
-                        <div className="flex flex-wrap gap-2">
-                          {wooCategories.map((cat: any) => (
-                            <Badge
-                              key={cat.id}
-                              variant={wooFormData.categories.includes(cat.id) ? "default" : "outline"}
-                              className="cursor-pointer"
-                              onClick={() => toggleWooCategory(cat.id)}
-                            >
-                              {cat.name}
-                            </Badge>
-                          ))}
-                        </div>
+                        (() => {
+                          const roots = (wooCategories as any[]).filter((c: any) => c.parent === 0);
+                          const childrenMap = new Map<number, any[]>();
+                          for (const cat of wooCategories as any[]) {
+                            if (cat.parent !== 0) {
+                              const existing = childrenMap.get(cat.parent) || [];
+                              existing.push(cat);
+                              childrenMap.set(cat.parent, existing);
+                            }
+                          }
+                          return (
+                            <div className="space-y-1 max-h-48 overflow-auto border rounded-md p-2">
+                              {roots.map((root: any) => {
+                                const children = childrenMap.get(root.id) || [];
+                                return (
+                                  <div key={root.id}>
+                                    <Badge
+                                      variant={wooFormData.categories.includes(root.id) ? "default" : "outline"}
+                                      className="cursor-pointer mb-1"
+                                      onClick={() => toggleWooCategory(root.id)}
+                                    >
+                                      {root.name}
+                                    </Badge>
+                                    {children.length > 0 && (
+                                      <div className="ml-4 flex flex-wrap gap-1 mb-1">
+                                        {children.map((child: any) => (
+                                          <Badge
+                                            key={child.id}
+                                            variant={wooFormData.categories.includes(child.id) ? "default" : "secondary"}
+                                            className={`cursor-pointer text-xs ${wooFormData.categories.includes(child.id) ? '' : 'opacity-70'}`}
+                                            onClick={() => toggleWooCategory(child.id)}
+                                          >
+                                            ↳ {child.name}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()
                       ) : (
                         <p className="text-xs text-muted-foreground">No hay categorías disponibles en la tienda web.</p>
                       )}
