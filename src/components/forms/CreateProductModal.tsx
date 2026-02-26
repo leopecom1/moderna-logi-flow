@@ -49,7 +49,7 @@ const formSchema = z.object({
   price_list_1: z.number().min(0, "El precio de lista 1 debe ser mayor a 0"),
   price_list_2: z.number().min(0, "El precio de lista 2 debe ser mayor a 0"),
   cost: z.number().min(0, "El costo debe ser mayor a 0"),
-  category: z.string().min(1, "Categoría es requerida"),
+  category: z.string().default(""),
   brand: z.string().optional(),
   warranty_years: z.number().min(0).optional(),
   warranty_months: z.number().min(0).max(11).optional(),
@@ -58,8 +58,26 @@ const formSchema = z.object({
   use_automatic_pricing: z.boolean().default(true),
   has_variants: z.boolean().default(false),
   createNewCategory: z.boolean().default(false),
-  newCategoryName: z.string().optional(),
+  newCategoryName: z.string().default(""),
   currency: z.enum(['UYU', 'USD']).default('UYU'),
+}).superRefine((data, ctx) => {
+  if (data.createNewCategory) {
+    if (!data.newCategoryName || data.newCategoryName.trim() === "") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "El nombre de la nueva categoría es requerido",
+        path: ["newCategoryName"],
+      });
+    }
+  } else {
+    if (!data.category || data.category === "" || data.category === "none") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Categoría es requerida",
+        path: ["category"],
+      });
+    }
+  }
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -710,7 +728,16 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         <FormControl>
                           <Checkbox
                             checked={field.value}
-                            onCheckedChange={field.onChange}
+                            onCheckedChange={(checked) => {
+                              field.onChange(checked);
+                              if (checked) {
+                                form.setValue("category", "");
+                                form.clearErrors("category");
+                              } else {
+                                form.setValue("newCategoryName", "");
+                                form.clearErrors("newCategoryName");
+                              }
+                            }}
                           />
                         </FormControl>
                         <div className="space-y-1 leading-none">
@@ -747,18 +774,16 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                                 <SelectValue placeholder="Seleccionar categoría" />
                               </SelectTrigger>
                             <SelectContent>
-                              {!createNewCategory && categories?.grouped?.map((category) => (
-                                <React.Fragment key={category.id}>
-                                <SelectItem value={category.id}>
+                              {!createNewCategory && categories?.grouped?.flatMap((category) => [
+                                <SelectItem key={category.id} value={category.id}>
                                   {category.name} ({category.reference_number})
-                                </SelectItem>
-                                {category.subcategories?.map((sub) => (
+                                </SelectItem>,
+                                ...(category.subcategories?.map((sub) => (
                                   <SelectItem key={sub.id} value={sub.id} className="pl-6">
                                     └ {sub.name} ({sub.reference_number})
                                   </SelectItem>
-                                ))}
-                                </React.Fragment>
-                              ))}
+                                )) || []),
+                              ])}
                             </SelectContent>
                             </Select>
                           </FormControl>
