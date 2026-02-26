@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Edit2, Trash2, Search } from 'lucide-react';
+import { Loader2, Edit2, Trash2, Search, Plus, ChevronRight, FolderOpen } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useWooCommerceCategories, useCreateWooCommerceCategory, useUpdateWooCommerceCategory, useDeleteWooCommerceCategory } from '@/hooks/useWooCommerceCategories';
 import { WooCommerceCategory } from '@/types/woocommerce';
 import {
@@ -25,6 +25,11 @@ interface CategoriesWooCommerceModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface CategoryNode {
+  category: WooCommerceCategory;
+  children: WooCommerceCategory[];
+}
+
 export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWooCommerceModalProps) {
   const [search, setSearch] = useState('');
   const [editingCategory, setEditingCategory] = useState<WooCommerceCategory | null>(null);
@@ -35,15 +40,73 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
     parent: 0,
   });
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [openNodes, setOpenNodes] = useState<Set<number>>(new Set());
 
   const { data: categories, isLoading } = useWooCommerceCategories();
   const createMutation = useCreateWooCommerceCategory();
   const updateMutation = useUpdateWooCommerceCategory();
   const deleteMutation = useDeleteWooCommerceCategory();
 
-  const filteredCategories = categories?.filter((cat: WooCommerceCategory) =>
-    cat.name.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  // Build tree structure
+  const categoryTree = useMemo(() => {
+    if (!categories) return [];
+    const roots: CategoryNode[] = [];
+    const childrenMap = new Map<number, WooCommerceCategory[]>();
+
+    // Group children by parent
+    for (const cat of categories as WooCommerceCategory[]) {
+      if (cat.parent === 0) {
+        roots.push({ category: cat, children: [] });
+      } else {
+        const existing = childrenMap.get(cat.parent) || [];
+        existing.push(cat);
+        childrenMap.set(cat.parent, existing);
+      }
+    }
+
+    // Assign children to roots
+    for (const node of roots) {
+      node.children = childrenMap.get(node.category.id) || [];
+    }
+
+    return roots;
+  }, [categories]);
+
+  // Filtered tree based on search
+  const filteredTree = useMemo(() => {
+    if (!search.trim()) return categoryTree;
+    const lowerSearch = search.toLowerCase();
+    return categoryTree
+      .map((node) => {
+        const rootMatches = node.category.name.toLowerCase().includes(lowerSearch);
+        const matchingChildren = node.children.filter((c) =>
+          c.name.toLowerCase().includes(lowerSearch)
+        );
+        if (rootMatches || matchingChildren.length > 0) {
+          return {
+            category: node.category,
+            children: rootMatches ? node.children : matchingChildren,
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as CategoryNode[];
+  }, [categoryTree, search]);
+
+  // Root categories for the parent selector
+  const rootCategories = useMemo(() => {
+    if (!categories) return [];
+    return (categories as WooCommerceCategory[]).filter((c) => c.parent === 0);
+  }, [categories]);
+
+  const toggleNode = (id: number) => {
+    setOpenNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleEdit = (category: WooCommerceCategory) => {
     setEditingCategory(category);
@@ -55,18 +118,18 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
     });
   };
 
+  const handleCreateSubcategory = (parentCategory: WooCommerceCategory) => {
+    resetForm();
+    setFormData((prev) => ({ ...prev, parent: parentCategory.id }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (editingCategory) {
-      await updateMutation.mutateAsync({
-        id: editingCategory.id,
-        data: formData,
-      });
+      await updateMutation.mutateAsync({ id: editingCategory.id, data: formData });
     } else {
       await createMutation.mutateAsync(formData);
     }
-
     resetForm();
   };
 
@@ -79,22 +142,29 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
 
   const resetForm = () => {
     setEditingCategory(null);
-    setFormData({
-      name: '',
-      slug: '',
-      description: '',
-      parent: 0,
-    });
+    setFormData({ name: '', slug: '', description: '', parent: 0 });
   };
 
-  const generateSlug = (name: string) => {
-    return name
+  const generateSlug = (name: string) =>
+    name
       .toLowerCase()
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)/g, '');
-  };
+
+  const isBusy = createMutation.isPending || updateMutation.isPending;
+
+  const CategoryActions = ({ cat }: { cat: WooCommerceCategory }) => (
+    <div className="flex gap-1 shrink-0">
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(cat)}>
+        <Edit2 className="h-3.5 w-3.5" />
+      </Button>
+      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDeleteId(cat.id)}>
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
 
   return (
     <>
@@ -105,7 +175,7 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
           </DialogHeader>
 
           <div className="grid grid-cols-2 gap-6 flex-1 overflow-hidden">
-            {/* Lista de categorías */}
+            {/* Lista jerárquica */}
             <div className="flex flex-col gap-4 overflow-hidden">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -117,52 +187,98 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
                 />
               </div>
 
-              <div className="border rounded-lg overflow-auto flex-1">
+              <div className="border rounded-lg overflow-auto flex-1 p-2 space-y-1">
                 {isLoading ? (
                   <div className="flex items-center justify-center h-full">
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
+                ) : filteredTree.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No se encontraron categorías</p>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nombre</TableHead>
-                        <TableHead className="w-20">Productos</TableHead>
-                        <TableHead className="w-24">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCategories.map((category: WooCommerceCategory) => (
-                        <TableRow key={category.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{category.name}</div>
-                              <div className="text-xs text-muted-foreground">{category.slug}</div>
+                  filteredTree.map((node) => {
+                    const hasChildren = node.children.length > 0;
+                    const isOpen = openNodes.has(node.category.id);
+
+                    if (!hasChildren) {
+                      return (
+                        <div
+                          key={node.category.id}
+                          className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent/50 group"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <div className="min-w-0">
+                              <span className="text-sm font-medium truncate block">{node.category.name}</span>
+                              <span className="text-xs text-muted-foreground">{node.category.slug} · {node.category.count} productos</span>
                             </div>
-                          </TableCell>
-                          <TableCell className="text-center">{category.count}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleEdit(category)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs opacity-0 group-hover:opacity-100"
+                              onClick={() => handleCreateSubcategory(node.category)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" /> Sub
+                            </Button>
+                            <CategoryActions cat={node.category} />
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <Collapsible
+                        key={node.category.id}
+                        open={isOpen}
+                        onOpenChange={() => toggleNode(node.category.id)}
+                      >
+                        <div className="flex items-center justify-between px-3 py-2 rounded-md hover:bg-accent/50 group">
+                          <CollapsibleTrigger asChild>
+                            <button className="flex items-center gap-2 min-w-0 flex-1 text-left">
+                              <ChevronRight
+                                className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                              />
+                              <div className="min-w-0">
+                                <span className="text-sm font-medium truncate block">{node.category.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {node.category.slug} · {node.category.count} productos · {node.children.length} sub
+                                </span>
+                              </div>
+                            </button>
+                          </CollapsibleTrigger>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs opacity-0 group-hover:opacity-100"
+                              onClick={() => handleCreateSubcategory(node.category)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" /> Sub
+                            </Button>
+                            <CategoryActions cat={node.category} />
+                          </div>
+                        </div>
+
+                        <CollapsibleContent>
+                          <div className="ml-6 border-l pl-3 space-y-1 py-1">
+                            {node.children.map((child) => (
+                              <div
+                                key={child.id}
+                                className="flex items-center justify-between px-3 py-1.5 rounded-md hover:bg-accent/50 group"
                               >
-                                <Edit2 className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setDeleteId(category.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                                <div className="min-w-0">
+                                  <span className="text-sm truncate block">{child.name}</span>
+                                  <span className="text-xs text-muted-foreground">{child.slug} · {child.count} productos</span>
+                                </div>
+                                <CategoryActions cat={child} />
+                              </div>
+                            ))}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -179,13 +295,13 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => {
+                    onChange={(e) =>
                       setFormData({
                         ...formData,
                         name: e.target.value,
                         slug: formData.slug || generateSlug(e.target.value),
-                      });
-                    }}
+                      })
+                    }
                     required
                   />
                 </div>
@@ -197,9 +313,7 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Se generará automáticamente si se deja vacío
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">Se generará automáticamente si se deja vacío</p>
                 </div>
 
                 <div>
@@ -222,26 +336,21 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
                       <SelectValue placeholder="Sin categoría padre" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="0">Sin categoría padre</SelectItem>
-                      {categories?.filter((cat: WooCommerceCategory) => 
-                        editingCategory ? cat.id !== editingCategory.id : true
-                      ).map((cat: WooCommerceCategory) => (
-                        <SelectItem key={cat.id} value={cat.id.toString()}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="0">Sin categoría padre (raíz)</SelectItem>
+                      {rootCategories
+                        .filter((cat) => (editingCategory ? cat.id !== editingCategory.id : true))
+                        .map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id.toString()}>
+                            {cat.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    type="submit"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                  >
-                    {(createMutation.isPending || updateMutation.isPending) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
+                  <Button type="submit" disabled={isBusy}>
+                    {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {editingCategory ? 'Actualizar' : 'Crear'} Categoría
                   </Button>
                   {editingCategory && (
@@ -266,9 +375,7 @@ export function CategoriesWooCommerceModal({ open, onOpenChange }: CategoriesWoo
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Eliminar
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
