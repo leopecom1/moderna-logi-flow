@@ -1,27 +1,27 @@
 
 
-## Plan: Organizar categorías WooCommerce por raíz/subcategorías con creación jerárquica
+## Plan: Agregar creación de categorías/subcategorías WooCommerce inline
 
-### Cambios en `src/components/forms/CategoriesWooCommerceModal.tsx`
+### Cambios en `src/components/forms/CreateProductModal.tsx`
 
-1. **Agrupar categorías en estructura de árbol**: Procesar el array plano de categorías usando el campo `parent` para construir una jerarquía (raíz = `parent === 0`, subcategorías = `parent === id_de_raíz`).
+1. **Importar `useCreateWooCommerceCategory`** desde `@/hooks/useWooCommerceCategories` (ya existe el hook).
 
-2. **Renderizar lista jerárquica**: Reemplazar la tabla plana por una vista con acordeón/collapsible donde:
-   - Las categorías raíz se muestran como encabezados expandibles con nombre, slug, cantidad de productos y acciones (editar/eliminar)
-   - Las subcategorías aparecen indentadas debajo de su padre con las mismas acciones
-   - Las categorías sin hijos se muestran sin expandir
+2. **Agregar estado local** para el flujo de creación inline:
+   - `showCreateWooCategory: boolean` — checkbox para mostrar/ocultar el formulario
+   - `newWooCategoryName: string` — nombre de la nueva categoría
+   - `newWooCategoryParent: number` — ID del padre (0 = raíz, o ID de categoría raíz para subcategoría)
 
-3. **Mejorar el selector "Categoría Padre"**: En el formulario de creación/edición, mostrar solo categorías raíz (`parent === 0`) como opciones de padre, evitando anidar más de un nivel (consistente con WooCommerce).
+3. **Agregar UI debajo de la lista jerárquica de categorías**:
+   - Un checkbox "Crear nueva categoría"
+   - Al activarse, muestra: campo de texto para nombre + selector de "Categoría padre" (opciones: "Ninguna (raíz)" + lista de categorías raíz existentes)
+   - Botón "Crear" que llama a `useCreateWooCommerceCategory` y al completarse invalida la query de categorías para refrescar la lista
+   - Al crearse exitosamente, se auto-selecciona la nueva categoría en `wooFormData.categories`
 
-4. **Botones rápidos de "Crear subcategoría"**: Agregar un botón junto a cada categoría raíz que pre-seleccione esa categoría como padre en el formulario, facilitando la creación de subcategorías.
-
-5. **Mantener búsqueda funcional**: El filtro de búsqueda mostrará tanto categorías raíz como subcategorías que coincidan, mostrando la raíz si alguna subcategoría coincide.
+4. **Invalidar queries** tras crear la categoría para que la lista se actualice inmediatamente.
 
 ### Sección técnica
 
-- Archivo único: `src/components/forms/CategoriesWooCommerceModal.tsx`
-- Se usa `Collapsible` de Radix UI (ya instalado) para expandir/contraer subcategorías
-- La agrupación se hace client-side con `useMemo` sobre el array de categorías existente
-- No requiere cambios en edge functions ni en la API de WooCommerce (la data de `parent` ya viene en la respuesta)
-- No requiere migraciones de base de datos
+- Se reutiliza el hook `useCreateWooCommerceCategory` que ya maneja la llamada a la edge function y los toasts
+- El selector de padre solo muestra categorías con `parent === 0` (máximo un nivel de profundidad)
+- No requiere cambios en edge functions ni tipos adicionales
 
