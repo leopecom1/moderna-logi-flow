@@ -42,7 +42,7 @@ import { CreateCategoryModal } from "./CreateCategoryModal";
 import { ProductVariantConfig } from "./ProductVariantConfig";
 import { WooCommerceImageUpload } from "./WooCommerceImageUpload";
 import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct } from "@/hooks/useWooCommerceProducts";
-import { useWooCommerceCategories } from "@/hooks/useWooCommerceCategories";
+import { useWooCommerceCategories, useCreateWooCommerceCategory } from "@/hooks/useWooCommerceCategories";
 
 const formSchema = z.object({
   name: z.string().min(1, "Nombre es requerido"),
@@ -135,11 +135,15 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     warehouse_id: null,
   });
   const [realStockPreview, setRealStockPreview] = React.useState<number | null>(null);
+  const [showCreateWooCategory, setShowCreateWooCategory] = React.useState(false);
+  const [newWooCategoryName, setNewWooCategoryName] = React.useState('');
+  const [newWooCategoryParent, setNewWooCategoryParent] = React.useState<number>(0);
   const { toast } = useToast();
 
   const createWooMutation = useCreateWooCommerceProduct();
   const updateWooMutation = useUpdateWooCommerceProduct();
   const { data: wooCategories, isLoading: wooCategoriesLoading } = useWooCommerceCategories();
+  const createWooCategoryMutation = useCreateWooCommerceCategory();
 
   // Fetch categories
   const { data: categories, refetch: refetchCategories } = useQuery({
@@ -1203,6 +1207,80 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         })()
                       ) : (
                         <p className="text-xs text-muted-foreground">No hay categorías disponibles en la tienda web.</p>
+                      )}
+
+                      {/* Crear nueva categoría inline */}
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Checkbox
+                          id="createWooCategory"
+                          checked={showCreateWooCategory}
+                          onCheckedChange={(val) => setShowCreateWooCategory(!!val)}
+                        />
+                        <Label htmlFor="createWooCategory" className="text-sm cursor-pointer">
+                          Crear nueva categoría
+                        </Label>
+                      </div>
+
+                      {showCreateWooCategory && (
+                        <div className="border rounded-md p-3 space-y-3 bg-muted/30">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Nombre de la categoría</Label>
+                            <Input
+                              placeholder="Ej: Muebles de jardín"
+                              value={newWooCategoryName}
+                              onChange={(e) => setNewWooCategoryName(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Categoría padre</Label>
+                            <Select
+                              value={String(newWooCategoryParent)}
+                              onValueChange={(val) => setNewWooCategoryParent(Number(val))}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar padre" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="0">Ninguna (raíz)</SelectItem>
+                                {wooCategories && (wooCategories as any[])
+                                  .filter((c: any) => c.parent === 0)
+                                  .map((c: any) => (
+                                    <SelectItem key={c.id} value={String(c.id)}>
+                                      {c.name}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={!newWooCategoryName.trim() || createWooCategoryMutation.isPending}
+                            onClick={() => {
+                              createWooCategoryMutation.mutate(
+                                {
+                                  name: newWooCategoryName.trim(),
+                                  parent: newWooCategoryParent || undefined,
+                                },
+                                {
+                                  onSuccess: (data: any) => {
+                                    if (data?.id) {
+                                      setWooFormData(prev => ({
+                                        ...prev,
+                                        categories: [...prev.categories, data.id],
+                                      }));
+                                    }
+                                    setNewWooCategoryName('');
+                                    setNewWooCategoryParent(0);
+                                    setShowCreateWooCategory(false);
+                                  },
+                                }
+                              );
+                            }}
+                          >
+                            {createWooCategoryMutation.isPending ? 'Creando...' : 'Crear categoría'}
+                          </Button>
+                        </div>
                       )}
                     </div>
 
