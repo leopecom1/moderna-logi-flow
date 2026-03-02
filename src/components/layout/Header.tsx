@@ -49,20 +49,20 @@ export const Header = () => {
     }
   };
   if (!profile) return null;
-  return <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 animate-element animate-delay-100">
-      <div className="h-full flex items-center justify-between px-4">
+  return <header className="h-14 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 shadow-[0_1px_3px_0_rgb(0_0_0/0.04)] animate-element animate-delay-100">
+      <div className="h-full flex items-center justify-between px-5">
         <div className="flex items-center gap-4 animate-element animate-delay-200">
-          <SidebarTrigger className="smooth-transition" />
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className={`${getRoleColor(profile.role)} smooth-transition`}>
+          <SidebarTrigger className="smooth-transition hover:bg-muted rounded-lg" />
+          <div className="flex items-center gap-2.5">
+            <Badge variant="outline" className={`${getRoleColor(profile.role)} smooth-transition border-0 shadow-sm px-2.5 py-1`}>
               {getRoleIcon(profile.role)}
-              <span className="ml-1 capitalize">{profile.role}</span>
+              <span className="ml-1.5 capitalize text-[11px] font-semibold tracking-wide">{profile.role}</span>
             </Badge>
-            
+
             {usdRate && (
-              <Badge variant="secondary" className="flex items-center gap-1 smooth-transition">
-                <DollarSign className="h-3 w-3" />
-                <span className="text-xs">
+              <Badge variant="secondary" className="flex items-center gap-1.5 smooth-transition shadow-sm border-0 px-2.5 py-1">
+                <DollarSign className="h-3 w-3 opacity-60" />
+                <span className="text-[11px] font-semibold tracking-wide">
                   USD: ${usdRate.sell_rate.toFixed(2)}
                 </span>
               </Badge>
@@ -70,19 +70,19 @@ export const Header = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 animate-element animate-delay-300">
+        <div className="flex items-center gap-1 animate-element animate-delay-300">
           <Button
             variant="ghost"
             size="sm"
-            className="relative h-9 w-9 p-0 smooth-transition"
+            className="relative h-9 w-9 p-0 smooth-transition rounded-lg hover:bg-muted"
             onClick={() => setShowUpdates(true)}
             title="Novedades del sistema"
           >
-            <Newspaper className="h-4 w-4" />
+            <Newspaper className="h-4 w-4 opacity-60" />
             {unreadCount > 0 && (
-              <Badge 
-                variant="destructive" 
-                className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 text-xs rounded-full flex items-center justify-center"
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 text-[10px] rounded-full flex items-center justify-center font-bold shadow-sm"
               >
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Badge>
@@ -92,28 +92,30 @@ export const Header = () => {
           <Button
             variant="ghost"
             size="sm"
-            className="relative h-9 w-9 p-0 smooth-transition"
+            className="relative h-9 w-9 p-0 smooth-transition rounded-lg hover:bg-muted"
             onClick={() => setShowFeedback(true)}
             title="Feedback"
           >
-            <MessageSquare className="h-4 w-4" />
+            <MessageSquare className="h-4 w-4 opacity-60" />
             {profile?.role === 'gerencia' && pendingCount > 0 && (
-              <Badge 
-                variant="secondary" 
-                className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 text-xs rounded-full flex items-center justify-center"
+              <Badge
+                variant="secondary"
+                className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 text-[10px] rounded-full flex items-center justify-center font-bold shadow-sm"
               >
                 {pendingCount > 9 ? '9+' : pendingCount}
               </Badge>
             )}
           </Button>
-          
+
           <NotificationDropdown />
-          
+
+          <div className="w-px h-6 bg-border/60 mx-1.5" />
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full smooth-transition">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>
+              <Button variant="ghost" className="relative h-9 w-9 rounded-full smooth-transition p-0">
+                <Avatar className="h-8 w-8 ring-2 ring-border/50 ring-offset-1 ring-offset-background">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                     {profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
@@ -122,25 +124,25 @@ export const Header = () => {
             <DropdownMenuContent className="w-56 glass-card" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{profile.full_name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">
+                  <p className="text-sm font-semibold leading-none">{profile.full_name}</p>
+                  <p className="text-xs leading-none text-muted-foreground capitalize">
                     {profile.role}
                   </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
+              <DropdownMenuItem className="cursor-pointer">
+                <User className="mr-2 h-4 w-4 opacity-60" />
                 <span>Perfil</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={signOut}>
-                <LogOut className="mr-2 h-4 w-4" />
+              <DropdownMenuItem onClick={signOut} className="cursor-pointer text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4 opacity-60" />
                 <span>Cerrar sesión</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          
+
           <UpdatesPanel open={showUpdates} onOpenChange={setShowUpdates} />
           <FeedbackPanel open={showFeedback} onOpenChange={setShowFeedback} />
         </div>

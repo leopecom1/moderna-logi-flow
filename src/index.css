@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
 
@@ -66,6 +66,13 @@ All colors MUST be HSL.
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(207 89% 44%), hsl(207 89% 54%));
     --gradient-accent: linear-gradient(135deg, hsl(45 93% 47%), hsl(45 93% 57%));
+
+    /* Professional shadow system */
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.03);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.05), 0 4px 6px -4px rgb(0 0 0 / 0.03);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.03);
   }
 
   .dark {
@@ -121,6 +128,12 @@ All colors MUST be HSL.
 
     --gradient-primary: linear-gradient(135deg, hsl(207 89% 54%), hsl(207 89% 64%));
     --gradient-accent: linear-gradient(135deg, hsl(45 93% 57%), hsl(45 93% 67%));
+
+    --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.1);
+    --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.15), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.2), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   }
 }
 
@@ -129,11 +142,148 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'tnum';
+    font-variant-numeric: tabular-nums;
   }
 }
 
+/* ─── Professional scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.35);
+}
+
+/* ─── Smooth transitions ─── */
+.smooth-transition {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Glass card ─── */
+.glass-card {
+  background: hsl(var(--background) / 0.8);
+  backdrop-filter: blur(12px) saturate(1.8);
+  -webkit-backdrop-filter: blur(12px) saturate(1.8);
+  border: 1px solid hsl(var(--border) / 0.6);
+  box-shadow: var(--shadow-lg);
+}
+
+.dark .glass-card {
+  background: hsl(var(--background) / 0.85);
+  border-color: hsl(var(--border) / 0.3);
+}
+
+/* ─── Animated entrance elements ─── */
+.animate-element {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-delay-100 { animation-delay: 0.06s; }
+.animate-delay-200 { animation-delay: 0.12s; }
+.animate-delay-300 { animation-delay: 0.18s; }
+.animate-delay-400 { animation-delay: 0.24s; }
+.animate-delay-500 { animation-delay: 0.30s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Card enhancements ─── */
+@layer components {
+  /* Better cards */
+  .card,
+  [data-slot="card"],
+  div[class*="rounded-lg border bg-card"] {
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  div[class*="rounded-lg border bg-card"]:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Better tables */
+  table thead tr {
+    background: hsl(var(--muted) / 0.6);
+  }
+
+  table thead th {
+    font-weight: 600;
+    font-size: 0.8rem;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  table tbody tr {
+    transition: background-color 0.15s ease;
+  }
+
+  table tbody tr:hover {
+    background: hsl(var(--muted) / 0.4);
+  }
+
+  /* Better inputs */
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select,
+  [role="combobox"] {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):focus,
+  textarea:focus,
+  select:focus,
+  [role="combobox"]:focus {
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  }
+
+  /* Better badges */
+  [data-slot="badge"],
+  span[class*="rounded-full"][class*="text-xs"] {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  /* Better buttons */
+  button {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+/* ─── Custom checkbox ─── */
 .custom-checkbox {
   appearance: none;
   width: 16px;
@@ -143,6 +293,11 @@ All colors MUST be HSL.
   background-color: transparent;
   cursor: pointer;
   position: relative;
+  transition: all 0.15s ease;
+}
+
+.custom-checkbox:hover {
+  border-color: hsl(var(--primary) / 0.5);
 }
 
 .custom-checkbox:checked {
@@ -158,4 +313,17 @@ All colors MUST be HSL.
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+}
+
+/* ─── Focus visible ring (accessibility) ─── */
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─── Selection color ─── */
+::selection {
+  background: hsl(var(--primary) / 0.15);
+  color: hsl(var(--foreground));
 }

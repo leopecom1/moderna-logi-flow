@@ -83,9 +83,9 @@ export const AppSidebar = () => {
     items.some(item => isActive(item.url));
 
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
-    isActive 
-      ? 'bg-primary/15 font-semibold border-l-3 border-primary pl-3' 
-      : 'hover:bg-sidebar-accent transition-colors';
+    isActive
+      ? 'bg-white/15 font-semibold border-l-[3px] border-white/80 pl-3 backdrop-blur-sm'
+      : 'hover:bg-white/10 transition-all duration-200';
 
   // Gerencia - 7 grupos lógicos bien organizados
   const gerenciaItems: MenuCategory[] = [
@@ -269,7 +269,7 @@ export const AppSidebar = () => {
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
-          {!isCollapsed && <Separator className="my-2" />}
+          {!isCollapsed && <Separator className="my-2 bg-white/10" />}
         </SidebarGroup>
       );
     }
@@ -283,13 +283,13 @@ export const AppSidebar = () => {
       >
         <SidebarGroup className="py-1">
           <CollapsibleTrigger asChild>
-            <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-lg transition-colors flex items-center justify-between pr-3 py-2.5 text-sm font-semibold text-white uppercase tracking-wide">
+            <SidebarGroupLabel className="cursor-pointer hover:bg-white/10 rounded-lg transition-all duration-200 flex items-center justify-between pr-3 py-2.5 text-[11px] font-semibold text-white/70 uppercase tracking-widest">
               <div className="flex items-center gap-2.5">
-                <category.icon className="h-5 w-5" />
+                <category.icon className="h-4 w-4 text-white/50" />
                 {!isCollapsed && <span>{category.category}</span>}
               </div>
               {!isCollapsed && (
-                <ChevronRight className="h-4 w-4 text-sidebar-foreground/60 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                <ChevronRight className="h-3.5 w-3.5 text-white/40 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
               )}
             </SidebarGroupLabel>
           </CollapsibleTrigger>
@@ -299,11 +299,11 @@ export const AppSidebar = () => {
                 {category.items.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild className="h-10">
-                      <NavLink 
-                        to={item.url} 
-                        className={({ isActive }) => `${getNavCls({ isActive })} text-sm text-white`}
+                      <NavLink
+                        to={item.url}
+                        className={({ isActive }) => `${getNavCls({ isActive })} text-[13px] text-white/90 rounded-md`}
                       >
-                        <item.icon className="h-5 w-5 shrink-0" />
+                        <item.icon className="h-4 w-4 shrink-0 opacity-70" />
                         {!isCollapsed && <span className="font-medium">{item.title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
@@ -319,24 +319,31 @@ export const AppSidebar = () => {
 
   return (
     <Sidebar className={isCollapsed ? 'w-14' : 'w-60'} collapsible="icon">
-      <SidebarContent>
+      <SidebarContent className="bg-gradient-to-b from-sidebar to-[hsl(24_41%_38%)]">
         {/* Logo Section */}
-        <div className="p-4 border-b border-sidebar-border">
+        <div className={`border-b border-white/10 ${isCollapsed ? 'p-3' : 'px-5 py-5'}`}>
           <div className="flex items-center justify-center">
-            <img 
-              src={modernaLogo} 
-              alt="Moderna Logo" 
-              className={`object-contain transition-all duration-200 ${
-                isCollapsed ? 'h-8 w-8' : 'h-12 w-auto'
+            <img
+              src={modernaLogo}
+              alt="Moderna Logo"
+              className={`object-contain transition-all duration-300 ${
+                isCollapsed ? 'h-8 w-8' : 'h-11 w-auto'
               }`}
             />
           </div>
         </div>
 
         {/* Menu Categories */}
-        <div className="flex-1 overflow-y-auto py-2">
+        <div className="flex-1 overflow-y-auto py-3 px-1.5">
           {menuCategories.map((category, index) => renderCategory(category, index))}
         </div>
+
+        {/* Footer */}
+        {!isCollapsed && (
+          <div className="border-t border-white/10 px-5 py-3">
+            <p className="text-[10px] text-white/40 tracking-wider uppercase">Moderna Logi-Flow</p>
+          </div>
+        )}
       </SidebarContent>
     </Sidebar>
   );
