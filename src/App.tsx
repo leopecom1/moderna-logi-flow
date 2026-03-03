@@ -54,6 +54,8 @@ import EcommerceCampaignsPage from "./pages/EcommerceCampaignsPage";
 import KpiAnalyticsPage from "./pages/KpiAnalyticsPage";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import NotFound from "./pages/NotFound";
+import { DemoVersionProvider } from "@/context/DemoVersionContext";
+import { DemoRoute } from "@/components/demo/DemoRoute";
 
 // Create a simple QueryClient instance
 const queryClient = new QueryClient({
@@ -73,58 +75,66 @@ function App() {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <DemoVersionProvider>
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<AuthPage />} />
-            <Route path="/users" element={<UsersPage />} />
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/orders/:id" element={<OrderDetailPage />} />
-            <Route path="/customers" element={<CustomersPage />} />
-            <Route path="/customers/:id" element={<CustomerDetailPage />} />
-            <Route path="/cadetes" element={<CadetesPage />} />
-            <Route path="/cadetes/:id" element={<CadeteDetailPage />} />
-            <Route path="/vehiculos" element={<VehiculosPage />} />
-            <Route path="/deliveries" element={<DeliveriesPage />} />
-            <Route path="/routes" element={<RoutesPage />} />
-            <Route path="/routes/:id" element={<RouteDetailPage />} />
-            <Route path="/incidents" element={<IncidentsPage />} />
-            <Route path="/payments" element={<PaymentsPage />} />
-            <Route path="/finance" element={<FinancePage />} />
-            <Route path="/collections" element={<CollectionsPage />} />
-            <Route path="/accounts-receivable" element={<AccountsReceivablePage />} />
-            <Route path="/purchases" element={<PurchasesPage />} />
-            <Route path="/supplier-payments" element={<SupplierPaymentsPage />} />
-            <Route path="/products" element={<ProductsPage />} />
-            
-            <Route path="/bulk-import" element={<BulkImportPage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/user-management" element={<UserManagementPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/references" element={<ReferencesPage />} />
-            <Route path="/cash-management" element={<CashManagementPage />} />
-            <Route path="/route-optimization" element={<RouteOptimizationPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/business" element={<BusinessManagementPage />} />
-            <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/stock-movements" element={<StockMovementsPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/credito-moderna" element={<ProtectedRoute><CreditoModernaPage /></ProtectedRoute>} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            <Route path="/logistics" element={<ProtectedRoute><NewLogisticsPage /></ProtectedRoute>} />
-            <Route path="/routes-management" element={<ProtectedRoute><RoutesManagementPage /></ProtectedRoute>} />
-            <Route path="/routes-view" element={<ProtectedRoute><RoutesViewPage /></ProtectedRoute>} />
-            <Route path="/assembly" element={<ProtectedRoute><AssemblyPage /></ProtectedRoute>} />
-            <Route path="/armadores" element={<ProtectedRoute><ArmadoresPage /></ProtectedRoute>} />
-          <Route path="/woocommerce-config" element={<ProtectedRoute><WooCommerceConfigPage /></ProtectedRoute>} />
-          <Route path="/woocommerce-review" element={<ProtectedRoute><WooCommerceReviewPage /></ProtectedRoute>} />
-          <Route path="/woocommerce-products" element={<ProtectedRoute><WooCommerceProductsPage /></ProtectedRoute>} />
-          <Route path="/product-sync" element={<ProtectedRoute><ProductSyncPage /></ProtectedRoute>} />
-          <Route path="/product-sync-history" element={<ProtectedRoute><ProductSyncHistoryPage /></ProtectedRoute>} />
-          <Route path="/ecommerce-campaigns" element={<ProtectedRoute><EcommerceCampaignsPage /></ProtectedRoute>} />
-          <Route path="/kpi-analytics" element={<ProtectedRoute><KpiAnalyticsPage /></ProtectedRoute>} />
-          <Route path="*" element={<NotFound />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/incidents" element={<IncidentsPage />} />
+
+            {/* V1: Comercial */}
+            <Route path="/customers" element={<DemoRoute><CustomersPage /></DemoRoute>} />
+            <Route path="/customers/:id" element={<DemoRoute><CustomerDetailPage /></DemoRoute>} />
+            <Route path="/orders" element={<DemoRoute><OrdersPage /></DemoRoute>} />
+            <Route path="/orders/:id" element={<DemoRoute><OrderDetailPage /></DemoRoute>} />
+            <Route path="/deliveries" element={<DemoRoute><DeliveriesPage /></DemoRoute>} />
+            <Route path="/collections" element={<DemoRoute><CollectionsPage /></DemoRoute>} />
+            <Route path="/accounts-receivable" element={<DemoRoute><AccountsReceivablePage /></DemoRoute>} />
+
+            {/* V2: Inventario + Operaciones */}
+            <Route path="/products" element={<DemoRoute><ProductsPage /></DemoRoute>} />
+            <Route path="/inventory" element={<DemoRoute><InventoryPage /></DemoRoute>} />
+            <Route path="/stock-movements" element={<DemoRoute><StockMovementsPage /></DemoRoute>} />
+            <Route path="/logistics" element={<DemoRoute><ProtectedRoute><NewLogisticsPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/routes-management" element={<DemoRoute><ProtectedRoute><RoutesManagementPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/routes" element={<DemoRoute><RoutesPage /></DemoRoute>} />
+            <Route path="/routes/:id" element={<DemoRoute><RouteDetailPage /></DemoRoute>} />
+            <Route path="/routes-view" element={<DemoRoute><ProtectedRoute><RoutesViewPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/route-optimization" element={<DemoRoute><RouteOptimizationPage /></DemoRoute>} />
+            <Route path="/assembly" element={<DemoRoute><ProtectedRoute><AssemblyPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/armadores" element={<DemoRoute><ProtectedRoute><ArmadoresPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/cadetes" element={<DemoRoute><CadetesPage /></DemoRoute>} />
+            <Route path="/cadetes/:id" element={<DemoRoute><CadeteDetailPage /></DemoRoute>} />
+            <Route path="/vehiculos" element={<DemoRoute><VehiculosPage /></DemoRoute>} />
+
+            {/* V3: Finanzas, E-commerce, Admin */}
+            <Route path="/users" element={<DemoRoute><UsersPage /></DemoRoute>} />
+            <Route path="/payments" element={<DemoRoute><PaymentsPage /></DemoRoute>} />
+            <Route path="/finance" element={<DemoRoute><FinancePage /></DemoRoute>} />
+            <Route path="/purchases" element={<DemoRoute><PurchasesPage /></DemoRoute>} />
+            <Route path="/supplier-payments" element={<DemoRoute><SupplierPaymentsPage /></DemoRoute>} />
+            <Route path="/bulk-import" element={<DemoRoute><BulkImportPage /></DemoRoute>} />
+            <Route path="/user-management" element={<DemoRoute><UserManagementPage /></DemoRoute>} />
+            <Route path="/settings" element={<DemoRoute><SettingsPage /></DemoRoute>} />
+            <Route path="/references" element={<DemoRoute><ReferencesPage /></DemoRoute>} />
+            <Route path="/cash-management" element={<DemoRoute><CashManagementPage /></DemoRoute>} />
+            <Route path="/analytics" element={<DemoRoute><AnalyticsPage /></DemoRoute>} />
+            <Route path="/business" element={<DemoRoute><BusinessManagementPage /></DemoRoute>} />
+            <Route path="/reports" element={<DemoRoute><ReportsPage /></DemoRoute>} />
+            <Route path="/credito-moderna" element={<DemoRoute><ProtectedRoute><CreditoModernaPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/woocommerce-config" element={<DemoRoute><ProtectedRoute><WooCommerceConfigPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/woocommerce-review" element={<DemoRoute><ProtectedRoute><WooCommerceReviewPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/woocommerce-products" element={<DemoRoute><ProtectedRoute><WooCommerceProductsPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/product-sync" element={<DemoRoute><ProtectedRoute><ProductSyncPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/product-sync-history" element={<DemoRoute><ProtectedRoute><ProductSyncHistoryPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/ecommerce-campaigns" element={<DemoRoute><ProtectedRoute><EcommerceCampaignsPage /></ProtectedRoute></DemoRoute>} />
+            <Route path="/kpi-analytics" element={<DemoRoute><ProtectedRoute><KpiAnalyticsPage /></ProtectedRoute></DemoRoute>} />
+
+            <Route path="*" element={<NotFound />} />
           </Routes>
+          </DemoVersionProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

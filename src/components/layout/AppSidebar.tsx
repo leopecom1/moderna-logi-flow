@@ -1,6 +1,9 @@
+import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink, useLocation } from 'react-router-dom';
 import modernaLogo from '@/assets/moderna-logo-blanco.png';
+import { useDemoVersion } from '@/context/DemoVersionContext';
+import { DemoVersionSelector } from '@/components/demo/DemoVersionSelector';
 import {
   Sidebar,
   SidebarContent,
@@ -76,6 +79,20 @@ export const AppSidebar = () => {
   const location = useLocation();
   const currentPath = location.pathname;
   const isCollapsed = state === 'collapsed';
+  const { demoVersion, getAllowedCategories } = useDemoVersion();
+  const [showDemoSelector, setShowDemoSelector] = useState(false);
+  const [clickCount, setClickCount] = useState(0);
+  const clickTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const handleLogoClick = () => {
+    setClickCount(prev => prev + 1);
+    clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => setClickCount(0), 500);
+    if (clickCount >= 2) {
+      setShowDemoSelector(true);
+      setClickCount(0);
+    }
+  };
 
   const isActive = (path: string) => currentPath === path;
 
@@ -95,7 +112,6 @@ export const AppSidebar = () => {
       defaultOpen: true,
       items: [
         { title: 'Dashboard', url: '/', icon: Home },
-        { title: 'Analytics', url: '/kpi-analytics', icon: Brain },
       ]
     },
     {
@@ -156,6 +172,7 @@ export const AppSidebar = () => {
       category: 'Administración',
       icon: Settings,
       items: [
+        { title: 'Analytics KPI', url: '/kpi-analytics', icon: Brain },
         { title: 'Usuarios', url: '/user-management', icon: Crown },
         { title: 'Cadetes', url: '/cadetes', icon: UserPlus },
         { title: 'Vehículos', url: '/vehiculos', icon: Car },
@@ -244,7 +261,11 @@ export const AppSidebar = () => {
     }
   };
 
-  const menuCategories = getMenuItems();
+  const allCategories = getMenuItems();
+  const allowedCategories = getAllowedCategories();
+  const menuCategories = allowedCategories
+    ? allCategories.filter(cat => allowedCategories.includes(cat.category))
+    : allCategories;
 
   const renderCategory = (category: MenuCategory, index: number) => {
     const isCategoryActive = isGroupActive(category.items);
@@ -320,8 +341,11 @@ export const AppSidebar = () => {
   return (
     <Sidebar className={isCollapsed ? 'w-14' : 'w-60'} collapsible="icon">
       <SidebarContent className="bg-gradient-to-b from-sidebar to-[hsl(24_41%_38%)]">
-        {/* Logo Section */}
-        <div className={`border-b border-white/10 ${isCollapsed ? 'p-3' : 'px-5 py-5'}`}>
+        {/* Logo Section — triple-click abre selector demo */}
+        <div
+          className={`border-b border-white/10 ${isCollapsed ? 'p-3' : 'px-5 py-5'} cursor-pointer select-none`}
+          onClick={handleLogoClick}
+        >
           <div className="flex items-center justify-center">
             <img
               src={modernaLogo}
@@ -340,11 +364,16 @@ export const AppSidebar = () => {
 
         {/* Footer */}
         {!isCollapsed && (
-          <div className="border-t border-white/10 px-5 py-3">
+          <div className="border-t border-white/10 px-5 py-3 flex items-center justify-between">
             <p className="text-[10px] text-white/40 tracking-wider uppercase">Moderna Logi-Flow</p>
+            {demoVersion && (
+              <span className="text-[9px] text-white/30 font-mono uppercase">{demoVersion}</span>
+            )}
           </div>
         )}
       </SidebarContent>
+
+      <DemoVersionSelector open={showDemoSelector} onOpenChange={setShowDemoSelector} />
     </Sidebar>
   );
 };
