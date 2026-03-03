@@ -81,16 +81,16 @@ export const AppSidebar = () => {
   const isCollapsed = state === 'collapsed';
   const { demoVersion, getAllowedCategories } = useDemoVersion();
   const [showDemoSelector, setShowDemoSelector] = useState(false);
-  const [clickCount, setClickCount] = useState(0);
+  const clickCountRef = useRef(0);
   const clickTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const handleLogoClick = () => {
-    setClickCount(prev => prev + 1);
+    clickCountRef.current += 1;
     clearTimeout(clickTimer.current);
-    clickTimer.current = setTimeout(() => setClickCount(0), 500);
-    if (clickCount >= 2) {
+    clickTimer.current = setTimeout(() => { clickCountRef.current = 0; }, 800);
+    if (clickCountRef.current >= 3) {
       setShowDemoSelector(true);
-      setClickCount(0);
+      clickCountRef.current = 0;
     }
   };
 
