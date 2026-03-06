@@ -47,9 +47,11 @@ export function ProductVariantConfig({
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
   const [variantValues, setVariantValues] = useState<VariantValue[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [selectedValues, setSelectedValues] = useState<Record<string, string[]>>({});
   const [combinations, setCombinations] = useState<VariantCombination[]>([]);
   const [selectedCombination, setSelectedCombination] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [newValueInputs, setNewValueInputs] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,12 +59,13 @@ export function ProductVariantConfig({
   }, []);
 
   useEffect(() => {
-    if (selectedTypes.length > 0) {
+    const hasAnyValues = Object.values(selectedValues).some(v => v.length > 0);
+    if (selectedTypes.length > 0 && hasAnyValues) {
       generateCombinations();
     } else {
       setCombinations([]);
     }
-  }, [selectedTypes, variantValues]);
+  }, [selectedTypes, selectedValues]);
 
   useEffect(() => {
     onVariantsChange?.(combinations);
@@ -100,11 +103,15 @@ export function ProductVariantConfig({
       return;
     }
 
-    // Get values for each selected type
-    const typeValues = selectedTypes.map(typeId => ({
-      typeId,
-      values: variantValues.filter(v => v.variant_type_id === typeId)
-    }));
+    // Get only selected values for each type
+    const typeValues = selectedTypes
+      .filter(typeId => (selectedValues[typeId] || []).length > 0)
+      .map(typeId => ({
+        typeId,
+        values: variantValues.filter(v =>
+          v.variant_type_id === typeId && (selectedValues[typeId] || []).includes(v.id)
+        )
+      }));
 
     // Generate all combinations
     const generateRecursive = (typeIndex: number, currentCombination: { [key: string]: string }): VariantCombination[] => {
@@ -149,11 +156,52 @@ export function ProductVariantConfig({
   const handleTypeToggle = (typeId: string) => {
     setSelectedTypes(prev => {
       if (prev.includes(typeId)) {
+        setSelectedValues(sv => {
+          const copy = { ...sv };
+          delete copy[typeId];
+          return copy;
+        });
         return prev.filter(id => id !== typeId);
       } else {
         return [...prev, typeId];
       }
     });
+  };
+
+  const handleValueToggle = (typeId: string, valueId: string) => {
+    setSelectedValues(prev => {
+      const current = prev[typeId] || [];
+      const updated = current.includes(valueId)
+        ? current.filter(id => id !== valueId)
+        : [...current, valueId];
+      return { ...prev, [typeId]: updated };
+    });
+  };
+
+  const handleCreateValue = async (typeId: string) => {
+    const name = (newValueInputs[typeId] || "").trim();
+    if (!name) return;
+
+    try {
+      const { data, error } = await supabase
+        .from("product_variant_values")
+        .insert([{ variant_type_id: typeId, name }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setVariantValues(prev => [...prev, data]);
+      setSelectedValues(prev => ({
+        ...prev,
+        [typeId]: [...(prev[typeId] || []), data.id]
+      }));
+      setNewValueInputs(prev => ({ ...prev, [typeId]: "" }));
+      toast({ title: "Valor creado", description: `"${name}" agregado correctamente` });
+    } catch (error) {
+      console.error("Error creating variant value:", error);
+      toast({ title: "Error", description: "No se pudo crear el valor", variant: "destructive" });
+    }
   };
 
   const updateCombination = (combinationId: string, field: keyof VariantCombination, value: any) => {
@@ -227,6 +275,63 @@ export function ProductVariantConfig({
           )}
         </CardContent>
       </Card>
+
+      {/* Values Selection Per Type */}
+      {selectedTypes.map((typeId) => {
+        const type = variantTypes.find(t => t.id === typeId);
+        if (!type) return null;
+        const typeVals = variantValues.filter(v => v.variant_type_id === typeId);
+        const selected = selectedValues[typeId] || [];
+
+        return (
+          <Card key={typeId}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Valores de {type.name}</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Selecciona los valores que aplicarán a este producto
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {typeVals.map((val) => {
+                  const isSelected = selected.includes(val.id);
+                  return (
+                    <Badge
+                      key={val.id}
+                      variant={isSelected ? "default" : "outline"}
+                      className="cursor-pointer"
+                      onClick={() => handleValueToggle(typeId, val.id)}
+                    >
+                      {val.name}
+                    </Badge>
+                  );
+                })}
+                {typeVals.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No hay valores. Crea uno abajo.</p>
+                )}
+              </div>
+              <div className="flex gap-2 items-center">
+                <Input
+                  placeholder={`Nuevo ${type.name.toLowerCase()}...`}
+                  value={newValueInputs[typeId] || ""}
+                  onChange={(e) => setNewValueInputs(prev => ({ ...prev, [typeId]: e.target.value }))}
+                  onKeyDown={(e) => e.key === "Enter" && handleCreateValue(typeId)}
+                  className="max-w-xs h-8 text-sm"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleCreateValue(typeId)}
+                  className="h-8 px-2"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Generated Combinations */}
       {combinations.length > 0 && (
@@ -314,7 +419,7 @@ export function ProductVariantConfig({
           <CardContent className="flex flex-col items-center justify-center py-8">
             <AlertTriangle className="h-8 w-8 text-yellow-500 mb-2" />
             <p className="text-sm text-muted-foreground">
-              No se pueden generar combinaciones. Verifica que los tipos seleccionados tengan valores configurados.
+              Selecciona al menos un valor en cada tipo para generar combinaciones.
             </p>
           </CardContent>
         </Card>
