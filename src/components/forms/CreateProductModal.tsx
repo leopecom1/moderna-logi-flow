@@ -470,11 +470,13 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
             if (isVariableWoo) {
               const basePrice = parseFloat(wooFormData.regular_price) || 0;
               const wooVariations = variants.map(variant => ({
-                regular_price: String(basePrice + (variant.priceAdjustment || 0)),
+                regular_price: variant.wooRegularPrice || String(basePrice + (variant.priceAdjustment || 0)),
+                sale_price: variant.wooSalePrice || undefined,
                 sku: variant.sku || undefined,
                 status: 'publish' as const,
                 stock_status: 'instock' as const,
-                ...stockPayload,
+                manage_stock: variant.wooManageStock ?? stockPayload.manage_stock,
+                stock_quantity: variant.wooManageStock ? (variant.wooStockQuantity ?? 0) : stockPayload.stock_quantity,
                 attributes: Object.entries(variant.values).map(([typeId, valueId]) => ({
                   name: variantMetadata!.types.find(t => t.id === typeId)?.name || '',
                   option: variantMetadata!.values.find(v => v.id === (valueId as string))?.name || '',

@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, AlertTriangle } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, AlertTriangle, Globe } from "lucide-react";
 import { Label } from "@/components/ui/label";
 
 interface VariantType {
@@ -31,6 +32,10 @@ interface VariantCombination {
   values: { [typeId: string]: string }; // typeId -> valueId
   sku?: string;
   priceAdjustment: number;
+  wooRegularPrice?: string;
+  wooSalePrice?: string;
+  wooStockQuantity?: number;
+  wooManageStock?: boolean;
 }
 
 export interface VariantMetadata {
@@ -403,7 +408,7 @@ export function ProductVariantConfig({
                         Se genera automáticamente si se deja vacío
                       </p>
                     </div>
-                    
+
                     <div>
                       <Label className="text-sm font-medium">Ajuste de Precio ($)</Label>
                       <Input
@@ -418,6 +423,61 @@ export function ProductVariantConfig({
                         Ajuste sobre el precio base del producto
                       </p>
                     </div>
+                  </div>
+
+                  {/* Configuración WooCommerce por variante */}
+                  <div className="border-t pt-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Globe className="h-4 w-4" />
+                      Configuración Web (WooCommerce)
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium">Precio Regular Web</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Usa precio base + ajuste si vacío"
+                          value={combination.wooRegularPrice || ""}
+                          onChange={(e) => updateCombination(combination.id, "wooRegularPrice", e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">Precio Oferta Web</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Sin oferta"
+                          value={combination.wooSalePrice || ""}
+                          onChange={(e) => updateCombination(combination.id, "wooSalePrice", e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div>
+                        <p className="text-sm font-medium">Gestionar stock individual</p>
+                        <p className="text-xs text-muted-foreground">Definir stock específico para esta variante</p>
+                      </div>
+                      <Switch
+                        checked={combination.wooManageStock || false}
+                        onCheckedChange={(val) => updateCombination(combination.id, "wooManageStock", val)}
+                      />
+                    </div>
+                    {combination.wooManageStock && (
+                      <div>
+                        <Label className="text-sm font-medium">Cantidad en Stock</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder="0"
+                          value={combination.wooStockQuantity ?? ""}
+                          onChange={(e) => updateCombination(combination.id, "wooStockQuantity", parseInt(e.target.value) || 0)}
+                          className="mt-1 max-w-[200px]"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               );
