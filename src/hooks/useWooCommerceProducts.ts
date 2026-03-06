@@ -34,10 +34,31 @@ export async function callWooCommerceAPI(
     });
 
     if (error) {
-      // FunctionsHttpError tiene detalles en error.context, no en error.message
+      // En @supabase/functions-js v2.4+, error.context es un Response object (no JSON parseado)
       const context = (error as any)?.context;
       let errorDetail = '';
-      if (context) {
+
+      if (context && typeof context === 'object' && typeof context.json === 'function') {
+        // context es un Response object — leer el body
+        try {
+          const body = await context.json();
+          console.error('[WooCommerce] Error response body:', body);
+          if (body?.error) {
+            errorDetail = typeof body.error === 'string' ? body.error : JSON.stringify(body.error);
+          } else if (body?.message) {
+            errorDetail = body.message;
+          } else {
+            errorDetail = JSON.stringify(body);
+          }
+        } catch {
+          try {
+            errorDetail = await context.text();
+          } catch {
+            errorDetail = `HTTP ${context.status || 'unknown'}`;
+          }
+        }
+      } else if (context) {
+        // Fallback: context es un objeto plano (versiones anteriores del SDK)
         if (typeof context === 'string') {
           errorDetail = context;
         } else if (context?.error) {
@@ -48,6 +69,7 @@ export async function callWooCommerceAPI(
           errorDetail = JSON.stringify(context);
         }
       }
+
       const fullMessage = errorDetail || error.message || 'WooCommerce API error';
       console.error('[WooCommerce] API call failed:', fullMessage, error);
       throw new Error(fullMessage);
