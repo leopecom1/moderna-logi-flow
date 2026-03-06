@@ -466,12 +466,11 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         // Construir payload
         const wooPayload: any = {
           name: wooFormData.name,
-          sku: generatedCode,
           type: isVariableWoo ? 'variable' : wooFormData.type,
           status: wooFormData.status,
           featured: wooFormData.featured,
           categories: wooFormData.categories.map(id => ({ id })),
-          images: wooFormData.images.map(src => ({ src })),
+          images: wooFormData.images.filter(src => src).map(src => ({ src })),
         };
         if (wooFormData.short_description) {
           wooPayload.short_description = wooFormData.short_description;
