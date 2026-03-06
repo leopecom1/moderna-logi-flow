@@ -472,6 +472,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
             Object.assign(wooPayload, stockPayload);
           }
 
+          console.log('[WooCommerce] Sending payload:', JSON.stringify(wooPayload, null, 2));
           const wooResponse = await createWooMutation.mutateAsync(wooPayload);
 
           // Guardar el ID de WooCommerce en el producto interno
@@ -518,10 +519,12 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
               : "El producto también fue creado exitosamente en WooCommerce.",
           });
         } catch (wooError: any) {
+          const errorMsg = wooError?.message || wooError?.toString() || 'Error desconocido';
           console.error("Error creating WooCommerce product:", wooError);
+          console.error("Error details:", errorMsg);
           toast({
-            title: "Advertencia: error en la tienda web",
-            description: "El producto interno se creó correctamente, pero no se pudo publicar en WooCommerce. Verificá la configuración.",
+            title: "Error en WooCommerce",
+            description: `Producto interno creado OK. Error web: ${errorMsg.substring(0, 200)}`,
             variant: "destructive",
           });
         }

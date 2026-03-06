@@ -34,8 +34,23 @@ export async function callWooCommerceAPI(
     });
 
     if (error) {
-      console.error('[WooCommerce] API call failed:', error);
-      throw new Error(error.message || 'WooCommerce API error');
+      // FunctionsHttpError tiene detalles en error.context, no en error.message
+      const context = (error as any)?.context;
+      let errorDetail = '';
+      if (context) {
+        if (typeof context === 'string') {
+          errorDetail = context;
+        } else if (context?.error) {
+          errorDetail = typeof context.error === 'string' ? context.error : JSON.stringify(context.error);
+        } else if (context?.message) {
+          errorDetail = context.message;
+        } else {
+          errorDetail = JSON.stringify(context);
+        }
+      }
+      const fullMessage = errorDetail || error.message || 'WooCommerce API error';
+      console.error('[WooCommerce] API call failed:', fullMessage, error);
+      throw new Error(fullMessage);
     }
 
     return data;
