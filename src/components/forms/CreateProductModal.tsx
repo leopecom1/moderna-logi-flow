@@ -427,10 +427,12 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
             type: isVariableWoo ? 'variable' : wooFormData.type,
             status: wooFormData.status,
             featured: wooFormData.featured,
-            short_description: wooFormData.short_description || undefined,
             categories: wooFormData.categories.map(id => ({ id })),
             images: wooFormData.images.map(src => ({ src })),
           };
+          if (wooFormData.short_description) {
+            wooPayload.short_description = wooFormData.short_description;
+          }
 
           if (isVariableWoo) {
             // Para productos variables: construir atributos desde variantes locales
@@ -453,7 +455,9 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
           } else {
             // Producto simple: incluir precio y stock a nivel padre
             wooPayload.regular_price = wooFormData.regular_price;
-            wooPayload.sale_price = wooFormData.on_sale && wooFormData.sale_price ? wooFormData.sale_price : undefined;
+            if (wooFormData.on_sale && wooFormData.sale_price) {
+              wooPayload.sale_price = wooFormData.sale_price;
+            }
             Object.assign(wooPayload, stockPayload);
           }
 
@@ -469,20 +473,23 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
             // Si es variable, crear las variaciones en WooCommerce
             if (isVariableWoo) {
               const basePrice = parseFloat(wooFormData.regular_price) || 0;
-              const wooVariations = variants.map(variant => ({
-                regular_price: variant.wooRegularPrice || String(basePrice + (variant.priceAdjustment || 0)),
-                sale_price: variant.wooSalePrice || undefined,
-                sku: variant.sku || undefined,
-                status: 'publish' as const,
-                stock_status: 'instock' as const,
-                manage_stock: variant.wooManageStock ?? stockPayload.manage_stock,
-                stock_quantity: variant.wooManageStock ? (variant.wooStockQuantity ?? 0) : stockPayload.stock_quantity,
-                image: variant.wooImageUrl ? { src: variant.wooImageUrl } : undefined,
-                attributes: Object.entries(variant.values).map(([typeId, valueId]) => ({
-                  name: variantMetadata!.types.find(t => t.id === typeId)?.name || '',
-                  option: variantMetadata!.values.find(v => v.id === (valueId as string))?.name || '',
-                })),
-              }));
+              const wooVariations = variants.map(variant => {
+                const variation: any = {
+                  regular_price: variant.wooRegularPrice || String(basePrice + (variant.priceAdjustment || 0)),
+                  status: 'publish',
+                  stock_status: 'instock',
+                  manage_stock: variant.wooManageStock ?? stockPayload.manage_stock,
+                  stock_quantity: variant.wooManageStock ? (variant.wooStockQuantity ?? 0) : stockPayload.stock_quantity,
+                  attributes: Object.entries(variant.values).map(([typeId, valueId]) => ({
+                    name: variantMetadata!.types.find(t => t.id === typeId)?.name || '',
+                    option: variantMetadata!.values.find(v => v.id === (valueId as string))?.name || '',
+                  })),
+                };
+                if (variant.wooSalePrice) variation.sale_price = variant.wooSalePrice;
+                if (variant.sku) variation.sku = variant.sku;
+                if (variant.wooImageUrl) variation.image = { src: variant.wooImageUrl };
+                return variation;
+              });
 
               for (const wooVariation of wooVariations) {
                 await createVariationMutation.mutateAsync({
@@ -1376,14 +1383,16 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                       />
                     </div>
 
-                    {/* Imágenes por variante */}
+                    {/* Configuración Web por variante */}
                     {hasVariants && variants.length > 0 && variantMetadata && (
-                      <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
-                        <p className="text-sm font-semibold">Imágenes por variante</p>
-                        <p className="text-xs text-muted-foreground">
-                          Cada variante puede tener su propia imagen en la tienda web
-                        </p>
-                        <div className="space-y-3">
+                      <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+                        <div>
+                          <p className="text-sm font-semibold">Configuración por variante</p>
+                          <p className="text-xs text-muted-foreground">
+                            Precio, stock e imagen individual para cada variante en la tienda web
+                          </p>
+                        </div>
+                        <div className="space-y-4">
                           {variants.map((variant, index) => {
                             const displayName = Object.entries(variant.values)
                               .map(([typeId, valueId]: [string, any]) => {
@@ -1393,8 +1402,74 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                               })
                               .join(' | ');
                             return (
-                              <div key={variant.id} className="space-y-1">
-                                <p className="text-xs font-medium">{displayName}</p>
+                              <div key={variant.id} className="space-y-3 rounded-md border p-3 bg-background">
+                                <p className="text-sm font-semibold">{displayName}</p>
+
+                                {/* Precios */}
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground">Precio regular</label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="Usa precio base si vacío"
+                                      value={variant.wooRegularPrice || ""}
+                                      onChange={(e) => {
+                                        setVariants(prev => prev.map((v, i) =>
+                                          i === index ? { ...v, wooRegularPrice: e.target.value } : v
+                                        ));
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground">Precio oferta</label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      placeholder="Sin oferta"
+                                      value={variant.wooSalePrice || ""}
+                                      onChange={(e) => {
+                                        setVariants(prev => prev.map((v, i) =>
+                                          i === index ? { ...v, wooSalePrice: e.target.value } : v
+                                        ));
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Stock */}
+                                <div className="flex items-center justify-between rounded-lg border p-2">
+                                  <div>
+                                    <p className="text-xs font-medium">Stock individual</p>
+                                  </div>
+                                  <Switch
+                                    checked={variant.wooManageStock || false}
+                                    onCheckedChange={(val) => {
+                                      setVariants(prev => prev.map((v, i) =>
+                                        i === index ? { ...v, wooManageStock: val } : v
+                                      ));
+                                    }}
+                                  />
+                                </div>
+                                {variant.wooManageStock && (
+                                  <div className="space-y-1">
+                                    <label className="text-xs text-muted-foreground">Cantidad en stock</label>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      placeholder="0"
+                                      value={variant.wooStockQuantity ?? ""}
+                                      onChange={(e) => {
+                                        setVariants(prev => prev.map((v, i) =>
+                                          i === index ? { ...v, wooStockQuantity: parseInt(e.target.value) || 0 } : v
+                                        ));
+                                      }}
+                                      className="max-w-[200px]"
+                                    />
+                                  </div>
+                                )}
+
+                                {/* Imagen */}
                                 <WooCommerceImageUpload
                                   maxFiles={1}
                                   existingImages={variant.wooImageUrl ? [variant.wooImageUrl] : []}
