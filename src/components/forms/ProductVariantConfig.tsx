@@ -33,16 +33,24 @@ interface VariantCombination {
   priceAdjustment: number;
 }
 
+export interface VariantMetadata {
+  types: VariantType[];
+  values: VariantValue[];
+  selectedTypes: string[];
+}
+
 interface ProductVariantConfigProps {
   productId?: string;
   onVariantsChange?: (variants: VariantCombination[]) => void;
+  onMetadataChange?: (metadata: VariantMetadata) => void;
   isCreating?: boolean;
 }
 
-export function ProductVariantConfig({ 
-  productId, 
-  onVariantsChange, 
-  isCreating = false 
+export function ProductVariantConfig({
+  productId,
+  onVariantsChange,
+  onMetadataChange,
+  isCreating = false
 }: ProductVariantConfigProps) {
   const [variantTypes, setVariantTypes] = useState<VariantType[]>([]);
   const [variantValues, setVariantValues] = useState<VariantValue[]>([]);
@@ -70,6 +78,10 @@ export function ProductVariantConfig({
   useEffect(() => {
     onVariantsChange?.(combinations);
   }, [combinations, onVariantsChange]);
+
+  useEffect(() => {
+    onMetadataChange?.({ types: variantTypes, values: variantValues, selectedTypes });
+  }, [variantTypes, variantValues, selectedTypes, onMetadataChange]);
 
   const fetchVariantData = async () => {
     try {

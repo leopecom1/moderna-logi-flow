@@ -12,6 +12,7 @@ import { FeedbackPanel } from '@/components/feedback/FeedbackPanel';
 import { useUSDRate } from '@/hooks/useCurrencyRates';
 import { useSystemUpdates } from '@/hooks/useSystemUpdates';
 import { useFeedback } from '@/hooks/useFeedback';
+import { APP_VERSION } from '@/lib/version';
 
 export const Header = () => {
   const [showUpdates, setShowUpdates] = useState(false);
@@ -110,6 +111,10 @@ export const Header = () => {
           <NotificationDropdown />
 
           <div className="w-px h-6 bg-border/60 mx-1.5" />
+
+          <span className="text-[10px] text-muted-foreground/50 font-mono select-none">
+            v{APP_VERSION}
+          </span>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

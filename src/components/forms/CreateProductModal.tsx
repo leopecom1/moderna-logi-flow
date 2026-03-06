@@ -39,9 +39,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Globe, AlertCircle, Store, Package, Boxes, Warehouse } from "lucide-react";
 import { CreateCategoryModal } from "./CreateCategoryModal";
-import { ProductVariantConfig } from "./ProductVariantConfig";
+import { ProductVariantConfig, VariantMetadata } from "./ProductVariantConfig";
 import { WooCommerceImageUpload } from "./WooCommerceImageUpload";
-import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct } from "@/hooks/useWooCommerceProducts";
+import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations } from "@/hooks/useWooCommerceProducts";
 import { useWooCommerceCategories, useCreateWooCommerceCategory } from "@/hooks/useWooCommerceCategories";
 
 const formSchema = z.object({
@@ -142,6 +142,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
 
   const createWooMutation = useCreateWooCommerceProduct();
   const updateWooMutation = useUpdateWooCommerceProduct();
+  const batchVariationsMutation = useBatchCreateWooCommerceVariations();
   const { data: wooCategories, isLoading: wooCategoriesLoading } = useWooCommerceCategories();
   const createWooCategoryMutation = useCreateWooCommerceCategory();
 
@@ -259,6 +260,16 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
   
   // State for variants
   const [variants, setVariants] = React.useState<any[]>([]);
+  const [variantMetadata, setVariantMetadata] = React.useState<VariantMetadata | null>(null);
+
+  // Auto-sync WooCommerce type when product has variants
+  React.useEffect(() => {
+    if (hasVariants) {
+      setWooFormData(prev => ({ ...prev, type: 'variable' }));
+    } else {
+      setWooFormData(prev => ({ ...prev, type: 'simple' }));
+    }
+  }, [hasVariants]);
 
   // Sync name and brand to wooFormData
   React.useEffect(() => {
@@ -388,7 +399,8 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       });
 
       // Si se pidió crear también en WooCommerce
-      if (createWooProduct && wooFormData.regular_price) {
+      const isVariableWoo = values.has_variants && variants.length > 0 && variantMetadata;
+      if (createWooProduct && (wooFormData.regular_price || isVariableWoo)) {
         try {
           // Calcular stock según configuración
           let stockPayload: { manage_stock: boolean; stock_quantity?: number; backorders?: string } = {
@@ -412,16 +424,38 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
 
           const wooPayload: any = {
             name: wooFormData.name,
-            type: wooFormData.type,
+            type: isVariableWoo ? 'variable' : wooFormData.type,
             status: wooFormData.status,
             featured: wooFormData.featured,
             short_description: wooFormData.short_description || undefined,
-            regular_price: wooFormData.regular_price,
-            sale_price: wooFormData.on_sale && wooFormData.sale_price ? wooFormData.sale_price : undefined,
             categories: wooFormData.categories.map(id => ({ id })),
             images: wooFormData.images.map(src => ({ src })),
-            ...stockPayload,
           };
+
+          if (isVariableWoo) {
+            // Para productos variables: construir atributos desde variantes locales
+            const attrMap = new Map<string, Set<string>>();
+            for (const variant of variants) {
+              for (const [typeId, valueId] of Object.entries(variant.values)) {
+                if (!attrMap.has(typeId)) attrMap.set(typeId, new Set());
+                attrMap.get(typeId)!.add(valueId as string);
+              }
+            }
+
+            wooPayload.attributes = Array.from(attrMap.entries()).map(([typeId, valueIds]) => {
+              const typeName = variantMetadata!.types.find(t => t.id === typeId)?.name || typeId;
+              const options = Array.from(valueIds).map(vid =>
+                variantMetadata!.values.find(v => v.id === vid)?.name || vid
+              );
+              return { name: typeName, options, visible: true, variation: true };
+            });
+            // Productos variables NO tienen precio a nivel padre
+          } else {
+            // Producto simple: incluir precio y stock a nivel padre
+            wooPayload.regular_price = wooFormData.regular_price;
+            wooPayload.sale_price = wooFormData.on_sale && wooFormData.sale_price ? wooFormData.sale_price : undefined;
+            Object.assign(wooPayload, stockPayload);
+          }
 
           const wooResponse = await createWooMutation.mutateAsync(wooPayload);
 
@@ -431,11 +465,34 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
               .from('products')
               .update({ woocommerce_product_id: wooResponse.id })
               .eq('id', product.id);
+
+            // Si es variable, crear las variaciones en WooCommerce
+            if (isVariableWoo) {
+              const basePrice = parseFloat(wooFormData.regular_price) || 0;
+              const wooVariations = variants.map(variant => ({
+                regular_price: String(basePrice + (variant.priceAdjustment || 0)),
+                sku: variant.sku || undefined,
+                status: 'publish' as const,
+                stock_status: 'instock' as const,
+                ...stockPayload,
+                attributes: Object.entries(variant.values).map(([typeId, valueId]) => ({
+                  name: variantMetadata!.types.find(t => t.id === typeId)?.name || '',
+                  option: variantMetadata!.values.find(v => v.id === (valueId as string))?.name || '',
+                })),
+              }));
+
+              await batchVariationsMutation.mutateAsync({
+                productId: wooResponse.id,
+                variations: wooVariations,
+              });
+            }
           }
 
           toast({
             title: "Producto publicado en la tienda web",
-            description: "El producto también fue creado exitosamente en WooCommerce.",
+            description: isVariableWoo
+              ? `Producto variable con ${variants.length} variaciones creado en WooCommerce.`
+              : "El producto también fue creado exitosamente en WooCommerce.",
           });
         } catch (wooError: any) {
           console.error("Error creating WooCommerce product:", wooError);
@@ -449,6 +506,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
 
       form.reset();
       setVariants([]);
+      setVariantMetadata(null);
       setCreateWooProduct(false);
       setWooFormData({
         name: '',
@@ -904,6 +962,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                       <ProductVariantConfig
                         isCreating={true}
                         onVariantsChange={setVariants}
+                        onMetadataChange={setVariantMetadata}
                       />
                     </div>
                   </div>
@@ -963,6 +1022,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         onValueChange={(val: 'simple' | 'variable') =>
                           setWooFormData(prev => ({ ...prev, type: val }))
                         }
+                        disabled={hasVariants}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -972,6 +1032,11 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                           <SelectItem value="variable">Variable</SelectItem>
                         </SelectContent>
                       </Select>
+                      {hasVariants && (
+                        <p className="text-xs text-muted-foreground">
+                          Tipo fijado a "Variable" porque el producto tiene variantes configuradas.
+                        </p>
+                      )}
                     </div>
 
                     {/* Descripción corta */}
@@ -988,9 +1053,16 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                     {/* Precio en UYU */}
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
-                        <label className="text-sm font-medium">Precio en la tienda web</label>
+                        <label className="text-sm font-medium">
+                          {hasVariants ? 'Precio base para variaciones' : 'Precio en la tienda web'}
+                        </label>
                         <Badge variant="outline" className="text-xs">🇺🇾 Pesos Uruguayos (UYU)</Badge>
                       </div>
+                      {hasVariants && variants.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          Este precio se usará como base. Cada variación sumará su ajuste de precio configurado en la pestaña interna.
+                        </p>
+                      )}
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
                           <label className="text-xs text-muted-foreground">Precio regular *</label>
