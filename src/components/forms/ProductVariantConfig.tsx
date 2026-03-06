@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, AlertTriangle, Globe } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { WooCommerceImageUpload } from "./WooCommerceImageUpload";
 
 interface VariantType {
   id: string;
@@ -36,6 +37,7 @@ interface VariantCombination {
   wooSalePrice?: string;
   wooStockQuantity?: number;
   wooManageStock?: boolean;
+  wooImageUrl?: string;
 }
 
 export interface VariantMetadata {
@@ -478,6 +480,18 @@ export function ProductVariantConfig({
                         />
                       </div>
                     )}
+                    <div>
+                      <Label className="text-sm font-medium">Imagen de la variante</Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Foto específica para esta variante en la tienda web
+                      </p>
+                      <WooCommerceImageUpload
+                        maxFiles={1}
+                        existingImages={combination.wooImageUrl ? [combination.wooImageUrl] : []}
+                        onImageUploaded={(url) => updateCombination(combination.id, "wooImageUrl", url)}
+                        onImageRemoved={() => updateCombination(combination.id, "wooImageUrl", "")}
+                      />
+                    </div>
                   </div>
                 </div>
               );

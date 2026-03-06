@@ -477,6 +477,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                 stock_status: 'instock' as const,
                 manage_stock: variant.wooManageStock ?? stockPayload.manage_stock,
                 stock_quantity: variant.wooManageStock ? (variant.wooStockQuantity ?? 0) : stockPayload.stock_quantity,
+                image: variant.wooImageUrl ? { src: variant.wooImageUrl } : undefined,
                 attributes: Object.entries(variant.values).map(([typeId, valueId]) => ({
                   name: variantMetadata!.types.find(t => t.id === typeId)?.name || '',
                   option: variantMetadata!.values.find(v => v.id === (valueId as string))?.name || '',
