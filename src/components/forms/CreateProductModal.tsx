@@ -374,9 +374,9 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         has_variants: values.has_variants,
         currency: values.currency,
         // Web stock config (solo se establece si se crea con WooCommerce)
-        web_stock_mode: createWooProduct && wooFormData.regular_price ? wooStockConfig.mode : 'virtual',
-        web_virtual_stock: createWooProduct && wooFormData.regular_price ? wooStockConfig.virtual_quantity : 10,
-        web_stock_warehouse_id: createWooProduct && wooFormData.regular_price && wooStockConfig.mode === 'real' ? wooStockConfig.warehouse_id : null,
+        web_stock_mode: createWooProduct ? wooStockConfig.mode : 'virtual',
+        web_virtual_stock: createWooProduct ? wooStockConfig.virtual_quantity : 10,
+        web_stock_warehouse_id: createWooProduct && wooStockConfig.mode === 'real' ? wooStockConfig.warehouse_id : null,
       };
 
       const { data: product, error: productError } = await supabase
@@ -410,8 +410,18 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       });
 
       // Si se pidió crear también en WooCommerce
-      const isVariableWoo = values.has_variants && variants.length > 0 && variantMetadata;
-      if (createWooProduct && (wooFormData.regular_price || isVariableWoo)) {
+      const isVariableWoo = values.has_variants && variants.length > 0;
+      if (createWooProduct) {
+        console.log('[WooCommerce Debug]', {
+          createWooProduct,
+          regularPrice: wooFormData.regular_price,
+          hasVariants: values.has_variants,
+          variantsLength: variants.length,
+          variantMetadata: !!variantMetadata,
+          isVariableWoo,
+          wooName: wooFormData.name,
+          wooType: wooFormData.type,
+        });
         try {
           // Calcular stock según configuración
           let stockPayload: { manage_stock: boolean; stock_quantity?: number; backorders?: string } = {
@@ -456,13 +466,14 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
             }
 
             wooPayload.attributes = Array.from(attrMap.entries()).map(([typeId, valueIds]) => {
-              const typeName = variantMetadata!.types.find(t => t.id === typeId)?.name || typeId;
+              const typeName = variantMetadata?.types.find(t => t.id === typeId)?.name || typeId;
               const options = Array.from(valueIds).map(vid =>
-                variantMetadata!.values.find(v => v.id === vid)?.name || vid
+                variantMetadata?.values.find(v => v.id === vid)?.name || vid
               );
               return { name: typeName, options, visible: true, variation: true };
             });
-            // Productos variables NO tienen precio a nivel padre
+            // Precio base para variables (fallback a 0)
+            wooPayload.regular_price = wooFormData.regular_price || '0';
           } else {
             // Producto simple: incluir precio y stock a nivel padre
             wooPayload.regular_price = wooFormData.regular_price;
@@ -493,8 +504,8 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                   manage_stock: variant.wooManageStock ?? stockPayload.manage_stock,
                   stock_quantity: variant.wooManageStock ? (variant.wooStockQuantity ?? 0) : stockPayload.stock_quantity,
                   attributes: Object.entries(variant.values).map(([typeId, valueId]) => ({
-                    name: variantMetadata!.types.find(t => t.id === typeId)?.name || '',
-                    option: variantMetadata!.values.find(v => v.id === (valueId as string))?.name || '',
+                    name: variantMetadata?.types.find(t => t.id === typeId)?.name || typeId,
+                    option: variantMetadata?.values.find(v => v.id === (valueId as string))?.name || (valueId as string),
                   })),
                 };
                 if (variant.wooSalePrice) variation.sale_price = variant.wooSalePrice;
