@@ -116,6 +116,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     price_list_1_name: 'Lista 1',
     price_list_2_name: 'Lista 2'
   });
+  const [activeTab, setActiveTab] = React.useState("interno");
   const [createWooProduct, setCreateWooProduct] = React.useState(false);
   const [wooFormData, setWooFormData] = React.useState<WooFormData>({
     name: '',
@@ -329,6 +330,16 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     return data?.reduce((sum, item) => sum + (item.current_stock || 0), 0) ?? 0;
   };
 
+  const onInvalid = (errors: any) => {
+    const firstError = Object.values(errors)[0] as any;
+    toast({
+      title: "Campos incompletos",
+      description: firstError?.message || "Por favor completá todos los campos requeridos en la pestaña Producto Interno.",
+      variant: "destructive",
+    });
+    setActiveTab("interno");
+  };
+
   const onSubmit = async (values: FormValues) => {
     try {
       let finalCategory = values.category;
@@ -519,6 +530,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       form.reset();
       setVariants([]);
       setVariantMetadata(null);
+      setActiveTab("interno");
       setCreateWooProduct(false);
       setWooFormData({
         name: '',
@@ -590,8 +602,8 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
           <DialogTitle>Crear Nuevo Producto</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <Tabs defaultValue="interno" className="w-full">
+          <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="interno" className="flex items-center gap-2">
                   <Store className="h-4 w-4" />
