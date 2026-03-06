@@ -41,7 +41,7 @@ import { Plus, Globe, AlertCircle, Store, Package, Boxes, Warehouse } from "luci
 import { CreateCategoryModal } from "./CreateCategoryModal";
 import { ProductVariantConfig, VariantMetadata } from "./ProductVariantConfig";
 import { WooCommerceImageUpload } from "./WooCommerceImageUpload";
-import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct, useBatchCreateWooCommerceVariations } from "@/hooks/useWooCommerceProducts";
+import { useCreateWooCommerceProduct, useUpdateWooCommerceProduct, useCreateWooCommerceVariation } from "@/hooks/useWooCommerceProducts";
 import { useWooCommerceCategories, useCreateWooCommerceCategory } from "@/hooks/useWooCommerceCategories";
 
 const formSchema = z.object({
@@ -142,7 +142,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
 
   const createWooMutation = useCreateWooCommerceProduct();
   const updateWooMutation = useUpdateWooCommerceProduct();
-  const batchVariationsMutation = useBatchCreateWooCommerceVariations();
+  const createVariationMutation = useCreateWooCommerceVariation();
   const { data: wooCategories, isLoading: wooCategoriesLoading } = useWooCommerceCategories();
   const createWooCategoryMutation = useCreateWooCommerceCategory();
 
@@ -484,10 +484,12 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                 })),
               }));
 
-              await batchVariationsMutation.mutateAsync({
-                productId: wooResponse.id,
-                variations: wooVariations,
-              });
+              for (const wooVariation of wooVariations) {
+                await createVariationMutation.mutateAsync({
+                  productId: wooResponse.id,
+                  data: wooVariation,
+                });
+              }
             }
           }
 
@@ -1373,6 +1375,46 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                         existingImages={wooFormData.images}
                       />
                     </div>
+
+                    {/* Imágenes por variante */}
+                    {hasVariants && variants.length > 0 && variantMetadata && (
+                      <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+                        <p className="text-sm font-semibold">Imágenes por variante</p>
+                        <p className="text-xs text-muted-foreground">
+                          Cada variante puede tener su propia imagen en la tienda web
+                        </p>
+                        <div className="space-y-3">
+                          {variants.map((variant, index) => {
+                            const displayName = Object.entries(variant.values)
+                              .map(([typeId, valueId]: [string, any]) => {
+                                const typeName = variantMetadata.types.find((t: any) => t.id === typeId)?.name || '';
+                                const valueName = variantMetadata.values.find((v: any) => v.id === valueId)?.name || '';
+                                return `${typeName}: ${valueName}`;
+                              })
+                              .join(' | ');
+                            return (
+                              <div key={variant.id} className="space-y-1">
+                                <p className="text-xs font-medium">{displayName}</p>
+                                <WooCommerceImageUpload
+                                  maxFiles={1}
+                                  existingImages={variant.wooImageUrl ? [variant.wooImageUrl] : []}
+                                  onImageUploaded={(url) => {
+                                    setVariants(prev => prev.map((v, i) =>
+                                      i === index ? { ...v, wooImageUrl: url } : v
+                                    ));
+                                  }}
+                                  onImageRemoved={() => {
+                                    setVariants(prev => prev.map((v, i) =>
+                                      i === index ? { ...v, wooImageUrl: '' } : v
+                                    ));
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </TabsContent>
