@@ -37,7 +37,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Globe, AlertCircle, Store, Package, Boxes, Warehouse } from "lucide-react";
+import { Plus, Globe, AlertCircle, Store, Package, Boxes, Warehouse, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { CreateCategoryModal } from "./CreateCategoryModal";
 import { ProductVariantConfig, VariantMetadata } from "./ProductVariantConfig";
 import { WooCommerceImageUpload } from "./WooCommerceImageUpload";
@@ -110,8 +111,16 @@ interface WooStockConfig {
   warehouse_id: string | null; // null = todos los depósitos
 }
 
+interface ProgressStep {
+  label: string;
+  status: 'pending' | 'running' | 'done' | 'error';
+  detail?: string;
+}
+
 export function CreateProductModal({ onProductCreated }: CreateProductModalProps) {
   const [open, setOpen] = React.useState(false);
+  const [progressSteps, setProgressSteps] = React.useState<ProgressStep[]>([]);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [priceListConfig, setPriceListConfig] = React.useState<PriceListConfig>({
     price_list_1_name: 'Lista 1',
     price_list_2_name: 'Lista 2'
@@ -340,17 +349,45 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
     setActiveTab("interno");
   };
 
-  const onSubmit = async (values: FormValues) => {
-    try {
-      let finalCategory = values.category;
+  // Helper para actualizar un paso del progreso
+  const updateStep = (index: number, update: Partial<ProgressStep>) => {
+    setProgressSteps(prev => prev.map((s, i) => i === index ? { ...s, ...update } : s));
+  };
 
+  const onSubmit = async (values: FormValues) => {
+    const isVariableWoo = values.has_variants && variants.length > 0;
+    const willPublishWeb = createWooProduct;
+
+    // Construir lista de pasos
+    const steps: ProgressStep[] = [
+      { label: 'Creando producto interno', status: 'pending' },
+    ];
+    if (values.has_variants && variants.length > 0) {
+      steps.push({ label: 'Creando variantes internas', status: 'pending' });
+    }
+    if (willPublishWeb) {
+      steps.push({ label: 'Publicando en WooCommerce', status: 'pending' });
+      if (isVariableWoo) {
+        steps.push({ label: `Creando ${variants.length} variaciones web`, status: 'pending' });
+      }
+    }
+
+    setProgressSteps(steps);
+    setIsSubmitting(true);
+
+    let currentStep = 0;
+
+    try {
+      // === PASO 1: Producto interno ===
+      updateStep(currentStep, { status: 'running' });
+
+      let finalCategory = values.category;
       if (values.createNewCategory && values.newCategoryName) {
         const { data: newCategory, error: categoryError } = await supabase
           .from("categories")
           .insert([{ name: values.newCategoryName }])
           .select()
           .single();
-
         if (categoryError) throw categoryError;
         finalCategory = newCategory.id;
       }
@@ -373,10 +410,9 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         use_automatic_pricing: values.use_automatic_pricing,
         has_variants: values.has_variants,
         currency: values.currency,
-        // Web stock config (solo se establece si se crea con WooCommerce)
-        web_stock_mode: createWooProduct ? wooStockConfig.mode : 'virtual',
-        web_virtual_stock: createWooProduct ? wooStockConfig.virtual_quantity : 10,
-        web_stock_warehouse_id: createWooProduct && wooStockConfig.mode === 'real' ? wooStockConfig.warehouse_id : null,
+        web_stock_mode: willPublishWeb ? wooStockConfig.mode : 'virtual',
+        web_virtual_stock: willPublishWeb ? wooStockConfig.virtual_quantity : 10,
+        web_stock_warehouse_id: willPublishWeb && wooStockConfig.mode === 'real' ? wooStockConfig.warehouse_id : null,
       };
 
       const { data: product, error: productError } = await supabase
@@ -387,8 +423,13 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
 
       if (productError) throw productError;
 
-      // Si tiene variantes, crear las variantes
+      updateStep(currentStep, { status: 'done', detail: `Código: ${generatedCode}` });
+      currentStep++;
+
+      // === PASO 2: Variantes internas (si aplica) ===
       if (values.has_variants && variants.length > 0) {
+        updateStep(currentStep, { status: 'running' });
+
         const variantData = variants.map(variant => ({
           product_id: product.id,
           variant_values: variant.values,
@@ -402,144 +443,122 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
           .insert(variantData);
 
         if (variantError) throw variantError;
+
+        updateStep(currentStep, { status: 'done', detail: `${variants.length} variantes` });
+        currentStep++;
       }
 
-      toast({
-        title: "Producto creado",
-        description: `El producto${values.has_variants ? ' y sus variantes han' : ' ha'} sido creado exitosamente.`,
-      });
+      // === PASO 3: WooCommerce (si se pidió) ===
+      if (willPublishWeb) {
+        updateStep(currentStep, { status: 'running' });
 
-      // Si se pidió crear también en WooCommerce
-      const isVariableWoo = values.has_variants && variants.length > 0;
-      if (createWooProduct) {
-        console.log('[WooCommerce Debug]', {
-          createWooProduct,
-          regularPrice: wooFormData.regular_price,
-          hasVariants: values.has_variants,
-          variantsLength: variants.length,
-          variantMetadata: !!variantMetadata,
-          isVariableWoo,
-          wooName: wooFormData.name,
-          wooType: wooFormData.type,
-        });
-        try {
-          // Calcular stock según configuración
-          let stockPayload: { manage_stock: boolean; stock_quantity?: number; backorders?: string } = {
-            manage_stock: false
-          };
+        // Calcular stock
+        let stockPayload: { manage_stock: boolean; stock_quantity?: number; backorders?: string } = {
+          manage_stock: false
+        };
+        if (wooStockConfig.mode === 'virtual') {
+          stockPayload = { manage_stock: true, stock_quantity: wooStockConfig.virtual_quantity, backorders: 'no' };
+        } else if (wooStockConfig.mode === 'real') {
+          const realStock = await calculateRealStock(product.id, wooStockConfig.warehouse_id);
+          stockPayload = { manage_stock: true, stock_quantity: realStock, backorders: 'no' };
+        }
 
-          if (wooStockConfig.mode === 'virtual') {
-            stockPayload = {
-              manage_stock: true,
-              stock_quantity: wooStockConfig.virtual_quantity,
-              backorders: 'no'
-            };
-          } else if (wooStockConfig.mode === 'real') {
-            const realStock = await calculateRealStock(product.id, wooStockConfig.warehouse_id);
-            stockPayload = {
-              manage_stock: true,
-              stock_quantity: realStock,
-              backorders: 'no'
-            };
-          }
+        // Construir payload
+        const wooPayload: any = {
+          name: wooFormData.name,
+          type: isVariableWoo ? 'variable' : wooFormData.type,
+          status: wooFormData.status,
+          featured: wooFormData.featured,
+          categories: wooFormData.categories.map(id => ({ id })),
+          images: wooFormData.images.map(src => ({ src })),
+        };
+        if (wooFormData.short_description) {
+          wooPayload.short_description = wooFormData.short_description;
+        }
 
-          const wooPayload: any = {
-            name: wooFormData.name,
-            type: isVariableWoo ? 'variable' : wooFormData.type,
-            status: wooFormData.status,
-            featured: wooFormData.featured,
-            categories: wooFormData.categories.map(id => ({ id })),
-            images: wooFormData.images.map(src => ({ src })),
-          };
-          if (wooFormData.short_description) {
-            wooPayload.short_description = wooFormData.short_description;
-          }
-
-          if (isVariableWoo) {
-            // Para productos variables: construir atributos desde variantes locales
-            const attrMap = new Map<string, Set<string>>();
-            for (const variant of variants) {
-              for (const [typeId, valueId] of Object.entries(variant.values)) {
-                if (!attrMap.has(typeId)) attrMap.set(typeId, new Set());
-                attrMap.get(typeId)!.add(valueId as string);
-              }
+        if (isVariableWoo) {
+          const attrMap = new Map<string, Set<string>>();
+          for (const variant of variants) {
+            for (const [typeId, valueId] of Object.entries(variant.values)) {
+              if (!attrMap.has(typeId)) attrMap.set(typeId, new Set());
+              attrMap.get(typeId)!.add(valueId as string);
             }
+          }
+          wooPayload.attributes = Array.from(attrMap.entries()).map(([typeId, valueIds]) => {
+            const typeName = variantMetadata?.types.find(t => t.id === typeId)?.name || typeId;
+            const options = Array.from(valueIds).map(vid =>
+              variantMetadata?.values.find(v => v.id === vid)?.name || vid
+            );
+            return { name: typeName, options, visible: true, variation: true };
+          });
+          wooPayload.regular_price = wooFormData.regular_price || '0';
+        } else {
+          wooPayload.regular_price = wooFormData.regular_price;
+          if (wooFormData.on_sale && wooFormData.sale_price) {
+            wooPayload.sale_price = wooFormData.sale_price;
+          }
+          Object.assign(wooPayload, stockPayload);
+        }
 
-            wooPayload.attributes = Array.from(attrMap.entries()).map(([typeId, valueIds]) => {
-              const typeName = variantMetadata?.types.find(t => t.id === typeId)?.name || typeId;
-              const options = Array.from(valueIds).map(vid =>
-                variantMetadata?.values.find(v => v.id === vid)?.name || vid
-              );
-              return { name: typeName, options, visible: true, variation: true };
+        console.log('[WooCommerce] Payload:', JSON.stringify(wooPayload, null, 2));
+        const wooResponse = await createWooMutation.mutateAsync(wooPayload);
+
+        if (!wooResponse?.id) {
+          throw new Error('WooCommerce no devolvió ID de producto');
+        }
+
+        await supabase
+          .from('products')
+          .update({ woocommerce_product_id: wooResponse.id })
+          .eq('id', product.id);
+
+        updateStep(currentStep, { status: 'done', detail: `WC ID: ${wooResponse.id}` });
+        currentStep++;
+
+        // === PASO 4: Variaciones WooCommerce (si es variable) ===
+        if (isVariableWoo) {
+          updateStep(currentStep, { status: 'running', detail: '0/' + variants.length });
+
+          const basePrice = parseFloat(wooFormData.regular_price) || 0;
+
+          for (let i = 0; i < variants.length; i++) {
+            const variant = variants[i];
+            updateStep(currentStep, { status: 'running', detail: `${i + 1}/${variants.length}` });
+
+            const variation: any = {
+              regular_price: variant.wooRegularPrice || String(basePrice + (variant.priceAdjustment || 0)),
+              status: 'publish',
+              stock_status: 'instock',
+              manage_stock: variant.wooManageStock ?? stockPayload.manage_stock,
+              stock_quantity: variant.wooManageStock ? (variant.wooStockQuantity ?? 0) : stockPayload.stock_quantity,
+              attributes: Object.entries(variant.values).map(([typeId, valueId]) => ({
+                name: variantMetadata?.types.find(t => t.id === typeId)?.name || typeId,
+                option: variantMetadata?.values.find(v => v.id === (valueId as string))?.name || (valueId as string),
+              })),
+            };
+            if (variant.wooSalePrice) variation.sale_price = variant.wooSalePrice;
+            if (variant.sku) variation.sku = variant.sku;
+            if (variant.wooImageUrl) variation.image = { src: variant.wooImageUrl };
+
+            await createVariationMutation.mutateAsync({
+              productId: wooResponse.id,
+              data: variation,
             });
-            // Precio base para variables (fallback a 0)
-            wooPayload.regular_price = wooFormData.regular_price || '0';
-          } else {
-            // Producto simple: incluir precio y stock a nivel padre
-            wooPayload.regular_price = wooFormData.regular_price;
-            if (wooFormData.on_sale && wooFormData.sale_price) {
-              wooPayload.sale_price = wooFormData.sale_price;
-            }
-            Object.assign(wooPayload, stockPayload);
           }
 
-          console.log('[WooCommerce] Sending payload:', JSON.stringify(wooPayload, null, 2));
-          const wooResponse = await createWooMutation.mutateAsync(wooPayload);
-
-          // Guardar el ID de WooCommerce en el producto interno
-          if (wooResponse?.id) {
-            await supabase
-              .from('products')
-              .update({ woocommerce_product_id: wooResponse.id })
-              .eq('id', product.id);
-
-            // Si es variable, crear las variaciones en WooCommerce
-            if (isVariableWoo) {
-              const basePrice = parseFloat(wooFormData.regular_price) || 0;
-              const wooVariations = variants.map(variant => {
-                const variation: any = {
-                  regular_price: variant.wooRegularPrice || String(basePrice + (variant.priceAdjustment || 0)),
-                  status: 'publish',
-                  stock_status: 'instock',
-                  manage_stock: variant.wooManageStock ?? stockPayload.manage_stock,
-                  stock_quantity: variant.wooManageStock ? (variant.wooStockQuantity ?? 0) : stockPayload.stock_quantity,
-                  attributes: Object.entries(variant.values).map(([typeId, valueId]) => ({
-                    name: variantMetadata?.types.find(t => t.id === typeId)?.name || typeId,
-                    option: variantMetadata?.values.find(v => v.id === (valueId as string))?.name || (valueId as string),
-                  })),
-                };
-                if (variant.wooSalePrice) variation.sale_price = variant.wooSalePrice;
-                if (variant.sku) variation.sku = variant.sku;
-                if (variant.wooImageUrl) variation.image = { src: variant.wooImageUrl };
-                return variation;
-              });
-
-              for (const wooVariation of wooVariations) {
-                await createVariationMutation.mutateAsync({
-                  productId: wooResponse.id,
-                  data: wooVariation,
-                });
-              }
-            }
-          }
-
-          toast({
-            title: "Producto publicado en la tienda web",
-            description: isVariableWoo
-              ? `Producto variable con ${variants.length} variaciones creado en WooCommerce.`
-              : "El producto también fue creado exitosamente en WooCommerce.",
-          });
-        } catch (wooError: any) {
-          const errorMsg = wooError?.message || wooError?.toString() || 'Error desconocido';
-          console.error("Error creating WooCommerce product:", wooError);
-          console.error("Error details:", errorMsg);
-          toast({
-            title: "Error en WooCommerce",
-            description: `Producto interno creado OK. Error web: ${errorMsg.substring(0, 200)}`,
-            variant: "destructive",
-          });
+          updateStep(currentStep, { status: 'done', detail: `${variants.length}/${variants.length}` });
         }
       }
+
+      // Éxito total — esperar 1s para que el usuario vea el progreso completo
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast({
+        title: willPublishWeb ? "Producto creado y publicado en la web" : "Producto creado",
+        description: isVariableWoo
+          ? `Producto con ${variants.length} variaciones creado exitosamente.`
+          : "El producto ha sido creado exitosamente.",
+      });
 
       form.reset();
       setVariants([]);
@@ -560,16 +579,28 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
       });
       setWooStockConfig({ mode: 'virtual', virtual_quantity: 10, warehouse_id: null });
       setRealStockPreview(null);
+      setIsSubmitting(false);
+      setProgressSteps([]);
       setOpen(false);
       onProductCreated?.();
       refetchCategories?.();
-    } catch (error) {
+    } catch (error: any) {
+      const errorMsg = error?.message || error?.toString() || 'Error desconocido';
       console.error("Error creating product:", error);
+
+      // Marcar el paso actual como error
+      setProgressSteps(prev => prev.map((s, i) =>
+        i === currentStep ? { ...s, status: 'error' as const, detail: errorMsg.substring(0, 150) } : s
+      ));
+
       toast({
         title: "Error",
-        description: "No se pudo crear el producto.",
+        description: errorMsg.substring(0, 200),
         variant: "destructive",
       });
+
+      // No cerrar modal — dejar el progreso visible para que el usuario vea qué falló
+      // El usuario puede cerrar manualmente
     }
   };
 
@@ -615,6 +646,58 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         <DialogHeader>
           <DialogTitle>Crear Nuevo Producto</DialogTitle>
         </DialogHeader>
+        {/* ─── OVERLAY DE PROGRESO ─── */}
+        {progressSteps.length > 0 && (
+          <div className="space-y-6 py-4">
+            <div className="space-y-3">
+              {progressSteps.map((step, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-lg border bg-background">
+                  <div className="mt-0.5">
+                    {step.status === 'done' && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                    {step.status === 'running' && <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />}
+                    {step.status === 'error' && <XCircle className="h-5 w-5 text-red-500" />}
+                    {step.status === 'pending' && <div className="h-5 w-5 rounded-full border-2 border-muted" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-medium ${step.status === 'pending' ? 'text-muted-foreground' : ''}`}>
+                      {step.label}
+                    </p>
+                    {step.detail && (
+                      <p className={`text-xs mt-0.5 ${step.status === 'error' ? 'text-red-500' : 'text-muted-foreground'}`}>
+                        {step.detail}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Barra de progreso global */}
+            <Progress
+              value={(progressSteps.filter(s => s.status === 'done').length / progressSteps.length) * 100}
+              className="h-2"
+            />
+
+            {/* Botón cerrar si hubo error */}
+            {progressSteps.some(s => s.status === 'error') && (
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setProgressSteps([]);
+                    setIsSubmitting(false);
+                  }}
+                >
+                  Cerrar
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── FORMULARIO (oculto durante progreso) ─── */}
+        {progressSteps.length === 0 && (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1526,18 +1609,21 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
                 type="button"
                 variant="outline"
                 onClick={() => setOpen(false)}
+                disabled={isSubmitting}
               >
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 type="submit"
-                disabled={hasVariants && variants.length === 0}
+                disabled={isSubmitting || (hasVariants && variants.length === 0)}
               >
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {createWooProduct ? "Crear Producto + Publicar en Web" : "Crear Producto"}
               </Button>
             </div>
           </form>
         </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
