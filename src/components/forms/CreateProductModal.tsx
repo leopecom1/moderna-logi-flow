@@ -466,6 +466,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         // Construir payload
         const wooPayload: any = {
           name: wooFormData.name,
+          sku: generatedCode,
           type: isVariableWoo ? 'variable' : wooFormData.type,
           status: wooFormData.status,
           featured: wooFormData.featured,
