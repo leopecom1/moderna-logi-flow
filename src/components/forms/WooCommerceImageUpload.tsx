@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useId } from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUploadWooCommerceImage } from '@/hooks/useWooCommerceProducts';
@@ -17,6 +17,8 @@ export function WooCommerceImageUpload({
   maxFiles = 1,
   existingImages = [] 
 }: WooCommerceImageUploadProps) {
+  const uniqueId = useId();
+  const inputId = `image-upload-${uniqueId}`;
   const [isDragging, setIsDragging] = useState(false);
   const [previews, setPreviews] = useState<string[]>(existingImages);
   const uploadMutation = useUploadWooCommerceImage();
@@ -129,14 +131,14 @@ export function WooCommerceImageUpload({
       >
         <input
           type="file"
-          id="image-upload"
+          id={inputId}
           className="hidden"
           accept="image/jpeg,image/png,image/webp"
           multiple={maxFiles > 1}
           onChange={handleFileInput}
           disabled={uploadMutation.isPending}
         />
-        <label htmlFor="image-upload" className="cursor-pointer">
+        <label htmlFor={inputId} className="cursor-pointer">
           <div className="flex flex-col items-center gap-2">
             {uploadMutation.isPending ? (
               <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
