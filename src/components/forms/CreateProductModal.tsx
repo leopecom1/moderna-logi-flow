@@ -466,6 +466,7 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
         // Construir payload
         const wooPayload: any = {
           name: wooFormData.name,
+          sku: `${generatedCode}-${Date.now()}`,
           type: isVariableWoo ? 'variable' : wooFormData.type,
           status: wooFormData.status,
           featured: wooFormData.featured,
@@ -537,7 +538,6 @@ export function CreateProductModal({ onProductCreated }: CreateProductModalProps
               })),
             };
             if (variant.wooSalePrice) variation.sale_price = variant.wooSalePrice;
-            if (variant.sku) variation.sku = variant.sku;
             if (variant.wooImageUrl) variation.image = { src: variant.wooImageUrl };
 
             await createVariationMutation.mutateAsync({
